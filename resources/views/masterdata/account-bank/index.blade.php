@@ -9,11 +9,18 @@
     <div class="kt-card">
         <div class="kt-card-header min-h-16">
             <input type="text" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#kt_datatable" />
-            @can('account-bank.create')
-            <button type="button" class="kt-btn kt-btn-outline" onclick="openCreateModal()">
-                <i class="ki-filled ki-plus-squared"></i> Tambah
-            </button>
-            @endcan
+            <div class="flex items-center gap-2">
+                @can('account-bank.edit')
+                <button type="button" class="kt-btn kt-btn-outline" onclick="openTransferModal()">
+                    <i class="ki-filled ki-transfer"></i> Transfer Saldo
+                </button>
+                @endcan
+                @can('account-bank.create')
+                <button type="button" class="kt-btn kt-btn-outline" onclick="openCreateModal()">
+                    <i class="ki-filled ki-plus-squared"></i> Tambah
+                </button>
+                @endcan
+            </div>
         </div>
         <div id="kt_datatable" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10">
             <div class="kt-table-wrapper kt-scrollable">
@@ -63,6 +70,7 @@
                                     @can('account-bank.edit')
                                     <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" onclick="openEditModal('{{ $item->id }}')"><i class="ki-filled ki-pencil"></i></button>
                                     @endcan
+                                    <a href="{{ route('account-bank.show', $item) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="History"><i class="ki-filled ki-time"></i></a>
                                     @can('account-bank.delete')
                                     <form method="POST" action="{{ route('account-bank.destroy', $item) }}" onsubmit="return confirm('Yakin hapus?')">
                                         @csrf @method('DELETE')
@@ -141,10 +149,98 @@
         </form>
     </div>
 </div>
+<!-- Modal Transfer Saldo -->
+<div class="kt-modal" data-kt-modal="true" id="transferModal">
+    <div class="kt-modal-content max-w-[600px] top-5 lg:top-[10%]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Transfer Saldo</h3>
+            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true"><i class="ki-filled ki-cross"></i></button>
+        </div>
+        <form id="transferForm" method="POST" action="{{ route('account-bank.transfer') }}">
+            @csrf
+            <div class="kt-modal-body flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-foreground">Dari Bank <span class="text-danger">*</span></label>
+                    <select name="dari_account_bank_id" id="transfer_dari_id" class="kt-select" required onchange="onDariChange()">
+                        <option value="">-- Pilih Bank Asal --</option>
+                        @foreach($data as $bank)
+                        <option value="{{ $bank->id }}" data-saldo="{{ $bank->saldo }}">
+                            {{ $bank->nama_bank }} - {{ $bank->nama_pemilik }} (Rp {{ number_format($bank->saldo, 0, ',', '.') }})
+                        </option>
+                        @endforeach
+                    </select>
+                    <span class="text-xs text-muted-foreground" id="saldo_dari_info" style="display:none;">
+                        Saldo: <span class="text-mono font-medium text-primary" id="saldo_dari_value"></span>
+                    </span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-foreground">Ke Bank <span class="text-danger">*</span></label>
+                    <select name="ke_account_bank_id" id="transfer_ke_id" class="kt-select" required>
+                        <option value="">-- Pilih Bank Tujuan --</option>
+                        @foreach($data as $bank)
+                        <option value="{{ $bank->id }}">
+                            {{ $bank->nama_bank }} - {{ $bank->nama_pemilik }} (Rp {{ number_format($bank->saldo, 0, ',', '.') }})
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-foreground">Nominal <span class="text-danger">*</span></label>
+                    <div class="kt-input-group">
+                        <span class="kt-input-addon">Rp.</span>
+                        <input class="kt-input" type="number" name="nominal" id="transfer_nominal" step="0.01" min="1" placeholder="0" required/>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-foreground">Catatan</label>
+                    <textarea name="catatan" id="transfer_catatan" class="kt-input" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="kt-modal-footer justify-end">
+                <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-primary">
+                    <i class="ki-filled ki-transfer"></i> Transfer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
+function openTransferModal() {
+    document.getElementById('transfer_dari_id').value = '';
+    document.getElementById('transfer_ke_id').value = '';
+    document.getElementById('transfer_nominal').value = '';
+    document.getElementById('transfer_catatan').value = '';
+    document.getElementById('saldo_dari_info').style.display = 'none';
+    // Reset semua option visible
+    var sel = document.getElementById('transfer_ke_id');
+    for (var i = 0; i < sel.options.length; i++) sel.options[i].hidden = false;
+    KTModal.getInstance(document.querySelector('#transferModal')).show();
+}
+
+function onDariChange() {
+    var sel = document.getElementById('transfer_dari_id');
+    var val = sel.value;
+    var saldo = sel.options[sel.selectedIndex]?.getAttribute('data-saldo');
+    var info = document.getElementById('saldo_dari_info');
+    if (val && saldo) {
+        document.getElementById('saldo_dari_value').textContent = 'Rp ' + Number(saldo).toLocaleString('id-ID');
+        info.style.display = '';
+    } else {
+        info.style.display = 'none';
+    }
+    // Sembunyikan bank asal dari dropdown tujuan
+    var ke = document.getElementById('transfer_ke_id');
+    for (var i = 0; i < ke.options.length; i++) {
+        ke.options[i].hidden = ke.options[i].value === val;
+    }
+    if (ke.value === val) ke.value = '';
+}
+
 function openCreateModal() {
     document.getElementById('modalTitle').textContent = 'Tambah Account Bank';
     document.getElementById('dataForm').action = "{{ route('account-bank.store') }}";

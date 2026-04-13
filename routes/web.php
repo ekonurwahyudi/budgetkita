@@ -65,7 +65,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('kategori-investasi', KategoriInvestasiController::class)->except(['show'])->middleware('can:kategori-investasi.view');
         Route::resource('kategori-hutang-piutang', KategoriHutangPiutangController::class)->except(['show'])->middleware('can:kategori-hutang-piutang.view');
         Route::resource('kategori-aset', KategoriAsetController::class)->except(['show'])->middleware('can:kategori-aset.view');
-        Route::resource('account-bank', AccountBankController::class)->except(['show'])->middleware('can:account-bank.view');
+        Route::resource('account-bank', AccountBankController::class)->middleware('can:account-bank.view');
+        Route::post('account-bank/transfer', [AccountBankController::class, 'transfer'])->name('account-bank.transfer')->middleware('can:account-bank.edit');
     });
 
     // Budidaya
@@ -89,7 +90,8 @@ Route::middleware('auth')->group(function () {
 
     // Keuangan
     Route::prefix('keuangan')->group(function () {
-        Route::resource('transaksi', TransaksiKeuanganController::class)->except(['show', 'create'])->parameters(['transaksi' => 'transaksi'])->middleware('can:transaksi-keuangan.view');
+        Route::get('transaksi/create', [\App\Http\Controllers\Keuangan\TransaksiKeuanganController::class, 'create'])->name('transaksi.create')->middleware('can:transaksi-keuangan.create');
+        Route::resource('transaksi', TransaksiKeuanganController::class)->except(['create'])->parameters(['transaksi' => 'transaksi'])->middleware('can:transaksi-keuangan.view');
         Route::post('transaksi/{transaksi}/approve', [TransaksiKeuanganController::class, 'approve'])->name('transaksi.approve');
         Route::post('transaksi/{transaksi}/reject', [TransaksiKeuanganController::class, 'reject'])->name('transaksi.reject');
         Route::get('transaksi/items-by-kategori/{kategori}', [TransaksiKeuanganController::class, 'itemsByKategori'])->name('transaksi.items-by-kategori');

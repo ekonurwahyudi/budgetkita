@@ -113,7 +113,7 @@ class AccountBankController extends Controller
                 'jenis'     => 'keluar',
                 'nominal'   => $t->items->sum('harga_total'),
                 'status'    => $t->status,
-                'view_url'  => null,
+                'view_url'  => route('pembelian-persediaan.show', $t->id),
             ]));
 
         // Pembelian Aset (pengeluaran)
@@ -126,7 +126,7 @@ class AccountBankController extends Controller
                 'jenis'     => 'keluar',
                 'nominal'   => $t->nominal_pembelian,
                 'status'    => $t->status,
-                'view_url'  => null,
+                'view_url'  => route('pembelian-aset.show', $t->id),
             ]));
 
         // Panen (pemasukan)

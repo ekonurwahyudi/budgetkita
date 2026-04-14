@@ -149,11 +149,48 @@
                                 <tr>
                                     <td>{{ $i + 1 }}</td>
                                     <td>{{ $pakan->tgl_pakan?->format('d/m/Y H:i') ?? '-' }}</td>
-                                    <td>{{ $pakan->itemPersediaan?->nama ?? '-' }}</td>
-                                    <td class="text-mono">{{ number_format($pakan->jumlah_pakan ?? 0, 2) }}</td>
+                                    <td>{{ $pakan->itemPersediaan?->deskripsi ?? $pakan->itemPersediaan?->kode_item_persediaan ?? '-' }}</td>
+                                    <td class="text-mono">{{ number_format($pakan->jumlah_pakan ?? 0, 2) }} {{ $pakan->unit ?? 'kg' }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4" class="text-center text-muted-foreground py-4">Belum ada data pemberian pakan</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tabel Penggunaan Bahan Kimia & Antibiotik --}}
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Penggunaan Bahan Kimia & Antibiotik</h3>
+                </div>
+                <div class="kt-card-table">
+                    <div class="kt-table-wrapper kt-scrollable">
+                        <table class="kt-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-12">No</th>
+                                    <th>Tanggal</th>
+                                    <th>Kategori</th>
+                                    <th>Item</th>
+                                    <th>Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($pemberianKimia as $i => $kimia)
+                                <tr>
+                                    <td>{{ $i + 1 }}</td>
+                                    <td>{{ $kimia->tgl_pakan?->format('d/m/Y H:i') ?? '-' }}</td>
+                                    <td>
+                                        <span class="kt-badge kt-badge-sm kt-badge-outline">{{ $kimia->itemPersediaan?->kategoriPersediaan?->deskripsi ?? '-' }}</span>
+                                    </td>
+                                    <td>{{ $kimia->itemPersediaan?->deskripsi ?? $kimia->itemPersediaan?->kode_item_persediaan ?? '-' }}</td>
+                                    <td class="text-mono">{{ number_format($kimia->jumlah_pakan ?? 0, 2) }} {{ $kimia->unit ?? 'kg' }}</td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="5" class="text-center text-muted-foreground py-4">Belum ada data penggunaan bahan kimia/antibiotik</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

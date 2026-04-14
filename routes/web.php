@@ -17,12 +17,17 @@ use App\Http\Controllers\Budidaya\BlokController;
 use App\Http\Controllers\Budidaya\SiklusController;
 use App\Http\Controllers\Budidaya\AnggotaTambakController;
 use App\Http\Controllers\Budidaya\PanenController;
+use App\Http\Controllers\Budidaya\PemberianPakanController;
+use App\Http\Controllers\Budidaya\PemberianKimiaController;
 use App\Http\Controllers\Pengaturan\RoleController;
 use App\Http\Controllers\Keuangan\TransaksiKeuanganController;
 use App\Http\Controllers\Keuangan\GajiKaryawanController;
 use App\Http\Controllers\Keuangan\InvestasiController;
 use App\Http\Controllers\Keuangan\HutangPiutangController;
 use App\Http\Controllers\Api\LokasiController;
+use App\Http\Controllers\Operasional\PersediaanController;
+use App\Http\Controllers\Operasional\PembelianPersediaanController;
+use App\Http\Controllers\Operasional\PembelianAsetController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -79,8 +84,16 @@ Route::middleware('auth')->group(function () {
         Route::get('blok/by-tambak/{tambak}', [BlokController::class, 'byTambak'])->name('blok.by-tambak');
         Route::resource('siklus', SiklusController::class)->parameters(['siklus' => 'siklus'])->middleware('can:siklus.view');
         Route::get('siklus/by-blok/{blok}', [SiklusController::class, 'byBlok'])->name('siklus.by-blok');
-        Route::post('panen', [PanenController::class, 'store'])->name('panen.store')->middleware('can:panen.create');
-        Route::delete('panen/{panen}', [PanenController::class, 'destroy'])->name('panen.destroy')->middleware('can:panen.delete');
+        Route::get('panen/create', [PanenController::class, 'create'])->name('panen.create')->middleware('can:panen.create');
+        Route::resource('panen', PanenController::class)->except(['create'])->parameters(['panen' => 'panen'])->middleware('can:panen.view');
+        Route::post('panen/{panen}/approve', [PanenController::class, 'approve'])->name('panen.approve');
+        Route::post('panen/{panen}/reject', [PanenController::class, 'reject'])->name('panen.reject');
+
+        Route::get('pemberian-pakan/create', [PemberianPakanController::class, 'create'])->name('pemberian-pakan.create')->middleware('can:pemberian-pakan.create');
+        Route::resource('pemberian-pakan', PemberianPakanController::class)->except(['create', 'edit', 'update'])->parameters(['pemberian_pakan' => 'pemberianPakan'])->middleware('can:pemberian-pakan.view');
+
+        Route::get('pemberian-kimia/create', [PemberianKimiaController::class, 'create'])->name('pemberian-kimia.create')->middleware('can:pemberian-pakan.create');
+        Route::resource('pemberian-kimia', PemberianKimiaController::class)->except(['create', 'edit', 'update'])->parameters(['pemberian-kimia' => 'pemberianKimia'])->middleware('can:pemberian-pakan.view');
     });
 
     // Pengaturan
@@ -111,5 +124,22 @@ Route::middleware('auth')->group(function () {
         Route::post('hutang-piutang/{hutangPiutang}/approve', [HutangPiutangController::class, 'approve'])->name('hutang-piutang.approve');
         Route::post('hutang-piutang/{hutangPiutang}/reject', [HutangPiutangController::class, 'reject'])->name('hutang-piutang.reject');
         Route::patch('hutang-piutang/{hutangPiutang}/bayar', [HutangPiutangController::class, 'bayar'])->name('hutang-piutang.bayar');
+    });
+
+    // Operasional
+    Route::prefix('operasional')->group(function () {
+        Route::get('persediaan', [PersediaanController::class, 'index'])->name('persediaan.index')->middleware('can:persediaan.view');
+        Route::get('persediaan/{persediaan}', [PersediaanController::class, 'show'])->name('persediaan.show')->middleware('can:persediaan.view');
+        Route::post('persediaan/{persediaan}/adjust', [PersediaanController::class, 'adjust'])->name('persediaan.adjust')->middleware('can:persediaan.edit');
+
+        Route::get('pembelian-persediaan/create', [PembelianPersediaanController::class, 'create'])->name('pembelian-persediaan.create')->middleware('can:pembelian-persediaan.create');
+        Route::resource('pembelian-persediaan', PembelianPersediaanController::class)->except(['create'])->parameters(['pembelian-persediaan' => 'pembelianPersediaan'])->middleware('can:pembelian-persediaan.view');
+        Route::post('pembelian-persediaan/{pembelianPersediaan}/approve', [PembelianPersediaanController::class, 'approve'])->name('pembelian-persediaan.approve');
+        Route::post('pembelian-persediaan/{pembelianPersediaan}/reject', [PembelianPersediaanController::class, 'reject'])->name('pembelian-persediaan.reject');
+
+        Route::get('pembelian-aset/create', [PembelianAsetController::class, 'create'])->name('pembelian-aset.create')->middleware('can:pembelian-aset.create');
+        Route::resource('pembelian-aset', PembelianAsetController::class)->except(['create'])->parameters(['pembelian-aset' => 'pembelianAset'])->middleware('can:pembelian-aset.view');
+        Route::post('pembelian-aset/{pembelianAset}/approve', [PembelianAsetController::class, 'approve'])->name('pembelian-aset.approve');
+        Route::post('pembelian-aset/{pembelianAset}/reject', [PembelianAsetController::class, 'reject'])->name('pembelian-aset.reject');
     });
 });

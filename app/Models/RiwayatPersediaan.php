@@ -10,4 +10,6 @@ class RiwayatPersediaan extends BaseModel
     ];
 
     public function persediaan() { return $this->belongsTo(Persediaan::class); }
+    public function blok() { return $this->belongsTo(\App\Models\Blok::class); }
+    public function siklus() { return $this->belongsTo(\App\Models\Siklus::class); }
 }

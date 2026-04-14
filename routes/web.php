@@ -96,16 +96,20 @@ Route::middleware('auth')->group(function () {
         Route::post('transaksi/{transaksi}/reject', [TransaksiKeuanganController::class, 'reject'])->name('transaksi.reject');
         Route::get('transaksi/items-by-kategori/{kategori}', [TransaksiKeuanganController::class, 'itemsByKategori'])->name('transaksi.items-by-kategori');
 
-        Route::resource('gaji', GajiKaryawanController::class)->except(['show', 'create'])->parameters(['gaji' => 'gaji'])->middleware('can:gaji-karyawan.view');
+        Route::get('gaji/create', [GajiKaryawanController::class, 'create'])->name('gaji.create')->middleware('can:gaji-karyawan.create');
+        Route::resource('gaji', GajiKaryawanController::class)->except(['create'])->parameters(['gaji' => 'gaji'])->middleware('can:gaji-karyawan.view');
         Route::post('gaji/{gaji}/approve', [GajiKaryawanController::class, 'approve'])->name('gaji.approve');
         Route::post('gaji/{gaji}/reject', [GajiKaryawanController::class, 'reject'])->name('gaji.reject');
 
-        Route::resource('investasi', InvestasiController::class)->except(['show', 'create'])->parameters(['investasi' => 'investasi'])->middleware('can:investasi.view');
+        Route::get('investasi/create', [InvestasiController::class, 'create'])->name('investasi.create')->middleware('can:investasi.create');
+        Route::resource('investasi', InvestasiController::class)->except(['create'])->parameters(['investasi' => 'investasi'])->middleware('can:investasi.view');
         Route::post('investasi/{investasi}/approve', [InvestasiController::class, 'approve'])->name('investasi.approve');
         Route::post('investasi/{investasi}/reject', [InvestasiController::class, 'reject'])->name('investasi.reject');
 
-        Route::resource('hutang-piutang', HutangPiutangController::class)->except(['show', 'create'])->parameters(['hutang_piutang' => 'hutangPiutang'])->middleware('can:hutang-piutang.view');
+        Route::get('hutang-piutang/create', [HutangPiutangController::class, 'create'])->name('hutang-piutang.create')->middleware('can:hutang-piutang.create');
+        Route::resource('hutang-piutang', HutangPiutangController::class)->except(['create'])->parameters(['hutang_piutang' => 'hutangPiutang'])->middleware('can:hutang-piutang.view');
         Route::post('hutang-piutang/{hutangPiutang}/approve', [HutangPiutangController::class, 'approve'])->name('hutang-piutang.approve');
         Route::post('hutang-piutang/{hutangPiutang}/reject', [HutangPiutangController::class, 'reject'])->name('hutang-piutang.reject');
+        Route::patch('hutang-piutang/{hutangPiutang}/bayar', [HutangPiutangController::class, 'bayar'])->name('hutang-piutang.bayar');
     });
 });

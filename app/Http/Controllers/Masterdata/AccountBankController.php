@@ -68,12 +68,14 @@ class AccountBankController extends Controller
                 'tanggal'   => $t->created_at,
                 'modul'     => 'Gaji Karyawan',
                 'nomor'     => $t->nomor_transaksi,
-                'keterangan'=> 'Gaji ' . ($t->user?->name ?? '-'),
+                'keterangan'=> 'Gaji ' . ($t->user?->nama ?? '-'),
                 'jenis'     => 'keluar',
                 'nominal'   => $t->thp,
                 'status'    => $t->status,
-                'view_url'  => null,
+                'view_url'  => route('gaji.show', $t->id),
             ]));
+
+        // Investasi (pemasukan)
 
         // Investasi (pemasukan)
         Investasi::where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
@@ -85,7 +87,7 @@ class AccountBankController extends Controller
                 'jenis'     => 'masuk',
                 'nominal'   => $t->nominal,
                 'status'    => $t->status,
-                'view_url'  => null,
+                'view_url'  => route('investasi.show', $t->id),
             ]));
 
         // Hutang Piutang
@@ -98,7 +100,7 @@ class AccountBankController extends Controller
                 'jenis'     => $t->jenis === 'hutang' ? 'masuk' : 'keluar',
                 'nominal'   => $t->nominal,
                 'status'    => $t->status,
-                'view_url'  => null,
+                'view_url'  => route('hutang-piutang.show', $t->id),
             ]));
 
         // Pembelian Persediaan (pengeluaran)

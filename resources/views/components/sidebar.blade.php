@@ -127,6 +127,7 @@
                     ['url' => '/masterdata/item-persediaan', 'icon' => 'ki-package', 'label' => 'Item Persediaan', 'perm' => 'item-persediaan.view'],
                     ['url' => '/masterdata/kategori-investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Kategori Investasi', 'perm' => 'kategori-investasi.view'],
                     ['url' => '/masterdata/kategori-aset', 'icon' => 'ki-home-2', 'label' => 'Kategori Aset', 'perm' => 'kategori-aset.view'],
+                    ['url' => '/masterdata/kategori-hutang-piutang', 'icon' => 'ki-document', 'label' => 'Kategori Hutang/Piutang', 'perm' => 'kategori-hutang-piutang.view'],
                 ];
                 $showMasterdata = collect($masterdataMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
                 @endphp

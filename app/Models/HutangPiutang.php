@@ -7,7 +7,7 @@ class HutangPiutang extends BaseModel
     protected $fillable = [
         'nomor_transaksi', 'jenis', 'aktivitas', 'kategori_hutang_piutang_id',
         'nominal', 'jatuh_tempo', 'nominal_bayar', 'sisa_pembayaran',
-        'jenis_pembayaran', 'account_bank_id', 'catatan', 'status',
+        'jenis_pembayaran', 'account_bank_id', 'eviden', 'catatan', 'status',
     ];
 
     protected function casts(): array
@@ -16,6 +16,7 @@ class HutangPiutang extends BaseModel
             'jatuh_tempo' => 'date',
             'nominal' => 'decimal:2', 'nominal_bayar' => 'decimal:2',
             'sisa_pembayaran' => 'decimal:2',
+            'eviden' => 'array',
         ];
     }
 

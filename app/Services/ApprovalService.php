@@ -5,6 +5,8 @@ namespace App\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use App\Models\AccountBank;
+use App\Models\Persediaan;
+use App\Models\RiwayatPersediaan;
 
 class ApprovalService
 {
@@ -13,6 +15,7 @@ class ApprovalService
         DB::transaction(function () use ($model) {
             $model->update(['status' => 'selesai']);
             $this->updateSaldo($model);
+            $this->updatePersediaan($model);
         });
     }
 
@@ -80,5 +83,44 @@ class ApprovalService
         if ($class === 'HutangPiutang' && $model->jenis === 'piutang') return 'kurang';
 
         return '';
+    }
+
+    private function updatePersediaan(Model $model): void
+    {
+        $class = class_basename($model);
+
+        if ($class !== 'PembelianPersediaan') {
+            return;
+        }
+
+        if (!$model->relationLoaded('items')) {
+            $model->load('items');
+        }
+
+        foreach ($model->items as $item) {
+            // Cari atau buat record persediaan
+            $persediaan = Persediaan::firstOrCreate(
+                ['item_persediaan_id' => $item->item_persediaan_id],
+                ['qty' => 0, 'unit' => $item->satuan, 'harga_per_unit' => 0, 'total_harga' => 0]
+            );
+
+            // Update qty dan harga
+            $persediaan->qty += $item->qty;
+            $persediaan->unit = $item->satuan;
+            $persediaan->harga_per_unit = $item->harga_satuan;
+            $persediaan->total_harga = $persediaan->qty * $persediaan->harga_per_unit;
+            $persediaan->save();
+
+            // Catat riwayat
+            RiwayatPersediaan::create([
+                'persediaan_id' => $persediaan->id,
+                'jenis'         => 'penambahan',
+                'qty_masuk'     => $item->qty,
+                'qty_keluar'    => 0,
+                'harga_per_unit'=> $item->harga_satuan,
+                'harga_total'   => $item->harga_total,
+                'catatan'       => 'Pembelian ' . $model->nomor_transaksi,
+            ]);
+        }
     }
 }

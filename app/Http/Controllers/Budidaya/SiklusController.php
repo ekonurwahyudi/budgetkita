@@ -75,12 +75,27 @@ class SiklusController extends Controller
             ->where('siklus_id', $siklus->id)
             ->latest('tgl_kwitansi')
             ->get();
-        $pemberianPakans = PemberianPakan::with('itemPersediaan')
+
+        // Semua pemberian untuk siklus ini, dengan kategori
+        $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan')
             ->where('siklus_id', $siklus->id)
             ->latest('tgl_pakan')
             ->get();
+
+        // Filter: Pakan = kategori yang mengandung kata "pakan" (case-insensitive)
+        $pemberianPakans = $semuaPemberian->filter(fn($p) =>
+            !$p->itemPersediaan?->kategoriPersediaan ||
+            stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') !== false
+        )->values();
+
+        // Filter: Kimia & Antibiotik = sisanya (bukan pakan)
+        $pemberianKimia = $semuaPemberian->filter(fn($p) =>
+            $p->itemPersediaan?->kategoriPersediaan &&
+            stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
+        )->values();
+
         $accountBanks = \App\Models\AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
-        return view('budidaya.siklus.show', compact('siklus', 'transaksis', 'pemberianPakans', 'accountBanks'));
+        return view('budidaya.siklus.show', compact('siklus', 'transaksis', 'pemberianPakans', 'pemberianKimia', 'accountBanks'));
     }
 
     public function edit(Siklus $siklus)

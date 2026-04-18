@@ -11,7 +11,7 @@ class Investasi extends BaseModel
 
     protected function casts(): array
     {
-        return ['nominal' => 'decimal:2'];
+        return ['nominal' => 'decimal:2', 'eviden' => 'array'];
     }
 
     public function kategoriInvestasi() { return $this->belongsTo(KategoriInvestasi::class); }

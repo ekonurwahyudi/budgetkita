@@ -23,7 +23,7 @@
                 <div class="kt-menu-item">
                     <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->is('dashboard*') ? 'active' : '' }}" href="{{ route('dashboard') }}" tabindex="0">
                         <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
-                            <i class="ki-filled ki-element-11 text-lg"></i>
+                            <i class="ki-filled ki-technology-3 text-lg"></i>
                         </span>
                         <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">Dashboard</span>
                     </a>
@@ -33,11 +33,11 @@
                 {{-- KEUANGAN --}}
                 @php
                 $keuanganMenus = [
-                    ['url' => '/keuangan/transaksi', 'icon' => 'ki-dollar', 'label' => 'Transaksi Keuangan', 'perm' => 'transaksi-keuangan.view'],
+                    ['url' => '/keuangan/transaksi', 'icon' => 'ki-cheque', 'label' => 'Transaksi Keuangan', 'perm' => 'transaksi-keuangan.view'],
                     ['url' => '/keuangan/gaji', 'icon' => 'ki-people', 'label' => 'Gaji Karyawan', 'perm' => 'gaji-karyawan.view'],
                     ['url' => '/keuangan/investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Investasi', 'perm' => 'investasi.view'],
                     ['url' => '/keuangan/hutang-piutang', 'icon' => 'ki-bill', 'label' => 'Hutang/Piutang', 'perm' => 'hutang-piutang.view'],
-                    ['url' => '/masterdata/account-bank', 'icon' => 'ki-bank', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
+                    ['url' => '/masterdata/account-bank', 'icon' => 'ki-two-credit-cart', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
                 ];
                 $showKeuangan = collect($keuanganMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
                 @endphp
@@ -90,10 +90,11 @@
                 @php
                 $budidayaMenus = [
                     // ['url' => '/budidaya/tambak', 'icon' => 'ki-geolocation', 'label' => 'Daftar Tambak', 'perm' => 'tambak.view'],
-                    ['url' => '/budidaya/blok', 'icon' => 'ki-grid', 'label' => 'Daftar Blok/Kolam', 'perm' => 'blok.view'],
+                    ['url' => '/budidaya/blok', 'icon' => 'ki-scan-barcode', 'label' => 'Daftar Blok/Kolam', 'perm' => 'blok.view'],
                     // ['url' => '/budidaya/siklus', 'icon' => 'ki-arrows-circle', 'label' => 'Daftar Siklus', 'perm' => 'siklus.view'], 
                     ['url' => '/budidaya/panen', 'icon' => 'ki-basket', 'label' => 'Panen', 'perm' => 'panen.view'],
-                    ['url' => '/budidaya/pemberian-pakan', 'icon' => 'ki-coffee', 'label' => 'Pemberian Pakan', 'perm' => 'pemberian-pakan.view'],
+                    ['url' => '/budidaya/pemberian-pakan', 'icon' => 'ki-delivery-3', 'label' => 'Pemberian Pakan', 'perm' => 'pemberian-pakan.view'],
+                    ['url' => '/budidaya/pemberian-kimia', 'icon' => 'ki-flask', 'label' => 'Pemberian Kimia/Antibiotik', 'perm' => 'pemberian-pakan.view'],
                 ];
                 $showBudidaya = collect($budidayaMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
                 @endphp
@@ -127,6 +128,7 @@
                     ['url' => '/masterdata/item-persediaan', 'icon' => 'ki-package', 'label' => 'Item Persediaan', 'perm' => 'item-persediaan.view'],
                     ['url' => '/masterdata/kategori-investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Kategori Investasi', 'perm' => 'kategori-investasi.view'],
                     ['url' => '/masterdata/kategori-aset', 'icon' => 'ki-home-2', 'label' => 'Kategori Aset', 'perm' => 'kategori-aset.view'],
+                    ['url' => '/masterdata/kategori-hutang-piutang', 'icon' => 'ki-document', 'label' => 'Kategori Hutang/Piutang', 'perm' => 'kategori-hutang-piutang.view'],
                 ];
                 $showMasterdata = collect($masterdataMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
                 @endphp

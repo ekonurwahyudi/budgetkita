@@ -15,7 +15,10 @@ class GajiKaryawanController extends Controller
 {
     public function index()
     {
-        $data = GajiKaryawan::with(['user', 'accountBank'])->latest()->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? GajiKaryawan::with(['user', 'accountBank'])->latest()->get()
+            : collect();
         return view('keuangan.gaji.index', compact('data'));
     }
 

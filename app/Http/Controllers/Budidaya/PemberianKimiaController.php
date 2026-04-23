@@ -23,7 +23,9 @@ class PemberianKimiaController extends Controller
 
     public function index()
     {
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
         $data = PemberianPakan::with(['blok.tambak', 'siklus', 'itemPersediaan.kategoriPersediaan'])
+            ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))
             ->latest()->get()
             ->filter(fn($p) =>
                 $p->itemPersediaan?->kategoriPersediaan &&
@@ -34,7 +36,8 @@ class PemberianKimiaController extends Controller
 
     public function create()
     {
-        $tambaks = Tambak::orderBy('nama_tambak')->get();
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
+        $tambaks = Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get();
 
         // Kategori selain pakan
         $kategoriPakan = KategoriPersediaan::where('deskripsi', 'ilike', '%pakan%')->pluck('id');

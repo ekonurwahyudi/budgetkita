@@ -16,7 +16,10 @@ class PembelianPersediaanController extends Controller
 {
     public function index()
     {
-        $data = PembelianPersediaan::with('items')->latest()->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? PembelianPersediaan::with('items')->latest()->get()
+            : collect();
         return view('operasional.pembelian-persediaan.index', compact('data'));
     }
 

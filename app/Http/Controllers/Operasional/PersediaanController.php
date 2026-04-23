@@ -12,7 +12,10 @@ class PersediaanController extends Controller
 {
     public function index()
     {
-        $data = Persediaan::with('itemPersediaan.kategoriPersediaan')->latest()->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? Persediaan::with('itemPersediaan.kategoriPersediaan')->latest()->get()
+            : collect();
         return view('operasional.persediaan.index', compact('data'));
     }
 

@@ -14,7 +14,10 @@ class PembelianAsetController extends Controller
 {
     public function index()
     {
-        $data = PembelianAset::with(['kategoriAset', 'accountBank'])->latest()->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? PembelianAset::with(['kategoriAset', 'accountBank'])->latest()->get()
+            : collect();
         return view('operasional.pembelian-aset.index', compact('data'));
     }
 

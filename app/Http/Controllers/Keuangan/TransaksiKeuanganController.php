@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Keuangan;
 
+use App\Exports\TransaksiKeuanganExport;
 use App\Http\Controllers\Controller;
 use App\Models\AccountBank;
 use App\Models\Blok;
@@ -15,15 +16,17 @@ use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TransaksiKeuanganController extends Controller
 {
     private function formData(): array
     {
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
         return [
             'kategoriTransaksis' => KategoriTransaksi::orderBy('deskripsi')->get(),
             'itemTransaksis'     => ItemTransaksi::orderBy('kode_item')->get(),
-            'tambaks'            => Tambak::orderBy('nama_tambak')->get(),
+            'tambaks'            => Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get(),
             'sumberDanas'        => SumberDana::orderBy('deskripsi')->get(),
             'accountBanks'       => AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get(),
         ];
@@ -31,11 +34,62 @@ class TransaksiKeuanganController extends Controller
 
     public function index(Request $request)
     {
-        $query = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'tambak', 'sumberDana', 'accountBank']);
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
+        $query = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'tambak', 'blok', 'siklus', 'sumberDana', 'accountBank'])
+            ->whereIn('tambak_id', $tambakIds);
+
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('jenis_transaksi')) $query->where('jenis_transaksi', $request->jenis_transaksi);
-        $data = $query->latest()->get();
-        return view('keuangan.transaksi.index', compact('data'));
+        if ($request->filled('kategori_transaksi_id')) $query->where('kategori_transaksi_id', $request->kategori_transaksi_id);
+        if ($request->filled('blok_id')) $query->where('blok_id', $request->blok_id);
+        if ($request->filled('siklus_id')) $query->where('siklus_id', $request->siklus_id);
+        if ($request->filled('tgl_dari')) $query->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
+        if ($request->filled('tgl_sampai')) $query->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
+
+        $data = $query->latest('tgl_kwitansi')->get();
+
+        $tambakIds2 = auth()->user()->tambaks()->pluck('tambaks.id');
+        $kategoriTransaksis = KategoriTransaksi::orderBy('deskripsi')->get();
+        $bloks = Blok::whereIn('tambak_id', $tambakIds2)->orderBy('nama_blok')->get();
+        $sikluses = Siklus::whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds2))->orderBy('nama_siklus')->get();
+
+        // Counts per tab - hitung dari total tanpa filter jenis_transaksi
+        $baseQuery = TransaksiKeuangan::whereIn('tambak_id', $tambakIds);
+        if ($request->filled('kategori_transaksi_id')) $baseQuery->where('kategori_transaksi_id', $request->kategori_transaksi_id);
+        if ($request->filled('blok_id')) $baseQuery->where('blok_id', $request->blok_id);
+        if ($request->filled('siklus_id')) $baseQuery->where('siklus_id', $request->siklus_id);
+        if ($request->filled('tgl_dari')) $baseQuery->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
+        if ($request->filled('tgl_sampai')) $baseQuery->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
+        if ($request->filled('status')) $baseQuery->where('status', $request->status);
+
+        $allCount = (clone $baseQuery)->count();
+        $counts = [
+            'all'         => $allCount,
+            'uang_masuk'  => (clone $baseQuery)->where('jenis_transaksi', 'uang_masuk')->count(),
+            'uang_keluar' => (clone $baseQuery)->where('jenis_transaksi', 'uang_keluar')->count(),
+        ];
+
+        return view('keuangan.transaksi.index', compact('data', 'kategoriTransaksis', 'bloks', 'sikluses', 'counts'));
+    }
+
+    public function export(Request $request)
+    {
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
+        $query = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'tambak', 'blok', 'siklus', 'sumberDana', 'accountBank'])
+            ->whereIn('tambak_id', $tambakIds);
+
+        if ($request->filled('status')) $query->where('status', $request->status);
+        if ($request->filled('jenis_transaksi')) $query->where('jenis_transaksi', $request->jenis_transaksi);
+        if ($request->filled('kategori_transaksi_id')) $query->where('kategori_transaksi_id', $request->kategori_transaksi_id);
+        if ($request->filled('blok_id')) $query->where('blok_id', $request->blok_id);
+        if ($request->filled('siklus_id')) $query->where('siklus_id', $request->siklus_id);
+        if ($request->filled('tgl_dari')) $query->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
+        if ($request->filled('tgl_sampai')) $query->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
+
+        $data = $query->latest('tgl_kwitansi')->get();
+        $filename = 'transaksi-keuangan-' . now()->format('Ymd-His') . '.xlsx';
+
+        return Excel::download(new TransaksiKeuanganExport($data), $filename);
     }
 
     public function create()

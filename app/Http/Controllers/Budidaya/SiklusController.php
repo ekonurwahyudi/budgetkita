@@ -14,7 +14,9 @@ class SiklusController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Siklus::with('blok.tambak');
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
+        $query = Siklus::with('blok.tambak')
+            ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
         if ($request->filled('blok_id')) {
             $query->where('blok_id', $request->blok_id);
         }
@@ -22,8 +24,8 @@ class SiklusController extends Controller
             $query->whereHas('blok', fn ($q) => $q->where('tambak_id', $request->tambak_id));
         }
         $data = $query->latest()->get();
-        $tambaks = Tambak::orderBy('nama_tambak')->get();
-        $bloks = Blok::with('tambak')->orderBy('nama_blok')->get();
+        $tambaks = Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get();
+        $bloks = Blok::with('tambak')->whereIn('tambak_id', $tambakIds)->orderBy('nama_blok')->get();
         return view('budidaya.siklus.index', compact('data', 'tambaks', 'bloks'));
     }
 

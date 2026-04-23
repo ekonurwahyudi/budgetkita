@@ -15,7 +15,10 @@ class HutangPiutangController extends Controller
 {
     public function index()
     {
-        $data = HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])->latest()->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])->latest()->get()
+            : collect();
         return view('keuangan.hutang-piutang.index', compact('data'));
     }
 

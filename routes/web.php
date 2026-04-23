@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
         Route::post('transaksi/{transaksi}/approve', [TransaksiKeuanganController::class, 'approve'])->name('transaksi.approve');
         Route::post('transaksi/{transaksi}/reject', [TransaksiKeuanganController::class, 'reject'])->name('transaksi.reject');
         Route::get('transaksi/items-by-kategori/{kategori}', [TransaksiKeuanganController::class, 'itemsByKategori'])->name('transaksi.items-by-kategori');
+        Route::get('transaksi-export', [TransaksiKeuanganController::class, 'export'])->name('transaksi.export');
 
         Route::get('gaji/create', [GajiKaryawanController::class, 'create'])->name('gaji.create')->middleware('can:gaji-karyawan.create');
         Route::resource('gaji', GajiKaryawanController::class)->except(['create'])->parameters(['gaji' => 'gaji'])->middleware('can:gaji-karyawan.view');

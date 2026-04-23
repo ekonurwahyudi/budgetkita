@@ -15,7 +15,10 @@ class InvestasiController extends Controller
 {
     public function index()
     {
-        $data = Investasi::with(['kategoriInvestasi', 'accountBank'])->latest()->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? Investasi::with(['kategoriInvestasi', 'accountBank'])->latest()->get()
+            : collect();
         return view('keuangan.investasi.index', compact('data'));
     }
 

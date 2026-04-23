@@ -23,7 +23,7 @@
                 <div class="kt-menu-item">
                     <a class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->is('dashboard*') ? 'active' : '' }}" href="{{ route('dashboard') }}" tabindex="0">
                         <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
-                            <i class="ki-filled ki-element-11 text-lg"></i>
+                            <i class="ki-filled ki-technology-3 text-lg"></i>
                         </span>
                         <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">Dashboard</span>
                     </a>
@@ -33,11 +33,11 @@
                 {{-- KEUANGAN --}}
                 @php
                 $keuanganMenus = [
-                    ['url' => '/keuangan/transaksi', 'icon' => 'ki-dollar', 'label' => 'Transaksi Keuangan', 'perm' => 'transaksi-keuangan.view'],
+                    ['url' => '/keuangan/transaksi', 'icon' => 'ki-cheque', 'label' => 'Transaksi Keuangan', 'perm' => 'transaksi-keuangan.view'],
                     ['url' => '/keuangan/gaji', 'icon' => 'ki-people', 'label' => 'Gaji Karyawan', 'perm' => 'gaji-karyawan.view'],
                     ['url' => '/keuangan/investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Investasi', 'perm' => 'investasi.view'],
                     ['url' => '/keuangan/hutang-piutang', 'icon' => 'ki-bill', 'label' => 'Hutang/Piutang', 'perm' => 'hutang-piutang.view'],
-                    ['url' => '/masterdata/account-bank', 'icon' => 'ki-bank', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
+                    ['url' => '/masterdata/account-bank', 'icon' => 'ki-two-credit-cart', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
                 ];
                 $showKeuangan = collect($keuanganMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
                 @endphp
@@ -89,13 +89,16 @@
                 {{-- BUDIDAYA --}}
                 @php
                 $budidayaMenus = [
-                    // ['url' => '/budidaya/tambak', 'icon' => 'ki-geolocation', 'label' => 'Daftar Tambak', 'perm' => 'tambak.view'],
-                    ['url' => '/budidaya/blok', 'icon' => 'ki-grid', 'label' => 'Daftar Blok/Kolam', 'perm' => 'blok.view'],
-                    // ['url' => '/budidaya/siklus', 'icon' => 'ki-arrows-circle', 'label' => 'Daftar Siklus', 'perm' => 'siklus.view'], 
+                    ['url' => '/budidaya/blok', 'icon' => 'ki-scan-barcode', 'label' => 'Daftar Blok/Kolam', 'perm' => 'blok.view'],
                     ['url' => '/budidaya/panen', 'icon' => 'ki-basket', 'label' => 'Panen', 'perm' => 'panen.view'],
-                    ['url' => '/budidaya/pemberian-pakan', 'icon' => 'ki-coffee', 'label' => 'Pemberian Pakan', 'perm' => 'pemberian-pakan.view'],
                 ];
-                $showBudidaya = collect($budidayaMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $pakanMenus = [
+                    ['url' => '/budidaya/pemberian-pakan', 'icon' => 'ki-delivery-3', 'label' => 'Pemberian Pakan', 'perm' => 'pemberian-pakan.view'],
+                    ['url' => '/budidaya/pemberian-kimia', 'icon' => 'ki-flask', 'label' => 'Kimia/Antibiotik', 'perm' => 'pemberian-pakan.view'],
+                ];
+                $showBudidaya = collect(array_merge($budidayaMenus, $pakanMenus))->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $showPakan = collect($pakanMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $pakanActive = request()->is('budidaya/pemberian-pakan*') || request()->is('budidaya/pemberian-kimia*');
                 @endphp
                 @if($showBudidaya)
                 <div class="kt-menu-item pt-2.25 pb-px">
@@ -113,6 +116,35 @@
                 </div>
                 @endcan
                 @endforeach
+
+                {{-- Pakan & Antibiotik (Collapsible) --}}
+                @if($showPakan)
+                <div class="kt-menu-item" data-kt-menu-item="true" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link border border-transparent items-center grow cursor-pointer hover:bg-accent/60 hover:rounded-lg gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ $pakanActive ? 'active' : '' }}" tabindex="0">
+                        <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                            <i class="ki-filled ki-medicine text-lg"></i>
+                        </span>
+                        <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary">Pakan & Antibiotik</span>
+                        <span class="kt-menu-arrow text-muted-foreground">
+                            <i class="ki-filled ki-down text-2xs kt-menu-item-show:[-webkit-transform:rotate(180deg)]"></i>
+                        </span>
+                    </div>
+                    <div class="kt-menu-accordion gap-0.5 ps-[10px] relative before:absolute before:start-[20px] before:top-0 before:bottom-0 before:border-s before:border-muted-foreground/20 {{ $pakanActive ? '' : 'hidden' }}">
+                        @foreach($pakanMenus as $sub)
+                        @can($sub['perm'])
+                        <div class="kt-menu-item">
+                            <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 hover:bg-accent/60 hover:rounded-lg gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->is(ltrim($sub['url'], '/').'*') ? 'active' : '' }}" href="{{ $sub['url'] }}" tabindex="0">
+                                <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                                    <i class="ki-filled {{ $sub['icon'] }} text-lg"></i>
+                                </span>
+                                <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">{{ $sub['label'] }}</span>
+                            </a>
+                        </div>
+                        @endcan
+                        @endforeach
+                    </div>
+                </div>
+                @endif
                 @endif
 
 
@@ -127,6 +159,7 @@
                     ['url' => '/masterdata/item-persediaan', 'icon' => 'ki-package', 'label' => 'Item Persediaan', 'perm' => 'item-persediaan.view'],
                     ['url' => '/masterdata/kategori-investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Kategori Investasi', 'perm' => 'kategori-investasi.view'],
                     ['url' => '/masterdata/kategori-aset', 'icon' => 'ki-home-2', 'label' => 'Kategori Aset', 'perm' => 'kategori-aset.view'],
+                    ['url' => '/masterdata/kategori-hutang-piutang', 'icon' => 'ki-document', 'label' => 'Kategori Hutang/Piutang', 'perm' => 'kategori-hutang-piutang.view'],
                 ];
                 $showMasterdata = collect($masterdataMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
                 @endphp

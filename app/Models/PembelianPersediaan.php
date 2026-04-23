@@ -11,7 +11,7 @@ class PembelianPersediaan extends BaseModel
 
     protected function casts(): array
     {
-        return ['tgl_pembelian' => 'date'];
+        return ['tgl_pembelian' => 'date', 'eviden' => 'array'];
     }
 
     public function items() { return $this->hasMany(PembelianPersediaanItem::class); }

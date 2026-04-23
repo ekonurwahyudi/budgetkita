@@ -4,7 +4,7 @@ namespace App\Models;
 
 class PemberianPakan extends BaseModel
 {
-    protected $fillable = ['blok_id', 'siklus_id', 'tgl_pakan', 'jumlah_pakan', 'item_persediaan_id'];
+    protected $fillable = ['blok_id', 'siklus_id', 'tgl_pakan', 'jumlah_pakan', 'unit', 'item_persediaan_id'];
 
     protected function casts(): array
     {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AccountBank;
 use App\Models\GajiKaryawan;
 use App\Models\HutangPiutang;
+use App\Models\HutangPiutangPayment;
 use App\Models\Investasi;
 use App\Models\Panen;
 use App\Models\PembelianAset;
@@ -90,17 +91,31 @@ class AccountBankController extends Controller
                 'view_url'  => route('investasi.show', $t->id),
             ]));
 
-        // Hutang Piutang
+        // Hutang Piutang - pencatatan awal (hutang = masuk, piutang = keluar)
         HutangPiutang::where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->created_at,
                 'modul'     => 'Hutang/Piutang',
                 'nomor'     => $t->nomor_transaksi,
-                'keterangan'=> $t->aktivitas,
+                'keterangan'=> ($t->jenis === 'hutang' ? '[Hutang Masuk] ' : '[Piutang] ') . $t->aktivitas,
                 'jenis'     => $t->jenis === 'hutang' ? 'masuk' : 'keluar',
                 'nominal'   => $t->nominal,
                 'status'    => $t->status,
                 'view_url'  => route('hutang-piutang.show', $t->id),
+            ]));
+
+        // Pembayaran Hutang/Piutang (bayar hutang = keluar, terima piutang = masuk)
+        HutangPiutangPayment::with('hutangPiutang')
+            ->where('account_bank_id', $id)->get()
+            ->each(fn($p) => $histories->push([
+                'tanggal'   => $p->created_at,
+                'modul'     => 'Hutang/Piutang',
+                'nomor'     => $p->hutangPiutang?->nomor_transaksi,
+                'keterangan'=> ($p->hutangPiutang?->jenis === 'hutang' ? '[Bayar Hutang] ' : '[Terima Piutang] ') . ($p->hutangPiutang?->aktivitas ?? '-') . ($p->catatan ? ' - ' . $p->catatan : ''),
+                'jenis'     => $p->hutangPiutang?->jenis === 'hutang' ? 'keluar' : 'masuk',
+                'nominal'   => $p->jumlah,
+                'status'    => 'selesai',
+                'view_url'  => $p->hutangPiutang ? route('hutang-piutang.show', $p->hutangPiutang->id) : null,
             ]));
 
         // Pembelian Persediaan (pengeluaran)

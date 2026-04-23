@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Keuangan;
 use App\Http\Controllers\Controller;
 use App\Models\AccountBank;
 use App\Models\HutangPiutang;
+use App\Models\HutangPiutangPayment;
 use App\Models\KategoriHutangPiutang;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
@@ -36,6 +37,7 @@ class HutangPiutangController extends Controller
             'aktivitas' => 'required|string',
             'kategori_hutang_piutang_id' => 'required|uuid|exists:kategori_hutang_piutangs,id',
             'nominal' => 'required|numeric|min:0',
+            'total_bayar' => 'nullable|numeric|min:0',
             'jatuh_tempo' => 'required|date',
             'nominal_bayar' => 'nullable|numeric|min:0',
             'jenis_pembayaran' => 'required|in:cash,bank',
@@ -44,9 +46,11 @@ class HutangPiutangController extends Controller
             'catatan' => 'nullable|string',
         ]);
 
-        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate($request->jenis === 'hutang' ? 'INVH' : 'INVP');
-        $input['sisa_pembayaran'] = ($input['nominal'] ?? 0) - ($input['nominal_bayar'] ?? 0);
+        // Sisa: untuk hutang = total_bayar - nominal_bayar, untuk piutang = nominal - nominal_bayar
+        $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
+        $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);
 
         if ($request->hasFile('eviden')) {
             $paths = [];
@@ -57,6 +61,12 @@ class HutangPiutangController extends Controller
         }
 
         HutangPiutang::create($input);
+
+        // Jika hutang via bank → saldo bank bertambah (uang masuk)
+        if ($request->jenis === 'hutang' && $request->jenis_pembayaran === 'bank' && $request->filled('account_bank_id')) {
+            AccountBank::where('id', $request->account_bank_id)->increment('saldo', $input['nominal']);
+        }
+
         return redirect()->route('hutang-piutang.index')->with('success', 'Data berhasil ditambahkan.');
     }
 
@@ -80,6 +90,7 @@ class HutangPiutangController extends Controller
             'aktivitas' => 'required|string',
             'kategori_hutang_piutang_id' => 'required|uuid|exists:kategori_hutang_piutangs,id',
             'nominal' => 'required|numeric|min:0',
+            'total_bayar' => 'nullable|numeric|min:0',
             'jatuh_tempo' => 'required|date',
             'nominal_bayar' => 'nullable|numeric|min:0',
             'jenis_pembayaran' => 'required|in:cash,bank',
@@ -87,8 +98,9 @@ class HutangPiutangController extends Controller
             'catatan' => 'nullable|string',
         ]);
 
-        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
-        $input['sisa_pembayaran'] = ($input['nominal'] ?? 0) - ($input['nominal_bayar'] ?? 0);
+        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
+        $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);
 
         if ($request->hasFile('eviden')) {
             $existing = $hutangPiutang->eviden ?? [];
@@ -125,9 +137,17 @@ class HutangPiutangController extends Controller
             'sisa_pembayaran' => $sisaBaru,
         ]);
 
+        // Simpan riwayat pembayaran
+        HutangPiutangPayment::create([
+            'hutang_piutang_id' => $hutangPiutang->id,
+            'jumlah'            => $jumlah,
+            'account_bank_id'   => $request->account_bank_id ?: null,
+            'catatan'           => $request->catatan_bayar,
+        ]);
+
         // Kurangi saldo bank jika bayar via bank
         if ($request->filled('account_bank_id')) {
-            \App\Models\AccountBank::where('id', $request->account_bank_id)->decrement('saldo', $jumlah);
+            AccountBank::where('id', $request->account_bank_id)->decrement('saldo', $jumlah);
         }
 
         $msg = 'Pembayaran Rp ' . number_format($jumlah, 0, ',', '.') . ' berhasil dicatat.';

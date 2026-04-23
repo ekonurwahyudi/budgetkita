@@ -32,20 +32,24 @@
 
                 {{-- KEUANGAN --}}
                 @php
-                $keuanganMenus = [
+                $keuanganMainMenus = [
                     ['url' => '/keuangan/transaksi', 'icon' => 'ki-cheque', 'label' => 'Transaksi Keuangan', 'perm' => 'transaksi-keuangan.view'],
+                    ['url' => '/masterdata/account-bank', 'icon' => 'ki-two-credit-cart', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
+                ];
+                $transaksiLainnyaMenus = [
                     ['url' => '/keuangan/gaji', 'icon' => 'ki-people', 'label' => 'Gaji Karyawan', 'perm' => 'gaji-karyawan.view'],
                     ['url' => '/keuangan/investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Investasi', 'perm' => 'investasi.view'],
                     ['url' => '/keuangan/hutang-piutang', 'icon' => 'ki-bill', 'label' => 'Hutang/Piutang', 'perm' => 'hutang-piutang.view'],
-                    ['url' => '/masterdata/account-bank', 'icon' => 'ki-two-credit-cart', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
                 ];
-                $showKeuangan = collect($keuanganMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $showKeuangan = collect(array_merge($keuanganMainMenus, $transaksiLainnyaMenus))->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $showTransaksiLainnya = collect($transaksiLainnyaMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $transaksiLainnyaActive = request()->is('keuangan/gaji*') || request()->is('keuangan/investasi*') || request()->is('keuangan/hutang-piutang*');
                 @endphp
                 @if($showKeuangan)
                 <div class="kt-menu-item pt-2.25 pb-px">
                     <span class="kt-menu-heading uppercase text-xs font-medium text-muted-foreground ps-[10px] pe-[10px]">Keuangan</span>
                 </div>
-                @foreach($keuanganMenus as $menu)
+                @foreach($keuanganMainMenus as $menu)
                 @can($menu['perm'])
                 <div class="kt-menu-item">
                     <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 hover:bg-accent/60 hover:rounded-lg gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->is(ltrim($menu['url'], '/').'*') ? 'active' : '' }}" href="{{ $menu['url'] }}" tabindex="0">
@@ -57,6 +61,40 @@
                 </div>
                 @endcan
                 @endforeach
+
+                {{-- Transaksi Lainnya (Collapsible) --}}
+                @if($showTransaksiLainnya)
+                <div class="kt-menu-item {{ $transaksiLainnyaActive ? 'here show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px]" tabindex="0">
+                        <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                            <i class="ki-filled ki-notepad text-lg"></i>
+                        </span>
+                        <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">Transaksi Lainnya</span>
+                        <span class="kt-menu-arrow text-muted-foreground w-[20px] shrink-0 justify-end ms-1 me-[-10px]">
+                            <span class="inline-flex kt-menu-item-show:hidden">
+                                <i class="ki-filled ki-plus text-[11px]"></i>
+                            </span>
+                            <span class="hidden kt-menu-item-show:inline-flex">
+                                <i class="ki-filled ki-minus text-[11px]"></i>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="kt-menu-accordion gap-1 ps-[10px] relative">
+                        @foreach($transaksiLainnyaMenus as $sub)
+                        @can($sub['perm'])
+                        <div class="kt-menu-item">
+                            <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 kt-menu-item-active:rounded-lg hover:bg-accent/60 hover:rounded-lg gap-[14px] ps-[10px] pe-[10px] py-[8px] {{ request()->is(ltrim($sub['url'], '/').'*') ? 'active' : '' }}" href="{{ $sub['url'] }}" tabindex="0">
+                                <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                                    <i class="ki-filled {{ $sub['icon'] }} text-lg"></i>
+                                </span>
+                                <span class="kt-menu-title text-2sm font-normal text-foreground kt-menu-item-active:text-primary kt-menu-item-active:font-semibold kt-menu-link-hover:!text-primary">{{ $sub['label'] }}</span>
+                            </a>
+                        </div>
+                        @endcan
+                        @endforeach
+                    </div>
+                </div>
+                @endif
                 @endif
 
                 {{-- OPERASIONAL --}}
@@ -119,25 +157,30 @@
 
                 {{-- Pakan & Antibiotik (Collapsible) --}}
                 @if($showPakan)
-                <div class="kt-menu-item" data-kt-menu-item="true" data-kt-menu-item-trigger="click">
-                    <div class="kt-menu-link border border-transparent items-center grow cursor-pointer hover:bg-accent/60 hover:rounded-lg gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ $pakanActive ? 'active' : '' }}" tabindex="0">
+                <div class="kt-menu-item {{ $pakanActive ? 'here show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px]" tabindex="0">
                         <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
-                            <i class="ki-filled ki-medicine text-lg"></i>
+                            <i class="ki-filled ki-bucket text-lg"></i>
                         </span>
-                        <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary">Pakan & Antibiotik</span>
-                        <span class="kt-menu-arrow text-muted-foreground">
-                            <i class="ki-filled ki-down text-2xs kt-menu-item-show:[-webkit-transform:rotate(180deg)]"></i>
+                        <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">Pakan & Antibiotik</span>
+                        <span class="kt-menu-arrow text-muted-foreground w-[20px] shrink-0 justify-end ms-1 me-[-10px]">
+                            <span class="inline-flex kt-menu-item-show:hidden">
+                                <i class="ki-filled ki-plus text-[11px]"></i>
+                            </span>
+                            <span class="hidden kt-menu-item-show:inline-flex">
+                                <i class="ki-filled ki-minus text-[11px]"></i>
+                            </span>
                         </span>
                     </div>
-                    <div class="kt-menu-accordion gap-0.5 ps-[10px] relative before:absolute before:start-[20px] before:top-0 before:bottom-0 before:border-s before:border-muted-foreground/20 {{ $pakanActive ? '' : 'hidden' }}">
+                    <div class="kt-menu-accordion gap-1 ps-[10px] relative">
                         @foreach($pakanMenus as $sub)
                         @can($sub['perm'])
                         <div class="kt-menu-item">
-                            <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 hover:bg-accent/60 hover:rounded-lg gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->is(ltrim($sub['url'], '/').'*') ? 'active' : '' }}" href="{{ $sub['url'] }}" tabindex="0">
+                            <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 dark:menu-item-active:border-border kt-menu-item-active:rounded-lg hover:bg-accent/60 hover:rounded-lg gap-[14px] ps-[10px] pe-[10px] py-[8px] {{ request()->is(ltrim($sub['url'], '/').'*') ? 'active' : '' }}" href="{{ $sub['url'] }}" tabindex="0">
                                 <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
                                     <i class="ki-filled {{ $sub['icon'] }} text-lg"></i>
                                 </span>
-                                <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">{{ $sub['label'] }}</span>
+                                <span class="kt-menu-title text-2sm font-normal text-foreground kt-menu-item-active:text-primary kt-menu-item-active:font-semibold kt-menu-link-hover:!text-primary">{{ $sub['label'] }}</span>
                             </a>
                         </div>
                         @endcan
@@ -150,24 +193,28 @@
 
                 {{-- MASTER DATA --}}
                 @php
-                $masterdataMenus = [
+                $masterdataMainMenus = [
                     ['url' => '/masterdata/karyawan', 'icon' => 'ki-people', 'label' => 'Data Karyawan', 'perm' => 'karyawan.view'],
+                ];
+                $kategoriMenus = [
                     ['url' => '/masterdata/kategori-transaksi', 'icon' => 'ki-category', 'label' => 'Kategori Transaksi', 'perm' => 'kategori-transaksi.view'],
                     ['url' => '/masterdata/item-transaksi', 'icon' => 'ki-document', 'label' => 'Item Transaksi', 'perm' => 'item-transaksi.view'],
                     ['url' => '/masterdata/sumber-dana', 'icon' => 'ki-wallet', 'label' => 'Sumber Dana', 'perm' => 'sumber-dana.view'],
-                    ['url' => '/masterdata/kategori-persediaan', 'icon' => 'ki-parcel', 'label' => 'Kategori Persediaan', 'perm' => 'kategori-persediaan.view'],
                     ['url' => '/masterdata/item-persediaan', 'icon' => 'ki-package', 'label' => 'Item Persediaan', 'perm' => 'item-persediaan.view'],
+                    ['url' => '/masterdata/kategori-persediaan', 'icon' => 'ki-parcel', 'label' => 'Kategori Persediaan', 'perm' => 'kategori-persediaan.view'],
                     ['url' => '/masterdata/kategori-investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Kategori Investasi', 'perm' => 'kategori-investasi.view'],
                     ['url' => '/masterdata/kategori-aset', 'icon' => 'ki-home-2', 'label' => 'Kategori Aset', 'perm' => 'kategori-aset.view'],
-                    ['url' => '/masterdata/kategori-hutang-piutang', 'icon' => 'ki-document', 'label' => 'Kategori Hutang/Piutang', 'perm' => 'kategori-hutang-piutang.view'],
+                    ['url' => '/masterdata/kategori-hutang-piutang', 'icon' => 'ki-document', 'label' => 'Kategori Hutang', 'perm' => 'kategori-hutang-piutang.view'],
                 ];
-                $showMasterdata = collect($masterdataMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $showMasterdata = collect(array_merge($masterdataMainMenus, $kategoriMenus))->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $showKategori = collect($kategoriMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
+                $kategoriActive = request()->is('masterdata/kategori-persediaan*') || request()->is('masterdata/kategori-investasi*') || request()->is('masterdata/kategori-aset*') || request()->is('masterdata/kategori-hutang-piutang*') || request()->is('masterdata/kategori-transaksi*') || request()->is('masterdata/item-transaksi*') || request()->is('masterdata/sumber-dana*') || request()->is('masterdata/item-persediaan*');
                 @endphp
                 @if($showMasterdata)
                 <div class="kt-menu-item pt-2.25 pb-px">
                     <span class="kt-menu-heading uppercase text-xs font-medium text-muted-foreground ps-[10px] pe-[10px]">Master Data</span>
                 </div>
-                @foreach($masterdataMenus as $menu)
+                @foreach($masterdataMainMenus as $menu)
                 @can($menu['perm'])
                 <div class="kt-menu-item">
                     <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 dark:kt-menu-item-active:border-border kt-menu-item-active:rounded-lg hover:bg-accent/60 hover:rounded-lg gap-[10px] ps-[10px] pe-[10px] py-[6px] {{ request()->is(ltrim($menu['url'], '/').'*') ? 'active' : '' }}" href="{{ $menu['url'] }}" tabindex="0">
@@ -179,6 +226,40 @@
                 </div>
                 @endcan
                 @endforeach
+
+                {{-- Kategori (Collapsible) --}}
+                @if($showKategori)
+                <div class="kt-menu-item {{ $kategoriActive ? 'here show' : '' }}" data-kt-menu-item-toggle="accordion" data-kt-menu-item-trigger="click">
+                    <div class="kt-menu-link flex items-center grow cursor-pointer border border-transparent gap-[10px] ps-[10px] pe-[10px] py-[6px]" tabindex="0">
+                        <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                            <i class="ki-filled ki-category text-lg"></i>
+                        </span>
+                        <span class="kt-menu-title text-sm font-medium text-foreground kt-menu-item-active:text-primary kt-menu-link-hover:!text-primary">Kategori</span>
+                        <span class="kt-menu-arrow text-muted-foreground w-[20px] shrink-0 justify-end ms-1 me-[-10px]">
+                            <span class="inline-flex kt-menu-item-show:hidden">
+                                <i class="ki-filled ki-plus text-[11px]"></i>
+                            </span>
+                            <span class="hidden kt-menu-item-show:inline-flex">
+                                <i class="ki-filled ki-minus text-[11px]"></i>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="kt-menu-accordion gap-1 ps-[10px] relative">
+                        @foreach($kategoriMenus as $sub)
+                        @can($sub['perm'])
+                        <div class="kt-menu-item">
+                            <a class="kt-menu-link border border-transparent items-center grow kt-menu-item-active:bg-accent/60 kt-menu-item-active:rounded-lg hover:bg-accent/60 hover:rounded-lg gap-[14px] ps-[10px] pe-[10px] py-[8px] {{ request()->is(ltrim($sub['url'], '/').'*') ? 'active' : '' }}" href="{{ $sub['url'] }}" tabindex="0">
+                                <span class="kt-menu-icon items-start text-muted-foreground w-[20px]">
+                                    <i class="ki-filled {{ $sub['icon'] }} text-lg"></i>
+                                </span>
+                                <span class="kt-menu-title text-2sm font-normal text-foreground kt-menu-item-active:text-primary kt-menu-item-active:font-semibold kt-menu-link-hover:!text-primary">{{ $sub['label'] }}</span>
+                            </a>
+                        </div>
+                        @endcan
+                        @endforeach
+                    </div>
+                </div>
+                @endif
                 @endif
                 
                 {{-- PENGATURAN --}}

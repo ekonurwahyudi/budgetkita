@@ -59,7 +59,7 @@
                     {{-- Nominal & Jatuh Tempo --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-medium text-foreground">Nominal <span class="text-danger">*</span></label>
+                            <label class="text-sm font-medium text-foreground">Nominal (Pinjaman) <span class="text-danger">*</span></label>
                             <div class="kt-input-group">
                                 <span class="kt-input-addon">Rp.</span>
                                 <input class="kt-input" type="text" id="nominal_display" placeholder="0" required/>
@@ -80,10 +80,24 @@
                         </div>
                     </div>
 
-                    {{-- Nominal Bayar & Sisa --}}
-                    <div class="grid grid-cols-2 gap-4">
+                    {{-- Total Bayar (hanya hutang) --}}
+                    <div id="row_total_bayar" class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-foreground">
+                            Total Bayar
+                            <span class="text-xs text-muted-foreground font-normal">(termasuk bunga/biaya lain)</span>
+                        </label>
+                        <div class="kt-input-group">
+                            <span class="kt-input-addon">Rp.</span>
+                            <input class="kt-input" type="text" id="total_bayar_display" placeholder="Kosongkan jika sama dengan nominal"/>
+                            <input type="hidden" name="total_bayar" id="total_bayar_val" value="{{ old('total_bayar', (int)($hutangPiutang?->total_bayar ?? 0)) }}"/>
+                        </div>
+                        <p class="text-xs text-muted-foreground">Contoh: pinjam Rp 2.000.000 tapi total harus bayar Rp 2.500.000 karena bunga</p>
+                    </div>
+
+                    {{-- Sudah Dibayar & Sisa --}}
+                    <div id="row_nominal_bayar" class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-medium text-foreground">Nominal Bayar</label>
+                            <label class="text-sm font-medium text-foreground">Sudah Dibayar</label>
                             <div class="kt-input-group">
                                 <span class="kt-input-addon">Rp.</span>
                                 <input class="kt-input" type="text" id="nominal_bayar_display" placeholder="0"/>
@@ -101,7 +115,7 @@
 
                     {{-- Pembayaran --}}
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-sm font-medium text-foreground">Pembayaran</label>
+                        <label class="text-sm font-medium text-foreground">Account Bank</label>
                         <select id="pembayaran_combo" class="kt-select" onchange="onPembayaranChange()">
                             <option value="">-- Pilih Bank --</option>
                             @foreach($accountBanks as $bank)
@@ -165,21 +179,35 @@
 function filterKategori() {
     var jenis = document.getElementById('jenis').value;
     var sel = document.getElementById('kategori_hutang_piutang_id');
-    var currentVal = sel.value;
     Array.from(sel.options).forEach(function(opt) {
-        if (!opt.value) return; // skip placeholder
+        if (!opt.value) return;
         opt.hidden = opt.getAttribute('data-jenis') !== jenis;
     });
-    // Reset jika pilihan saat ini tidak sesuai jenis
     if (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].hidden) {
         sel.value = '';
     }
+    // Show/hide Total Bayar & Sudah Dibayar rows
+    var isHutang = jenis === 'hutang';
+    document.getElementById('row_total_bayar').style.display = isHutang ? '' : 'none';
+    document.getElementById('row_nominal_bayar').style.display = isHutang ? '' : 'none';
+    if (!isHutang) {
+        document.getElementById('total_bayar_val').value = 0;
+        document.getElementById('total_bayar_display').value = '';
+        document.getElementById('nominal_bayar_val').value = 0;
+        document.getElementById('nominal_bayar_display').value = '';
+    }
+    calcSisa();
 }
 
 function calcSisa() {
-    var nom = parseInt(document.getElementById('nominal_val').value) || 0;
-    var bayar = parseInt(document.getElementById('nominal_bayar_val').value) || 0;
-    document.getElementById('sisa_display').value = (nom - bayar).toLocaleString('id-ID');
+    var jenis = document.getElementById('jenis').value;
+    var nominal = parseInt(document.getElementById('nominal_val').value) || 0;
+    var totalBayar = parseInt(document.getElementById('total_bayar_val').value) || 0;
+    var sudahBayar = parseInt(document.getElementById('nominal_bayar_val').value) || 0;
+    // Basis sisa: untuk hutang pakai total_bayar (jika diisi), fallback ke nominal
+    var basis = (jenis === 'hutang' && totalBayar > 0) ? totalBayar : nominal;
+    var sisa = basis - sudahBayar;
+    document.getElementById('sisa_display').value = sisa.toLocaleString('id-ID');
 }
 
 function onPembayaranChange() {
@@ -212,6 +240,7 @@ function initMoney(displayId, hiddenId, cb) {
 document.addEventListener('DOMContentLoaded', function() {
     filterKategori();
     initMoney('nominal_display', 'nominal_val', calcSisa);
+    initMoney('total_bayar_display', 'total_bayar_val', calcSisa);
     initMoney('nominal_bayar_display', 'nominal_bayar_val', calcSisa);
     calcSisa();
     onPembayaranChange();

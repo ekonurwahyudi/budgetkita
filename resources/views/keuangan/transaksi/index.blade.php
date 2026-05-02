@@ -7,30 +7,57 @@
 @section('content')
 <div class="grid w-full space-y-5">
     <div class="kt-card">
-        <div class="kt-card-header min-h-16">
-            <form method="GET" class="flex items-center gap-2">
-                <input type="text" name="search" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#kt_datatable" value="{{ request('search') }}" />
-                <select name="status" class="kt-select sm:w-40" onchange="this.form.submit()">
-                    <option value="">-- Status --</option>
-                    <option value="awaiting_approval" {{ request('status')=='awaiting_approval'?'selected':'' }}>Awaiting</option>
-                    <option value="proses" {{ request('status')=='proses'?'selected':'' }}>Proses</option>
-                    <option value="selesai" {{ request('status')=='selesai'?'selected':'' }}>Selesai</option>
-                    <option value="cancel" {{ request('status')=='cancel'?'selected':'' }}>Cancel</option>
-                    <option value="pending" {{ request('status')=='pending'?'selected':'' }}>Pending</option>
-                </select>
-                <select name="jenis_transaksi" class="kt-select sm:w-40" onchange="this.form.submit()">
-                    <option value="">-- Jenis --</option>
-                    <option value="uang_masuk" {{ request('jenis_transaksi')=='uang_masuk'?'selected':'' }}>Uang Masuk</option>
-                    <option value="uang_keluar" {{ request('jenis_transaksi')=='uang_keluar'?'selected':'' }}>Uang Keluar</option>
-                    <!-- <option value="cash_card" {{ request('jenis_transaksi')=='cash_card'?'selected':'' }}>Cash Card</option> -->
-                </select>
-            </form>
-            @can('transaksi-keuangan.create')
-            <button type="button" class="kt-btn kt-btn kt-btn-primary" onclick="openCreateModal()">
-                <i class="ki-filled ki-plus-squared"></i> Tambah Transaksi
-            </button>
-            @endcan
+        {{-- Header: Tabs kiri, Search/Filter/Export kanan --}}
+        <div class="kt-card-header min-h-16 flex-wrap gap-3">
+            {{-- Tabs kiri - bg grey, aktif putih --}}
+            <div class="flex items-center rounded-lg p-1" style="background-color: #f1f5f9;">
+                @php
+                    $activeTab = request('jenis_transaksi', '');
+                    $tabs = [
+                        '' => 'Semua (' . $counts['all'] . ')',
+                        'uang_masuk' => 'Uang Masuk (' . $counts['uang_masuk'] . ')',
+                        'uang_keluar' => 'Uang Keluar (' . $counts['uang_keluar'] . ')',
+                    ];
+                @endphp
+                @foreach($tabs as $val => $label)
+                    <a href="{{ request()->fullUrlWithQuery(['jenis_transaksi' => $val, 'page' => null]) }}"
+                       class="px-4 py-1.5 rounded-md text-sm whitespace-nowrap transition-all
+                              {{ $activeTab === $val
+                                  ? 'text-gray-900 font-semibold'
+                                  : 'text-gray-500 hover:text-gray-700' }}"
+                       @if($activeTab === $val) style="background-color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.06);" @endif>
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+
+            {{-- Kanan: Search, Filter, Export, Tambah --}}
+            <div class="flex items-center gap-2 flex-wrap">
+                <input type="text" placeholder="Cari kegiatan..." class="kt-input" style="width:200px"
+                       data-kt-datatable-search="#kt_datatable" value="{{ request('search') }}" />
+
+                {{-- Filter Button --}}
+                <button type="button" id="filter-btn" class="kt-btn kt-btn-outline flex items-center gap-2">
+                    <i class="ki-filled ki-filter"></i> Filter
+                    @if(request()->hasAny(['tgl_dari','tgl_sampai','kategori_transaksi_id','blok_id','siklus_id','status']))
+                        <span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+                    @endif
+                </button>
+
+                <a href="{{ route('transaksi.export', request()->query()) }}"
+                   class="kt-btn flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white border-0">
+                    <i class="ki-filled ki-file-sheet"></i> Export
+                </a>
+
+                @can('transaksi-keuangan.create')
+                <a href="{{ route('transaksi.create') }}" class="kt-btn kt-btn-primary">
+                    <i class="ki-filled ki-plus-squared"></i> Tambah
+                </a>
+                @endcan
+            </div>
         </div>
+
+        {{-- Table --}}
         <div id="kt_datatable" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
@@ -41,13 +68,14 @@
                             <th data-kt-datatable-column="jenis"><span class="kt-table-col"><span class="kt-table-col-label">Jenis</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tanggal</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="aktivitas"><span class="kt-table-col"><span class="kt-table-col-label">Aktivitas/Kegiatan</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="kategori"><span class="kt-table-col"><span class="kt-table-col-label">Kategori</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nominal"><span class="kt-table-col"><span class="kt-table-col-label">Nominal</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th>
                             <th class="w-28" data-kt-datatable-column="aksi"></th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($data as $i => $item)
+                        @forelse($data as $i => $item)
                         <tr>
                             <td>{{ $i + 1 }}</td>
                             <td class="text-mono">{{ $item->nomor_transaksi }}</td>
@@ -56,12 +84,20 @@
                                     <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Uang Masuk</span>
                                 @elseif($item->jenis_transaksi === 'uang_keluar')
                                     <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Uang Keluar</span>
-                                <!-- @else
-                                    <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Cash Card</span> -->
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-outline">{{ ucfirst($item->jenis_transaksi) }}</span>
                                 @endif
                             </td>
                             <td>{{ $item->tgl_kwitansi?->format('d/m/Y') ?? '-' }}</td>
-                            <td>{{ Str::limit($item->aktivitas, 40) }}</td>
+                            <td>
+                                <div>{{ Str::limit($item->aktivitas, 40) }}</div>
+                                @if($item->blok || $item->siklus)
+                                <div class="text-xs text-gray-400 mt-0.5">
+                                    {{ $item->blok?->nama_blok }} {{ $item->siklus ? '· '.$item->siklus->nama_siklus : '' }}
+                                </div>
+                                @endif
+                            </td>
+                            <td class="text-sm text-gray-500">{{ $item->kategoriTransaksi?->deskripsi ?? '-' }}</td>
                             <td class="text-mono">Rp {{ number_format($item->nominal, 0, ',', '.') }}</td>
                             <td>
                                 @if($item->status === 'selesai')
@@ -79,32 +115,28 @@
                             <td class="text-end">
                                 <span class="inline-flex gap-2.5">
                                     @if($item->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
-                                    <form method="POST" action="{{ route('transaksi.approve', $item) }}" class="inline">
-                                        @csrf
-                                        <button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-success" title="Approve"><i class="ki-filled ki-check"></i></button>
-                                    </form>
-                                    <form method="POST" action="{{ route('transaksi.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">
-                                        @csrf
-                                        <button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Reject"><i class="ki-filled ki-cross"></i></button>
-                                    </form>
+                                    <form method="POST" action="{{ route('transaksi.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-success" title="Approve"><i class="ki-filled ki-check"></i></button></form>
+                                    <form method="POST" action="{{ route('transaksi.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
                                     @endif
+                                    <a href="{{ route('transaksi.show', $item) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Lihat"><i class="ki-filled ki-eye"></i></a>
                                     @can('transaksi-keuangan.edit')
-                                    @if(in_array($item->status, ['awaiting_approval','pending']))
-                                    <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" onclick="openEditModal('{{ $item->id }}')"><i class="ki-filled ki-pencil"></i></button>
+                                    @if(auth()->user()->hasRole('Owner') || in_array($item->status, ['awaiting_approval','pending']))
+                                    <a href="{{ route('transaksi.edit', $item) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Edit"><i class="ki-filled ki-pencil"></i></a>
                                     @endif
                                     @endcan
                                     @can('transaksi-keuangan.delete')
-                                    @if($item->status === 'awaiting_approval')
-                                    <form method="POST" action="{{ route('transaksi.destroy', $item) }}" onsubmit="return confirm('Yakin hapus?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger"><i class="ki-filled ki-trash"></i></button>
-                                    </form>
+                                    @if(auth()->user()->hasRole('Owner') || $item->status === 'awaiting_approval')
+                                    <form method="POST" action="{{ route('transaksi.destroy', $item) }}" onsubmit="return confirm('Yakin hapus?')">@csrf @method('DELETE')<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Hapus"><i class="ki-filled ki-trash"></i></button></form>
                                     @endif
                                     @endcan
                                 </span>
                             </td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr>
+                            <td colspan="9" class="text-center text-gray-400 py-8">Tidak ada data transaksi.</td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -116,241 +148,200 @@
     </div>
 </div>
 
-<!-- Modal Create/Edit -->
-<div class="kt-modal" data-kt-modal="true" id="formModal">
-    <div class="kt-modal-content max-w-[500px] top-5 lg:top-[10%]">
-        <div class="kt-modal-header">
-            <h3 class="kt-modal-title" id="modalTitle">Tambah Transaksi</h3>
-            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true"><i class="ki-filled ki-cross"></i></button>
+{{-- Filter Panel - TIDAK pakai overlay, langsung fixed panel saja --}}
+<div id="filter-panel" class="hidden bg-white border border-gray-200 rounded-xl shadow-2xl p-5 w-80"
+     style="position:fixed; z-index:100;">
+    <form method="GET" id="filter-form">
+        @if(request('jenis_transaksi'))
+            <input type="hidden" name="jenis_transaksi" value="{{ request('jenis_transaksi') }}">
+        @endif
+
+        <p class="font-semibold text-gray-800 mb-4">Filter Transaksi</p>
+
+        <div class="space-y-4">
+            {{-- Range Tanggal --}}
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Tanggal Kwitansi</label>
+                <div class="kt-input w-full">
+                    <i class="ki-outline ki-calendar"></i>
+                    <input
+                        id="tgl-range-picker"
+                        class="grow"
+                        type="text"
+                        placeholder="Pilih rentang tanggal"
+                        readonly
+                        data-kt-date-picker="true"
+                        data-kt-date-picker-action-buttons="true"
+                        data-kt-date-picker-display-months-count="2"
+                        data-kt-date-picker-input-mode="true"
+                        data-kt-date-picker-months-to-switch="1"
+                        data-kt-date-picker-position-to-input="left"
+                        data-kt-date-picker-preset-last-month="true"
+                        data-kt-date-picker-preset-last30-days="true"
+                        data-kt-date-picker-preset-last7-days="true"
+                        data-kt-date-picker-preset-this-month="true"
+                        data-kt-date-picker-preset-this-week="true"
+                        data-kt-date-picker-presets="true"
+                        data-kt-date-picker-selection-dates-mode="multiple-ranged"
+                        data-kt-date-picker-type="multiple"
+                        @if(request('tgl_dari') && request('tgl_sampai'))
+                            value="{{ request('tgl_dari') }} - {{ request('tgl_sampai') }}"
+                        @endif
+                    />
+                </div>
+                <input type="hidden" name="tgl_dari" id="input-tgl-dari" value="{{ request('tgl_dari') }}">
+                <input type="hidden" name="tgl_sampai" id="input-tgl-sampai" value="{{ request('tgl_sampai') }}">
+            </div>
+
+            {{-- Kategori --}}
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Kategori</label>
+                <select name="kategori_transaksi_id" class="kt-select w-full">
+                    <option value="">Semua Kategori</option>
+                    @foreach($kategoriTransaksis as $kat)
+                        <option value="{{ $kat->id }}" {{ request('kategori_transaksi_id') == $kat->id ? 'selected' : '' }}>
+                            {{ $kat->deskripsi }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Blok --}}
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Blok</label>
+                <select name="blok_id" class="kt-select w-full">
+                    <option value="">Semua Blok</option>
+                    @foreach($bloks as $blok)
+                        <option value="{{ $blok->id }}" {{ request('blok_id') == $blok->id ? 'selected' : '' }}>
+                            {{ $blok->nama_blok }} ({{ $blok->tambak?->nama_tambak }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Siklus --}}
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Siklus</label>
+                <select name="siklus_id" class="kt-select w-full">
+                    <option value="">Semua Siklus</option>
+                    @foreach($sikluses as $siklus)
+                        <option value="{{ $siklus->id }}" {{ request('siklus_id') == $siklus->id ? 'selected' : '' }}>
+                            {{ $siklus->nama_siklus }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Status --}}
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                <select name="status" class="kt-select w-full">
+                    <option value="">Semua Status</option>
+                    <option value="awaiting_approval" {{ request('status')=='awaiting_approval'?'selected':'' }}>Awaiting</option>
+                    <option value="proses" {{ request('status')=='proses'?'selected':'' }}>Proses</option>
+                    <option value="selesai" {{ request('status')=='selesai'?'selected':'' }}>Selesai</option>
+                    <option value="cancel" {{ request('status')=='cancel'?'selected':'' }}>Cancel</option>
+                    <option value="pending" {{ request('status')=='pending'?'selected':'' }}>Pending</option>
+                </select>
+            </div>
         </div>
-        <form id="dataForm" method="POST" enctype="multipart/form-data">
-            @csrf
-            <input type="hidden" name="_method" id="formMethod" value="POST">
-            <div class="kt-modal-body flex flex-col gap-4" style="max-height:75vh;overflow-y:auto;">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Jenis Transaksi <span class="text-danger">*</span></label>
-                        <select name="jenis_transaksi" id="jenis_transaksi" class="kt-select" required>
-                            <option value="uang_masuk">Uang Masuk</option>
-                            <option value="uang_keluar">Uang Keluar</option>
-                            <!-- <option value="cash_card">Cash Card</option> -->
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Tanggal Kwitansi <span class="text-danger">*</span></label>
-                        <div class="kt-input">
-                            <i class="ki-outline ki-calendar"></i>
-                            <input class="grow" name="tgl_kwitansi" id="tgl_kwitansi" data-kt-date-picker="true" data-kt-date-picker-input-mode="true" placeholder="Pilih tanggal" readonly type="text" required/>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium text-foreground">Aktivitas/Kegiatan <span class="text-danger">*</span></label>
-                    <textarea name="aktivitas" id="aktivitas" class="kt-input" rows="2" style="height: 60px;" required></textarea>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Kategori Transaksi <span class="text-danger">*</span></label>
-                        <select name="kategori_transaksi_id" id="kategori_transaksi_id" class="kt-select" required onchange="loadItemsByKategori()">
-                            <option value="">-- Pilih Kategori --</option>
-                            @foreach($kategoriTransaksis as $kat)
-                            <option value="{{ $kat->id }}">{{ $kat->kode_kategori }} - {{ $kat->deskripsi }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Item Transaksi <span class="text-danger">*</span></label>
-                        <select name="item_transaksi_id" id="item_transaksi_id" class="kt-select" required>
-                            <option value="">-- Pilih Item --</option>
-                            @foreach($itemTransaksis as $it)
-                            <option value="{{ $it->id }}" data-kategori="{{ $it->kategori_transaksi_id }}">{{ $it->kode_item }} - {{ $it->deskripsi }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium text-foreground">Nominal <span class="text-danger">*</span></label>
-                    <div class="kt-input-group">
-                        <span class="kt-input-addon">Rp.</span>
-                        <input class="kt-input" type="number" name="nominal" id="nominal" step="0.01" min="0" placeholder="0" required/>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Tambak <span class="text-danger">*</span></label>
-                        <select name="tambak_id" id="tambak_id" class="kt-select" required onchange="loadBlokByTambak()">
-                            <option value="">-- Pilih --</option>
-                            @foreach($tambaks as $t)
-                            <option value="{{ $t->id }}">{{ $t->nama_tambak }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Blok</label>
-                        <select name="blok_id" id="blok_id" class="kt-select" onchange="loadSiklusByBlok()">
-                            <option value="">-- Pilih --</option>
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Siklus</label>
-                        <select name="siklus_id" id="siklus_id" class="kt-select">
-                            <option value="">-- Pilih --</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Sumber Dana <span class="text-danger">*</span></label>
-                        <select name="sumber_dana_id" id="sumber_dana_id" class="kt-select" required>
-                            <option value="">-- Pilih --</option>
-                            @foreach($sumberDanas as $sd)
-                            <option value="{{ $sd->id }}">{{ $sd->deskripsi }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-sm font-medium text-foreground">Pembayaran <span class="text-danger">*</span></label>
-                        <select name="pembayaran_combo" id="pembayaran_combo" class="kt-select" required onchange="onPembayaranChange()">
-                            @foreach($accountBanks as $bank)
-                            <option value="bank|{{ $bank->id }}" data-saldo="{{ $bank->saldo }}">{{ $bank->nama_bank }} - {{ $bank->nama_pemilik }}</option>
-                            @endforeach
-                        </select>
-                        <input type="hidden" name="jenis_pembayaran" id="jenis_pembayaran" value="cash">
-                        <input type="hidden" name="account_bank_id" id="account_bank_id" value="">
-                        <span class="text-xs text-muted-foreground mt-1" id="saldoInfo" style="display:none;">Saldo: <span class="text-mono font-medium text-primary" id="saldoValue"></span></span>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium text-foreground">Eviden</label>
-                    <input type="file" name="eviden" id="eviden" class="kt-input" accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.xlsx,.xls">
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium text-foreground">Catatan</label>
-                    <textarea name="catatan" id="catatan" class="kt-input" rows="2" style="height: 60px;"></textarea>
-                </div>
-            </div>
-            <div class="kt-modal-footer justify-end">
-                <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Batal</button>
-                <button type="submit" class="kt-btn kt-btn-primary">Simpan</button>
-            </div>
-        </form>
-    </div>
+
+        <div class="flex gap-2 mt-5">
+            <button type="submit" class="kt-btn kt-btn-primary flex-1">Terapkan</button>
+            <a href="{{ route('transaksi.index') }}" class="kt-btn kt-btn-outline flex-1 text-center">Reset</a>
+        </div>
+    </form>
 </div>
+
 @endsection
 
 @push('scripts')
-<script>
-var formFields = ['jenis_transaksi','tgl_kwitansi','aktivitas','kategori_transaksi_id','item_transaksi_id','nominal','tambak_id','sumber_dana_id','catatan'];
-
-function onPembayaranChange() {
-    var sel = document.getElementById('pembayaran_combo');
-    var val = sel.value;
-    var saldoInfo = document.getElementById('saldoInfo');
-    var saldoValue = document.getElementById('saldoValue');
-    var parts = val.split('|');
-    document.getElementById('jenis_pembayaran').value = 'bank';
-    document.getElementById('account_bank_id').value = parts[1] || '';
-    var saldo = sel.options[sel.selectedIndex]?.getAttribute('data-saldo');
-    if (saldo !== null && saldo !== '') {
-        saldoValue.textContent = 'Rp ' + Number(saldo || 0).toLocaleString('id-ID');
-        saldoInfo.style.display = '';
-    } else {
-        saldoInfo.style.display = 'none';
+<style>
+    /* Paksa datepicker popup (popper) selalu di atas filter panel */
+    [data-popper-placement] {
+        z-index: 9999 !important;
     }
-}
+</style>
+<script>
+(function() {
+    var filterBtn = document.getElementById('filter-btn');
+    var panel = document.getElementById('filter-panel');
+    var isOpen = false;
+    var datePickerActive = false;
 
-function loadItemsByKategori() {
-    var katId = document.getElementById('kategori_transaksi_id').value;
-    var sel = document.getElementById('item_transaksi_id');
-    if (!katId) { sel.innerHTML = '<option value="">-- Pilih Item --</option>'; return; }
-    fetch('/keuangan/transaksi/items-by-kategori/' + katId)
-        .then(r => r.json())
-        .then(items => {
-            sel.innerHTML = '<option value="">-- Pilih Item --</option>' + items.map(i => '<option value="'+i.id+'">'+(i.kode_item)+(i.deskripsi ? ' - '+i.deskripsi : '')+'</option>').join('');
-        });
-}
+    function positionPanel() {
+        var rect = filterBtn.getBoundingClientRect();
+        panel.style.top = (rect.bottom + 8) + 'px';
+        panel.style.left = Math.max(0, rect.right - 320) + 'px';
+    }
 
-function loadBlokByTambak() {
-    var tambakId = document.getElementById('tambak_id').value;
-    var sel = document.getElementById('blok_id');
-    document.getElementById('siklus_id').innerHTML = '<option value="">-- Pilih --</option>';
-    if (!tambakId) { sel.innerHTML = '<option value="">-- Pilih --</option>'; return; }
-    fetch('/budidaya/blok/by-tambak/' + tambakId)
-        .then(r => r.json())
-        .then(bloks => {
-            sel.innerHTML = '<option value="">-- Pilih --</option>' + bloks.map(b => '<option value="'+b.id+'">'+b.nama_blok+'</option>').join('');
-        });
-}
+    function openFilter() {
+        positionPanel();
+        panel.classList.remove('hidden');
+        isOpen = true;
+    }
 
-function loadSiklusByBlok() {
-    var blokId = document.getElementById('blok_id').value;
-    var sel = document.getElementById('siklus_id');
-    if (!blokId) { sel.innerHTML = '<option value="">-- Pilih --</option>'; return; }
-    fetch('/budidaya/siklus/by-blok/' + blokId)
-        .then(r => r.json())
-        .then(sikluses => {
-            sel.innerHTML = '<option value="">-- Pilih --</option>' + sikluses.map(s => '<option value="'+s.id+'">'+s.nama_siklus+'</option>').join('');
-        });
-}
+    function closeFilter() {
+        panel.classList.add('hidden');
+        isOpen = false;
+    }
 
-function openCreateModal() {
-    document.getElementById('modalTitle').textContent = 'Tambah Transaksi';
-    document.getElementById('dataForm').action = "{{ route('transaksi.store') }}";
-    document.getElementById('formMethod').value = 'POST';
-    formFields.forEach(f => { var el = document.getElementById(f); if(el) el.value = ''; });
-    document.getElementById('jenis_transaksi').value = 'uang_masuk';
-    document.getElementById('pembayaran_combo').selectedIndex = 0;
-    onPembayaranChange();
-    document.getElementById('blok_id').innerHTML = '<option value="">-- Pilih --</option>';
-    document.getElementById('siklus_id').innerHTML = '<option value="">-- Pilih --</option>';
-    KTModal.getInstance(document.querySelector('#formModal')).show();
-}
+    filterBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isOpen) { closeFilter(); } else { openFilter(); }
+    });
 
-function openEditModal(id) {
-    fetch('/keuangan/transaksi/' + id + '/edit')
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('modalTitle').textContent = 'Edit Transaksi';
-            document.getElementById('dataForm').action = '/keuangan/transaksi/' + id;
-            document.getElementById('formMethod').value = 'PUT';
-            formFields.forEach(f => {
-                if (f === 'tgl_kwitansi') return;
-                var el = document.getElementById(f);
-                if (el) el.value = data[f] ?? '';
+    // Detect datepicker open/close via MutationObserver
+    var dpObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.hasAttribute && node.hasAttribute('data-popper-placement')) {
+                    datePickerActive = true;
+                }
             });
-            // Set pembayaran combo
-            if (data.jenis_pembayaran === 'bank' && data.account_bank_id) {
-                document.getElementById('pembayaran_combo').value = 'bank|' + data.account_bank_id;
-            } else {
-                document.getElementById('pembayaran_combo').selectedIndex = 0;
-            }
-            onPembayaranChange();
-            // Load dependent dropdowns
-            if (data.tambak_id) {
-                fetch('/budidaya/blok/by-tambak/' + data.tambak_id)
-                    .then(r => r.json())
-                    .then(bloks => {
-                        var sel = document.getElementById('blok_id');
-                        sel.innerHTML = '<option value="">-- Pilih --</option>' + bloks.map(b => '<option value="'+b.id+'">'+b.nama_blok+'</option>').join('');
-                        sel.value = data.blok_id || '';
-                        if (data.blok_id) {
-                            fetch('/budidaya/siklus/by-blok/' + data.blok_id)
-                                .then(r => r.json())
-                                .then(sikluses => {
-                                    var ssel = document.getElementById('siklus_id');
-                                    ssel.innerHTML = '<option value="">-- Pilih --</option>' + sikluses.map(s => '<option value="'+s.id+'">'+s.nama_siklus+'</option>').join('');
-                                    ssel.value = data.siklus_id || '';
-                                });
-                        }
-                    });
-            }
-            KTModal.getInstance(document.querySelector('#formModal')).show();
-            setTimeout(function() {
-                var el = document.getElementById('tgl_kwitansi');
-                if (el && el._flatpickr) el._flatpickr.setDate(data.tgl_kwitansi, true);
-                else if (el) el.value = data.tgl_kwitansi || '';
-            }, 100);
+            mutation.removedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.hasAttribute && node.hasAttribute('data-popper-placement')) {
+                    // Delay reset so mousedown handler doesn't close filter
+                    setTimeout(function() { datePickerActive = false; }, 200);
+                }
+            });
         });
-}
+    });
+    dpObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Close hanya jika klik di luar panel, filter button, dan datepicker popup
+    document.addEventListener('mousedown', function(e) {
+        if (!isOpen) return;
+        // Jangan tutup jika datepicker sedang aktif
+        if (datePickerActive) return;
+        if (filterBtn.contains(e.target)) return;
+        if (panel.contains(e.target)) return;
+        // Cek apakah klik di datepicker popup (popper element)
+        if (e.target.closest('[data-popper-placement]')) return;
+        closeFilter();
+    });
+
+    window.addEventListener('scroll', function() {
+        if (isOpen) positionPanel();
+    }, true);
+
+    window.addEventListener('resize', function() {
+        if (isOpen) positionPanel();
+    });
+
+    // Parse date range picker value into hidden inputs before form submit
+    document.getElementById('filter-form').addEventListener('submit', function() {
+        var pickerVal = (document.getElementById('tgl-range-picker').value || '').trim();
+        if (pickerVal && pickerVal.indexOf(' - ') !== -1) {
+            var parts = pickerVal.split(' - ');
+            document.getElementById('input-tgl-dari').value = parts[0].trim();
+            document.getElementById('input-tgl-sampai').value = parts[1].trim();
+        } else {
+            document.getElementById('input-tgl-dari').value = '';
+            document.getElementById('input-tgl-sampai').value = '';
+        }
+    });
+})();
 </script>
 @endpush

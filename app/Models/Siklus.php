@@ -28,4 +28,9 @@ class Siklus extends BaseModel
     {
         return $this->hasMany(Panen::class);
     }
+
+    public function kolams()
+    {
+        return $this->hasMany(Kolam::class);
+    }
 }

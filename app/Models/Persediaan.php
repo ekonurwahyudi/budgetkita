@@ -8,4 +8,5 @@ class Persediaan extends BaseModel
 
     public function itemPersediaan() { return $this->belongsTo(ItemPersediaan::class); }
     public function riwayats() { return $this->hasMany(RiwayatPersediaan::class); }
+    public function penyesuaians() { return $this->hasMany(PenyesuaianPersediaan::class); }
 }

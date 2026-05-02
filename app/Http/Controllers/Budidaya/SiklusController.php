@@ -14,7 +14,9 @@ class SiklusController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Siklus::with('blok.tambak');
+        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
+        $query = Siklus::with('blok.tambak')
+            ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
         if ($request->filled('blok_id')) {
             $query->where('blok_id', $request->blok_id);
         }
@@ -22,8 +24,8 @@ class SiklusController extends Controller
             $query->whereHas('blok', fn ($q) => $q->where('tambak_id', $request->tambak_id));
         }
         $data = $query->latest()->get();
-        $tambaks = Tambak::orderBy('nama_tambak')->get();
-        $bloks = Blok::with('tambak')->orderBy('nama_blok')->get();
+        $tambaks = Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get();
+        $bloks = Blok::with('tambak')->whereIn('tambak_id', $tambakIds)->orderBy('nama_blok')->get();
         return view('budidaya.siklus.index', compact('data', 'tambaks', 'bloks'));
     }
 
@@ -75,12 +77,43 @@ class SiklusController extends Controller
             ->where('siklus_id', $siklus->id)
             ->latest('tgl_kwitansi')
             ->get();
-        $pemberianPakans = PemberianPakan::with('itemPersediaan')
+
+        $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan')
             ->where('siklus_id', $siklus->id)
             ->latest('tgl_pakan')
             ->get();
+
+        $pemberianPakans = $semuaPemberian->filter(fn($p) =>
+            !$p->itemPersediaan?->kategoriPersediaan ||
+            stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') !== false
+        )->values();
+
+        $pemberianKimia = $semuaPemberian->filter(fn($p) =>
+            $p->itemPersediaan?->kategoriPersediaan &&
+            stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
+        )->values();
+
+        $kolams = \App\Models\Kolam::with(['users'])
+            ->where('siklus_id', $siklus->id)
+            ->when(!auth()->user()->hasRole('Owner'), function ($q) {
+                $q->whereHas('users', fn ($q2) => $q2->where('users.id', auth()->id()));
+            })
+            ->latest()->get();
+
+        // Load latest parameter per kolam manually (avoid UUID + MAX issue)
+        $kolamIds = $kolams->pluck('id');
+        $latestParams = \App\Models\KolamParameter::whereIn('kolam_id', $kolamIds)
+            ->selectRaw('DISTINCT ON (kolam_id) *')
+            ->orderBy('kolam_id')
+            ->orderByDesc('created_at')
+            ->get()
+            ->keyBy('kolam_id');
+
+        $kolams->each(fn($k) => $k->setRelation('latestParameter', $latestParams->get($k->id)));
+
+        $users = \App\Models\User::where('status', 'aktif')->orderBy('nama')->get();
         $accountBanks = \App\Models\AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
-        return view('budidaya.siklus.show', compact('siklus', 'transaksis', 'pemberianPakans', 'accountBanks'));
+        return view('budidaya.siklus.show', compact('siklus', 'transaksis', 'pemberianPakans', 'pemberianKimia', 'accountBanks', 'kolams', 'users'));
     }
 
     public function edit(Siklus $siklus)

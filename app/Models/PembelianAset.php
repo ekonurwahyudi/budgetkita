@@ -9,12 +9,17 @@ class PembelianAset extends BaseModel
     protected $fillable = [
         'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
         'umur_manfaat', 'nilai_residu', 'jenis_pembayaran', 'account_bank_id',
-        'status', 'catatan',
+        'status', 'catatan', 'eviden',
     ];
 
     protected function casts(): array
     {
-        return ['tgl_pembelian' => 'date', 'nominal_pembelian' => 'decimal:2', 'nilai_residu' => 'decimal:2'];
+        return [
+            'tgl_pembelian' => 'date',
+            'nominal_pembelian' => 'decimal:2',
+            'nilai_residu' => 'decimal:2',
+            'eviden' => 'array',
+        ];
     }
 
     public function kategoriAset() { return $this->belongsTo(KategoriAset::class); }

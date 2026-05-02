@@ -13,7 +13,7 @@ class TransaksiKeuangan extends BaseModel
 
     protected function casts(): array
     {
-        return ['tgl_kwitansi' => 'date', 'nominal' => 'decimal:2'];
+        return ['tgl_kwitansi' => 'date', 'nominal' => 'decimal:2', 'eviden' => 'array'];
     }
 
     public function itemTransaksi() { return $this->belongsTo(ItemTransaksi::class); }

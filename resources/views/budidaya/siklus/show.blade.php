@@ -9,6 +9,75 @@
     {{-- KIRI: Tabel History --}}
     <div class="col-span-2">
         <div class="flex flex-col gap-5 lg:gap-7.5">
+            {{-- Daftar Kolam --}}
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Daftar Kolam</h3>
+                    @can('kolam.create')
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openKolamModal()">
+                        <i class="ki-filled ki-plus-squared"></i> Tambah Kolam
+                    </button>
+                    @endcan
+                </div>
+                <div class="kt-card-table">
+                    <div class="kt-table-wrapper kt-scrollable">
+                        <table class="kt-table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Kolam</th>
+                                    <th>Tgl Berdiri</th>
+                                    <th>Total Tebar</th>
+                                    <th>Status</th>
+                                    <th>Parameter Terakhir</th>
+                                    <th class="w-24">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($kolams as $kolam)
+                                <tr>
+                                    <td class="font-medium">{{ $kolam->nama_kolam }}</td>
+                                    <td class="text-mono text-sm">{{ $kolam->tgl_berdiri?->format('d/m/Y') ?? '-' }}</td>
+                                    <td class="text-mono">{{ $kolam->total_tebar ? number_format($kolam->total_tebar) . ' ekor' : '-' }}</td>
+                                    <td>
+                                        @if($kolam->status === 'aktif')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Aktif</span>
+                                        @elseif($kolam->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Selesai</span>
+                                        @else
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Batal</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($kolam->latestParameter)
+                                            <span class="text-xs text-muted-foreground">{{ $kolam->latestParameter->tgl_parameter?->format('d/m/Y') }}</span>
+                                            @if($kolam->latestParameter->status === 'kritis')
+                                                <span class="kt-badge kt-badge-sm kt-badge-destructive ml-1">Kritis</span>
+                                            @elseif($kolam->latestParameter->status === 'perhatian')
+                                                <span class="kt-badge kt-badge-sm kt-badge-warning ml-1">Perhatian</span>
+                                            @else
+                                                <span class="kt-badge kt-badge-sm kt-badge-success ml-1">Normal</span>
+                                            @endif
+                                        @else
+                                            <span class="text-xs text-muted-foreground">Belum ada</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="inline-flex gap-1">
+                                            <a href="{{ route('kolam.show', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Detail"><i class="ki-filled ki-eye"></i></a>
+                                            <button type="button" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Edit" onclick="editKolam('{{ $kolam->id }}', '{{ addslashes($kolam->nama_kolam) }}', '{{ $kolam->tgl_berdiri?->format('Y-m-d') }}', '{{ $kolam->total_tebar }}', '{{ $kolam->status }}', {{ $kolam->users->pluck('id')->toJson() }})"><i class="ki-filled ki-pencil"></i></button>
+                                            <form method="POST" action="{{ route('kolam.destroy', $kolam) }}" onsubmit="return confirm('Hapus kolam ini?')">@csrf @method('DELETE')<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Hapus"><i class="ki-filled ki-trash"></i></button></form>
+                                        </span>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="6" class="text-center text-muted-foreground py-4">Belum ada kolam</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             {{-- Tabel History Panen --}}
             <div class="kt-card">
                 <div class="kt-card-header">
@@ -269,54 +338,7 @@
                 </div>
             </div>
 
-            {{-- Kolam --}}
-            <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Daftar Kolam</h3>
-                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openKolamModal()">
-                        <i class="ki-filled ki-plus-squared"></i> Tambah
-                    </button>
-                </div>
-                <div class="kt-card-table">
-                    <div class="kt-table-wrapper kt-scrollable">
-                        <table class="kt-table">
-                            <thead>
-                                <tr>
-                                    <th>Nama Kolam</th>
-                                    <th>Status</th>
-                                    <th class="w-20">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($kolams as $kolam)
-                                <tr>
-                                    <td class="font-medium">{{ $kolam->nama_kolam }}</td>
-                                    <td>
-                                        @if($kolam->status === 'aktif')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success">Aktif</span>
-                                        @elseif($kolam->status === 'selesai')
-                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Selesai</span>
-                                        @else
-                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Batal</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="inline-flex gap-1">
-                                            <a href="{{ route('kolam.show', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Detail"><i class="ki-filled ki-eye"></i></a>
-                                            <form method="POST" action="{{ route('kolam.destroy', $kolam) }}" onsubmit="return confirm('Hapus kolam ini?')">@csrf @method('DELETE')<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Hapus"><i class="ki-filled ki-trash"></i></button></form>
-                                        </span>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr><td colspan="3" class="text-center text-muted-foreground py-4">Belum ada kolam</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Parameter Air & Performa --}}
+{{-- Parameter Air & Performa --}}
             <div class="kt-card">
                 <div class="kt-card-header">
                     <h3 class="kt-card-title">Parameter Air & Performa</h3>
@@ -573,27 +595,41 @@
     </div>
 </div>
 
-{{-- Modal Tambah Kolam --}}
+{{-- Modal Tambah/Edit Kolam --}}
 <div class="kt-modal" data-kt-modal="true" id="kolamModal">
     <div class="kt-modal-content max-w-[500px] top-5 lg:top-[15%]">
         <div class="kt-modal-header">
-            <h3 class="kt-modal-title">Tambah Kolam</h3>
+            <h3 class="kt-modal-title" id="kolamModalTitle">Tambah Kolam</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
                 <i class="ki-filled ki-cross"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('kolam.store') }}">
+        <form id="kolamForm" method="POST" action="{{ route('kolam.store') }}">
             @csrf
+            <input type="hidden" name="_method" id="kolamFormMethod" value="POST">
             <input type="hidden" name="siklus_id" value="{{ $siklus->id }}">
             <input type="hidden" name="blok_id" value="{{ $siklus->blok_id }}">
             <div class="kt-modal-body flex flex-col gap-4">
                 <div class="flex flex-col gap-1.5">
                     <label class="text-sm font-medium">Nama Kolam <span class="text-danger">*</span></label>
-                    <input type="text" name="nama_kolam" class="kt-input" required>
+                    <input type="text" name="nama_kolam" id="k_nama_kolam" class="kt-input" required placeholder="Nama kolam">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium">Tgl Berdiri</label>
+                        <div class="kt-input">
+                            <i class="ki-outline ki-calendar"></i>
+                            <input class="grow" name="tgl_berdiri" id="k_tgl_berdiri" data-kt-date-picker="true" data-kt-date-picker-input-mode="true" placeholder="Pilih tanggal" readonly type="text">
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium">Total Tebar (ekor)</label>
+                        <input type="number" name="total_tebar" id="k_total_tebar" class="kt-input" min="0" placeholder="0">
+                    </div>
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-sm font-medium">Status <span class="text-danger">*</span></label>
-                    <select name="status" class="kt-select" required>
+                    <select name="status" id="k_status" class="kt-select" required>
                         <option value="aktif">Aktif</option>
                         <option value="selesai">Selesai</option>
                         <option value="batal">Batal</option>
@@ -601,10 +637,10 @@
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-sm font-medium">Akses User</label>
-                    <div class="flex flex-col gap-1 max-h-40 overflow-y-auto border border-border rounded-lg p-2">
+                    <div id="k_user_checkboxes" class="flex flex-col gap-1 max-h-40 overflow-y-auto border border-border rounded-lg p-2">
                         @foreach($users as $u)
                         <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/40 px-2 py-1 rounded">
-                            <input type="checkbox" name="user_ids[]" value="{{ $u->id }}" class="size-4">
+                            <input type="checkbox" name="user_ids[]" value="{{ $u->id }}" class="size-4 k-user-cb" data-user-id="{{ $u->id }}">
                             {{ $u->nama }}
                         </label>
                         @endforeach
@@ -652,6 +688,32 @@ function openPanenModal() {
     toggleBank();
     toggleSisaBayar();
     KTModal.getInstance(document.querySelector('#panenModal')).show();
+}
+
+function openKolamModal() {
+    document.getElementById('kolamModalTitle').textContent = 'Tambah Kolam';
+    document.getElementById('kolamForm').action = "{{ route('kolam.store') }}";
+    document.getElementById('kolamFormMethod').value = 'POST';
+    document.getElementById('k_nama_kolam').value = '';
+    document.getElementById('k_tgl_berdiri').value = '';
+    document.getElementById('k_total_tebar').value = '';
+    document.getElementById('k_status').value = 'aktif';
+    document.querySelectorAll('.k-user-cb').forEach(function(cb) { cb.checked = false; });
+    KTModal.getInstance(document.querySelector('#kolamModal')).show();
+}
+
+function editKolam(id, nama, tglBerdiri, totalTebar, status, userIds) {
+    document.getElementById('kolamModalTitle').textContent = 'Edit Kolam';
+    document.getElementById('kolamForm').action = "{{ route('kolam.update', ['kolam' => '__ID__']) }}".replace('__ID__', id);
+    document.getElementById('kolamFormMethod').value = 'PUT';
+    document.getElementById('k_nama_kolam').value = nama;
+    document.getElementById('k_tgl_berdiri').value = tglBerdiri || '';
+    document.getElementById('k_total_tebar').value = totalTebar || '';
+    document.getElementById('k_status').value = status || 'aktif';
+    document.querySelectorAll('.k-user-cb').forEach(function(cb) {
+        cb.checked = userIds && userIds.indexOf(cb.dataset.userId) !== -1;
+    });
+    KTModal.getInstance(document.querySelector('#kolamModal')).show();
 }
 </script>
 @endpush

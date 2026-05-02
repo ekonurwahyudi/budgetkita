@@ -93,9 +93,23 @@ class SiklusController extends Controller
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
         )->values();
 
-        $kolams = \App\Models\Kolam::with(['users', 'latestParameter'])
+        $kolams = \App\Models\Kolam::with(['users'])
             ->where('siklus_id', $siklus->id)
+            ->when(!auth()->user()->hasRole('Owner'), function ($q) {
+                $q->whereHas('users', fn ($q2) => $q2->where('users.id', auth()->id()));
+            })
             ->latest()->get();
+
+        // Load latest parameter per kolam manually (avoid UUID + MAX issue)
+        $kolamIds = $kolams->pluck('id');
+        $latestParams = \App\Models\KolamParameter::whereIn('kolam_id', $kolamIds)
+            ->selectRaw('DISTINCT ON (kolam_id) *')
+            ->orderBy('kolam_id')
+            ->orderByDesc('created_at')
+            ->get()
+            ->keyBy('kolam_id');
+
+        $kolams->each(fn($k) => $k->setRelation('latestParameter', $latestParams->get($k->id)));
 
         $users = \App\Models\User::where('status', 'aktif')->orderBy('nama')->get();
         $accountBanks = \App\Models\AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();

@@ -102,7 +102,10 @@ Route::middleware('auth')->group(function () {
         Route::put('kolam/{kolam}', [KolamController::class, 'update'])->name('kolam.update');
         Route::delete('kolam/{kolam}', [KolamController::class, 'destroy'])->name('kolam.destroy');
         Route::get('kolam/{kolam}', [KolamController::class, 'show'])->name('kolam.show');
+        Route::get('kolam/{kolam}/export-parameter', [KolamController::class, 'exportParameter'])->name('kolam.parameter.export');
+        Route::post('kolam/{kolam}/import-parameter', [KolamController::class, 'importParameter'])->name('kolam.parameter.import');
         Route::post('kolam/{kolam}/parameter', [KolamController::class, 'storeParameter'])->name('kolam.parameter.store');
+        Route::put('kolam-parameter/{parameter}', [KolamController::class, 'updateParameter'])->name('kolam.parameter.update');
         Route::delete('kolam-parameter/{parameter}', [KolamController::class, 'destroyParameter'])->name('kolam.parameter.destroy');
     });
 

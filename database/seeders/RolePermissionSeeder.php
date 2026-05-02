@@ -35,6 +35,7 @@ class RolePermissionSeeder extends Seeder
             'blok' => ['view', 'create', 'edit', 'delete'],
             'siklus' => ['view', 'create', 'edit', 'delete'],
             'panen' => ['view', 'create', 'edit', 'delete', 'approve'],
+            'kolam' => ['view', 'create', 'edit', 'delete'],
             'pemberian-pakan' => ['view', 'create', 'edit', 'delete'],
             'roles' => ['view', 'create', 'edit', 'delete'],
         ];

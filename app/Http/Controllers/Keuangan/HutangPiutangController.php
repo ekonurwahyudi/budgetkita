@@ -10,6 +10,7 @@ use App\Models\KategoriHutangPiutang;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class HutangPiutangController extends Controller
@@ -109,11 +110,69 @@ class HutangPiutangController extends Controller
             $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
         }
 
-        $hutangPiutang->update($input);
+        DB::transaction(function () use ($hutangPiutang, $input) {
+            if ($hutangPiutang->status === 'selesai' && $hutangPiutang->jenis_pembayaran === 'bank' && $hutangPiutang->account_bank_id) {
+                $bankLama = AccountBank::find($hutangPiutang->account_bank_id);
+                if ($bankLama) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bankLama->decrement('saldo', $hutangPiutang->nominal);
+                    } else {
+                        $bankLama->increment('saldo', $hutangPiutang->nominal);
+                    }
+                }
+            }
+
+            $hutangPiutang->update($input);
+
+            $hutangPiutang->refresh();
+            if ($hutangPiutang->status === 'selesai' && $hutangPiutang->jenis_pembayaran === 'bank' && $hutangPiutang->account_bank_id) {
+                $bankBaru = AccountBank::find($hutangPiutang->account_bank_id);
+                if ($bankBaru) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bankBaru->increment('saldo', $hutangPiutang->nominal);
+                    } else {
+                        $bankBaru->decrement('saldo', $hutangPiutang->nominal);
+                    }
+                }
+            }
+        });
+
         return redirect()->route('hutang-piutang.index')->with('success', 'Data berhasil diperbarui.');
     }
 
-    public function destroy(HutangPiutang $hutangPiutang) { $hutangPiutang->delete(); return redirect()->back()->with('success', 'Data berhasil dihapus.'); }
+    public function destroy(HutangPiutang $hutangPiutang)
+    {
+        DB::transaction(function () use ($hutangPiutang) {
+            if ($hutangPiutang->status === 'selesai' && $hutangPiutang->jenis_pembayaran === 'bank' && $hutangPiutang->account_bank_id) {
+                $bank = AccountBank::find($hutangPiutang->account_bank_id);
+                if ($bank) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bank->decrement('saldo', $hutangPiutang->nominal);
+                    } else {
+                        $bank->increment('saldo', $hutangPiutang->nominal);
+                    }
+                }
+            }
+
+            foreach ($hutangPiutang->payments as $payment) {
+                if ($payment->account_bank_id) {
+                    $bank = AccountBank::find($payment->account_bank_id);
+                    if ($bank) {
+                        if ($hutangPiutang->jenis === 'hutang') {
+                            $bank->increment('saldo', $payment->jumlah);
+                        } else {
+                            $bank->decrement('saldo', $payment->jumlah);
+                        }
+                    }
+                }
+                $payment->delete();
+            }
+
+            $hutangPiutang->delete();
+        });
+
+        return redirect()->back()->with('success', 'Data berhasil dihapus.');
+    }
 
     public function bayar(Request $request, HutangPiutang $hutangPiutang)
     {
@@ -140,9 +199,16 @@ class HutangPiutangController extends Controller
             'catatan'           => $request->catatan_bayar,
         ]);
 
-        // Kurangi saldo bank jika bayar via bank
+        // Update saldo bank jika bayar via bank
         if ($request->filled('account_bank_id')) {
-            AccountBank::where('id', $request->account_bank_id)->decrement('saldo', $jumlah);
+            $bank = AccountBank::find($request->account_bank_id);
+            if ($bank) {
+                if ($hutangPiutang->jenis === 'hutang') {
+                    $bank->decrement('saldo', $jumlah);
+                } else {
+                    $bank->increment('saldo', $jumlah);
+                }
+            }
         }
 
         $msg = 'Pembayaran Rp ' . number_format($jumlah, 0, ',', '.') . ' berhasil dicatat.';

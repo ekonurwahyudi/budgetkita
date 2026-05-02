@@ -9,6 +9,7 @@ use App\Models\PembelianAset;
 use App\Services\ApprovalService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PembelianAsetController extends Controller
 {
@@ -85,13 +86,44 @@ class PembelianAsetController extends Controller
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
 
-        $pembelianAset->update($input);
+        DB::transaction(function () use ($pembelianAset, $input) {
+            // Reverse saldo lama jika sudah selesai via bank (pembelian selalu keluar)
+            if ($pembelianAset->status === 'selesai' && $pembelianAset->jenis_pembayaran === 'bank' && $pembelianAset->account_bank_id) {
+                $bankLama = AccountBank::find($pembelianAset->account_bank_id);
+                if ($bankLama) {
+                    $bankLama->increment('saldo', $pembelianAset->nominal_pembelian);
+                }
+            }
+
+            $pembelianAset->update($input);
+
+            // Apply saldo baru jika masih selesai via bank
+            $pembelianAset->refresh();
+            if ($pembelianAset->status === 'selesai' && $pembelianAset->jenis_pembayaran === 'bank' && $pembelianAset->account_bank_id) {
+                $bankBaru = AccountBank::find($pembelianAset->account_bank_id);
+                if ($bankBaru) {
+                    $bankBaru->decrement('saldo', $pembelianAset->nominal_pembelian);
+                }
+            }
+        });
+
         return redirect()->route('pembelian-aset.index')->with('success', 'Pembelian aset berhasil diperbarui.');
     }
 
     public function destroy(PembelianAset $pembelianAset)
     {
-        $pembelianAset->delete();
+        DB::transaction(function () use ($pembelianAset) {
+            // Reverse saldo jika sudah selesai via bank (pembelian selalu keluar)
+            if ($pembelianAset->status === 'selesai' && $pembelianAset->jenis_pembayaran === 'bank' && $pembelianAset->account_bank_id) {
+                $bank = AccountBank::find($pembelianAset->account_bank_id);
+                if ($bank) {
+                    $bank->increment('saldo', $pembelianAset->nominal_pembelian);
+                }
+            }
+
+            $pembelianAset->delete();
+        });
+
         return redirect()->back()->with('success', 'Pembelian aset berhasil dihapus.');
     }
 

@@ -12,6 +12,7 @@ use App\Models\Panen;
 use App\Models\PembelianAset;
 use App\Models\PembelianPersediaan;
 use App\Models\TransaksiKeuangan;
+use App\Models\SaldoAdjustment;
 use App\Models\TransferSaldo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,15 +44,14 @@ class AccountBankController extends Controller
         return view('masterdata.account-bank.index', compact('data', 'banks'));
     }
 
-    public function show(AccountBank $account_bank)
+    private function getBankHistories(string $id): \Illuminate\Support\Collection
     {
-        $id = $account_bank->id;
-
-        // Kumpulkan semua transaksi dari berbagai modul
         $histories = collect();
 
-        // Transaksi Keuangan
-        TransaksiKeuangan::where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        TransaksiKeuangan::where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->tgl_kwitansi,
                 'modul'     => 'Transaksi Keuangan',
@@ -63,8 +63,11 @@ class AccountBankController extends Controller
                 'view_url'  => route('transaksi.show', $t->id),
             ]));
 
-        // Gaji Karyawan (pengeluaran)
-        GajiKaryawan::with('user')->where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        GajiKaryawan::with('user')
+            ->where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->created_at,
                 'modul'     => 'Gaji Karyawan',
@@ -76,10 +79,10 @@ class AccountBankController extends Controller
                 'view_url'  => route('gaji.show', $t->id),
             ]));
 
-        // Investasi (pemasukan)
-
-        // Investasi (pemasukan)
-        Investasi::where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        Investasi::where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->created_at,
                 'modul'     => 'Investasi',
@@ -91,8 +94,10 @@ class AccountBankController extends Controller
                 'view_url'  => route('investasi.show', $t->id),
             ]));
 
-        // Hutang Piutang - pencatatan awal (hutang = masuk, piutang = keluar)
-        HutangPiutang::where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        HutangPiutang::where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->created_at,
                 'modul'     => 'Hutang/Piutang',
@@ -104,9 +109,9 @@ class AccountBankController extends Controller
                 'view_url'  => route('hutang-piutang.show', $t->id),
             ]));
 
-        // Pembayaran Hutang/Piutang (bayar hutang = keluar, terima piutang = masuk)
         HutangPiutangPayment::with('hutangPiutang')
-            ->where('account_bank_id', $id)->get()
+            ->where('account_bank_id', $id)
+            ->get()
             ->each(fn($p) => $histories->push([
                 'tanggal'   => $p->created_at,
                 'modul'     => 'Hutang/Piutang',
@@ -118,8 +123,11 @@ class AccountBankController extends Controller
                 'view_url'  => $p->hutangPiutang ? route('hutang-piutang.show', $p->hutangPiutang->id) : null,
             ]));
 
-        // Pembelian Persediaan (pengeluaran)
-        PembelianPersediaan::with('items')->where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        PembelianPersediaan::with('items')
+            ->where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->tgl_pembelian,
                 'modul'     => 'Pembelian Persediaan',
@@ -131,8 +139,10 @@ class AccountBankController extends Controller
                 'view_url'  => route('pembelian-persediaan.show', $t->id),
             ]));
 
-        // Pembelian Aset (pengeluaran)
-        PembelianAset::where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        PembelianAset::where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->tgl_pembelian,
                 'modul'     => 'Pembelian Aset',
@@ -144,8 +154,11 @@ class AccountBankController extends Controller
                 'view_url'  => route('pembelian-aset.show', $t->id),
             ]));
 
-        // Panen (pemasukan)
-        Panen::with('siklus')->where('account_bank_id', $id)->where('jenis_pembayaran', 'bank')->get()
+        Panen::with('siklus')
+            ->where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->tgl_panen,
                 'modul'     => 'Panen',
@@ -157,7 +170,6 @@ class AccountBankController extends Controller
                 'view_url'  => null,
             ]));
 
-        // Transfer Keluar
         TransferSaldo::with('keBank')->where('dari_account_bank_id', $id)->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->created_at,
@@ -170,7 +182,6 @@ class AccountBankController extends Controller
                 'view_url'  => null,
             ]));
 
-        // Transfer Masuk
         TransferSaldo::with('dariBank')->where('ke_account_bank_id', $id)->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->created_at,
@@ -183,10 +194,64 @@ class AccountBankController extends Controller
                 'view_url'  => null,
             ]));
 
-        // Sort by tanggal desc
-        $histories = $histories->sortByDesc('tanggal')->values();
+        return $histories;
+    }
 
-        return view('masterdata.account-bank.show', compact('account_bank', 'histories'));
+    private function getBankAdjustments(string $id): \Illuminate\Support\Collection
+    {
+        return SaldoAdjustment::where('account_bank_id', $id)->get()
+            ->map(fn($a) => [
+                'tanggal'   => $a->created_at,
+                'modul'     => 'Penyesuaian Saldo',
+                'nomor'     => 'ADJ-' . strtoupper(substr($a->id, 0, 8)),
+                'keterangan'=> ($a->jenis === 'tambah' ? '[Penambahan] ' : '[Pengurangan] ') . ($a->deskripsi ?: 'Penyesuaian saldo manual'),
+                'jenis'     => $a->jenis === 'tambah' ? 'masuk' : 'keluar',
+                'nominal'   => $a->selisih,
+                'status'    => 'selesai',
+                'view_url'  => null,
+            ]);
+    }
+
+    public function show(AccountBank $account_bank)
+    {
+        $id = $account_bank->id;
+
+        // Transaksi bisnis saja — yang dihitung dalam mutasi
+        $histories = $this->getBankHistories($id);
+
+        // Log penyesuaian saldo — untuk audit, TIDAK ikut hitung mutasi
+        $adjustments = $this->getBankAdjustments($id);
+
+        // Hitung running balance dari transaksi bisnis (terlama ke terbaru)
+        $historiesSortedAsc = $histories->sortBy('tanggal')->values();
+
+        $totalNetChange = $histories->sum(fn($h) => $h['jenis'] === 'masuk' ? $h['nominal'] : -$h['nominal']);
+        $saldoAwalTerhitung = $account_bank->saldo - $totalNetChange;
+
+        $runningBalance = $saldoAwalTerhitung;
+        $historiesWithBalance = collect();
+
+        foreach ($historiesSortedAsc as $h) {
+            if ($h['jenis'] === 'masuk') {
+                $runningBalance += $h['nominal'];
+            } else {
+                $runningBalance -= $h['nominal'];
+            }
+            $h['running_balance'] = $runningBalance;
+            $historiesWithBalance->push($h);
+        }
+
+        // Sort by tanggal desc untuk tampilan
+        $histories = $historiesWithBalance->sortByDesc('tanggal')->values();
+
+        // Data rekonsiliasi (hanya dari transaksi bisnis)
+        $saldoAwalAsli = $account_bank->saldo_awal;
+        $saldoSeharusnya = $saldoAwalAsli !== null ? (float) $saldoAwalAsli + $totalNetChange : null;
+        $selisih = $saldoSeharusnya !== null ? (float) $account_bank->saldo - $saldoSeharusnya : null;
+
+        return view('masterdata.account-bank.show', compact(
+            'account_bank', 'histories', 'adjustments', 'totalNetChange', 'saldoAwalTerhitung', 'saldoSeharusnya', 'selisih'
+        ));
     }
 
     public function transfer(Request $request)
@@ -229,7 +294,9 @@ class AccountBankController extends Controller
             'saldo' => 'required|numeric|min:0',
             'status' => 'required|in:aktif,nonaktif',
         ]);
-        AccountBank::create($request->only('kode_account', 'nama_bank', 'nama_pemilik', 'nomor_rekening', 'saldo', 'status'));
+        $input = $request->only('kode_account', 'nama_bank', 'nama_pemilik', 'nomor_rekening', 'saldo', 'status');
+        $input['saldo_awal'] = $request->saldo;
+        AccountBank::create($input);
         return redirect()->back()->with('success', 'Account Bank berhasil ditambahkan.');
     }
 
@@ -246,10 +313,66 @@ class AccountBankController extends Controller
             'nama_pemilik' => 'nullable|string|max:255',
             'nomor_rekening' => 'nullable|string|max:50',
             'saldo' => 'required|numeric|min:0',
+            'saldo_awal' => 'nullable|numeric|min:0',
             'status' => 'required|in:aktif,nonaktif',
+            'deskripsi_saldo' => 'nullable|string|max:500',
         ]);
-        $account_bank->update($request->only('kode_account', 'nama_bank', 'nama_pemilik', 'nomor_rekening', 'saldo', 'status'));
+
+        $saldoLama = (float) $account_bank->saldo;
+        $saldoBaru = (float) $request->saldo;
+        $selisih   = abs($saldoBaru - $saldoLama);
+
+        DB::transaction(function () use ($request, $account_bank, $saldoLama, $saldoBaru, $selisih) {
+            $account_bank->update($request->only('kode_account', 'nama_bank', 'nama_pemilik', 'nomor_rekening', 'saldo', 'saldo_awal', 'status'));
+
+            // Catat adjustment saldo jika ada perubahan nilai saldo (bukan saldo_awal)
+            if ($selisih > 0) {
+                SaldoAdjustment::create([
+                    'account_bank_id'  => $account_bank->id,
+                    'saldo_sebelumnya' => $saldoLama,
+                    'saldo_baru'       => $saldoBaru,
+                    'selisih'          => $selisih,
+                    'jenis'            => $saldoBaru > $saldoLama ? 'tambah' : 'kurang',
+                    'deskripsi'        => $request->deskripsi_saldo ?: 'Penyesuaian saldo manual',
+                ]);
+            }
+        });
+
         return redirect()->back()->with('success', 'Account Bank berhasil diperbarui.');
+    }
+
+    public function syncSaldo(AccountBank $account_bank)
+    {
+        if ($account_bank->saldo_awal === null) {
+            return redirect()->back()->with('error', 'Saldo Awal belum ditentukan untuk bank ini. Silakan edit bank dan isi field Saldo Awal terlebih dahulu.');
+        }
+
+        $histories = $this->getBankHistories($account_bank->id);
+        $totalNetChange = $histories->sum(fn($h) => $h['jenis'] === 'masuk' ? $h['nominal'] : -$h['nominal']);
+        $saldoSeharusnya = (float) $account_bank->saldo_awal + $totalNetChange;
+        $selisih = (float) $account_bank->saldo - $saldoSeharusnya;
+
+        if (abs($selisih) < 0.01) {
+            return redirect()->back()->with('info', 'Saldo sudah sinkron. Tidak ada perubahan.');
+        }
+
+        DB::transaction(function () use ($account_bank, $saldoSeharusnya, $selisih) {
+            $saldoLama = (float) $account_bank->saldo;
+
+            $account_bank->update(['saldo' => $saldoSeharusnya]);
+
+            SaldoAdjustment::create([
+                'account_bank_id'  => $account_bank->id,
+                'saldo_sebelumnya' => $saldoLama,
+                'saldo_baru'       => $saldoSeharusnya,
+                'selisih'          => abs($selisih),
+                'jenis'            => $selisih > 0 ? 'kurang' : 'tambah',
+                'deskripsi'        => 'Sinkronisasi otomatis saldo berdasarkan history transaksi (Selisih: Rp ' . number_format(abs($selisih), 0, ',', '.') . ')',
+            ]);
+        });
+
+        $tanda = $selisih > 0 ? 'dikurangi' : 'ditambah';
+        return redirect()->back()->with('success', 'Saldo berhasil disinkronkan. Saldo ' . $tanda . ' Rp ' . number_format(abs($selisih), 0, ',', '.') . '.');
     }
 
     public function destroy(AccountBank $account_bank)

@@ -8,6 +8,7 @@ use App\Models\Panen;
 use App\Models\Siklus;
 use App\Services\ApprovalService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PanenController extends Controller
 {
@@ -118,13 +119,44 @@ class PanenController extends Controller
             $input['sisa_bayar'] = 0;
         }
 
-        $panen->update($input);
+        DB::transaction(function () use ($panen, $input) {
+            // Reverse saldo lama jika sudah selesai via bank (panen selalu masuk)
+            if ($panen->status === 'selesai' && $panen->jenis_pembayaran === 'bank' && $panen->account_bank_id) {
+                $bankLama = AccountBank::find($panen->account_bank_id);
+                if ($bankLama) {
+                    $bankLama->decrement('saldo', $panen->total_penjualan);
+                }
+            }
+
+            $panen->update($input);
+
+            // Apply saldo baru jika masih selesai via bank
+            $panen->refresh();
+            if ($panen->status === 'selesai' && $panen->jenis_pembayaran === 'bank' && $panen->account_bank_id) {
+                $bankBaru = AccountBank::find($panen->account_bank_id);
+                if ($bankBaru) {
+                    $bankBaru->increment('saldo', $panen->total_penjualan);
+                }
+            }
+        });
+
         return redirect()->route('panen.index')->with('success', 'Data panen berhasil diperbarui.');
     }
 
     public function destroy(Panen $panen)
     {
-        $panen->delete();
+        DB::transaction(function () use ($panen) {
+            // Reverse saldo jika sudah selesai via bank (panen selalu masuk)
+            if ($panen->status === 'selesai' && $panen->jenis_pembayaran === 'bank' && $panen->account_bank_id) {
+                $bank = AccountBank::find($panen->account_bank_id);
+                if ($bank) {
+                    $bank->decrement('saldo', $panen->total_penjualan);
+                }
+            }
+
+            $panen->delete();
+        });
+
         return redirect()->route('panen.index')->with('success', 'Data panen berhasil dihapus.');
     }
 

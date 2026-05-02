@@ -11,6 +11,7 @@ use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PembelianPersediaanController extends Controller
 {
@@ -117,28 +118,67 @@ class PembelianPersediaanController extends Controller
             $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
         }
 
-        $pembelianPersediaan->update($input);
+        DB::transaction(function () use ($request, $pembelianPersediaan, $input) {
+            // Hitung nominal lama dari items sebelum dihapus
+            $nominalLama = $pembelianPersediaan->items->sum('harga_total');
 
-        // Sync items
-        $pembelianPersediaan->items()->delete();
-        foreach ($request->input('items', []) as $item) {
-            $hargaTotal = (float) $item['qty'] * (float) $item['harga_satuan'];
-            $pembelianPersediaan->items()->create([
-                'item_persediaan_id' => $item['item_persediaan_id'],
-                'qty'                => $item['qty'],
-                'satuan'             => $item['satuan'],
-                'harga_satuan'       => $item['harga_satuan'],
-                'harga_total'        => $hargaTotal,
-            ]);
-        }
+            // Reverse saldo lama jika sudah selesai via bank (pembelian selalu keluar)
+            if ($pembelianPersediaan->status === 'selesai' && $pembelianPersediaan->jenis_pembayaran === 'bank' && $pembelianPersediaan->account_bank_id) {
+                $bankLama = AccountBank::find($pembelianPersediaan->account_bank_id);
+                if ($bankLama) {
+                    $bankLama->increment('saldo', $nominalLama);
+                }
+            }
+
+            $pembelianPersediaan->update($input);
+
+            // Sync items
+            $pembelianPersediaan->items()->delete();
+            foreach ($request->input('items', []) as $item) {
+                $hargaTotal = (float) $item['qty'] * (float) $item['harga_satuan'];
+                $pembelianPersediaan->items()->create([
+                    'item_persediaan_id' => $item['item_persediaan_id'],
+                    'qty'                => $item['qty'],
+                    'satuan'             => $item['satuan'],
+                    'harga_satuan'       => $item['harga_satuan'],
+                    'harga_total'        => $hargaTotal,
+                ]);
+            }
+
+            // Apply saldo baru jika masih selesai via bank
+            $pembelianPersediaan->refresh();
+            $pembelianPersediaan->load('items');
+            $nominalBaru = $pembelianPersediaan->items->sum('harga_total');
+
+            if ($pembelianPersediaan->status === 'selesai' && $pembelianPersediaan->jenis_pembayaran === 'bank' && $pembelianPersediaan->account_bank_id) {
+                $bankBaru = AccountBank::find($pembelianPersediaan->account_bank_id);
+                if ($bankBaru) {
+                    $bankBaru->decrement('saldo', $nominalBaru);
+                }
+            }
+        });
 
         return redirect()->route('pembelian-persediaan.index')->with('success', 'Pembelian persediaan berhasil diperbarui.');
     }
 
     public function destroy(PembelianPersediaan $pembelianPersediaan)
     {
-        $pembelianPersediaan->items()->delete();
-        $pembelianPersediaan->delete();
+        DB::transaction(function () use ($pembelianPersediaan) {
+            $pembelianPersediaan->load('items');
+            $nominalLama = $pembelianPersediaan->items->sum('harga_total');
+
+            // Reverse saldo jika sudah selesai via bank (pembelian selalu keluar)
+            if ($pembelianPersediaan->status === 'selesai' && $pembelianPersediaan->jenis_pembayaran === 'bank' && $pembelianPersediaan->account_bank_id) {
+                $bank = AccountBank::find($pembelianPersediaan->account_bank_id);
+                if ($bank) {
+                    $bank->increment('saldo', $nominalLama);
+                }
+            }
+
+            $pembelianPersediaan->items()->delete();
+            $pembelianPersediaan->delete();
+        });
+
         return redirect()->back()->with('success', 'Pembelian persediaan berhasil dihapus.');
     }
 

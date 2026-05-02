@@ -131,7 +131,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Saldo <span class="text-danger">*</span></label>
-                        <input type="number" name="saldo" id="saldo" class="kt-input" step="0.01" min="0" required>
+                        <input type="text" name="saldo" id="saldo" class="kt-input rupiah-input" inputmode="decimal" required>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Status <span class="text-danger">*</span></label>
@@ -140,6 +140,16 @@
                             <option value="nonaktif">Non Aktif</option>
                         </select>
                     </div>
+                </div>
+                <div class="flex flex-col gap-1" id="saldo_awal_wrapper" style="display:none;">
+                    <label class="text-sm font-medium text-foreground">Saldo Awal</label>
+                    <input type="text" name="saldo_awal" id="saldo_awal" class="kt-input rupiah-input" inputmode="decimal" placeholder="Saldo saat bank pertama kali dibuat">
+                    <p class="text-xs text-muted-foreground">Isi dengan saldo awal saat bank dibuat untuk sinkronisasi otomatis. Kosongkan jika tidak ingin mengubah.</p>
+                </div>
+                <div class="flex flex-col gap-1" id="deskripsi_saldo_wrapper" style="display:none;">
+                    <label class="text-sm font-medium text-foreground">Alasan Perubahan Saldo</label>
+                    <textarea name="deskripsi_saldo" id="deskripsi_saldo" class="kt-input" rows="2" placeholder="Contoh: Koreksi saldo awal, Selisih tutup buku, dll."></textarea>
+                    <p class="text-xs text-muted-foreground">Wajib diisi jika saldo diubah. Akan tercatat di history.</p>
                 </div>
             </div>
             <div class="kt-modal-footer justify-end">
@@ -241,13 +251,47 @@ function onDariChange() {
     if (ke.value === val) ke.value = '';
 }
 
+// Format angka ribuan (Indonesia)
+function formatRupiah(str) {
+    if (!str) return '';
+    var parts = str.toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return parts.join(',');
+}
+
+// Hapus tit ribuan, kembalikan desimal dengan titik
+function unformatRupiah(str) {
+    if (!str) return '';
+    return str.toString().replace(/\./g, '').replace(',', '.');
+}
+
+// Pasang event listener pada input rupiah
+document.querySelectorAll('.rupiah-input').forEach(function(input) {
+    input.addEventListener('blur', function() {
+        var raw = unformatRupiah(this.value);
+        if (raw !== '') this.value = formatRupiah(raw);
+    });
+    input.addEventListener('focus', function() {
+        this.value = unformatRupiah(this.value);
+    });
+});
+
+// Bersihkan format sebelum submit
+document.getElementById('dataForm').addEventListener('submit', function(e) {
+    document.querySelectorAll('.rupiah-input').forEach(function(input) {
+        input.value = unformatRupiah(input.value);
+    });
+});
+
 function openCreateModal() {
     document.getElementById('modalTitle').textContent = 'Tambah Account Bank';
     document.getElementById('dataForm').action = "{{ route('account-bank.store') }}";
     document.getElementById('formMethod').value = 'POST';
-    ['kode_account','nama_bank','nama_pemilik','nomor_rekening'].forEach(f => document.getElementById(f).value = '');
+    ['kode_account','nama_bank','nama_pemilik','nomor_rekening','deskripsi_saldo','saldo_awal'].forEach(f => document.getElementById(f).value = '');
     document.getElementById('saldo').value = '0';
     document.getElementById('status').value = 'aktif';
+    document.getElementById('deskripsi_saldo_wrapper').style.display = 'none';
+    document.getElementById('saldo_awal_wrapper').style.display = 'none';
     KTModal.getInstance(document.querySelector('#formModal')).show();
 }
 function openEditModal(id) {
@@ -261,8 +305,12 @@ function openEditModal(id) {
             document.getElementById('nama_bank').value = data.nama_bank;
             document.getElementById('nama_pemilik').value = data.nama_pemilik || '';
             document.getElementById('nomor_rekening').value = data.nomor_rekening || '';
-            document.getElementById('saldo').value = data.saldo;
+            document.getElementById('saldo').value = formatRupiah(data.saldo);
             document.getElementById('status').value = data.status || 'aktif';
+            document.getElementById('deskripsi_saldo').value = '';
+            document.getElementById('saldo_awal').value = data.saldo_awal ? formatRupiah(data.saldo_awal) : '';
+            document.getElementById('deskripsi_saldo_wrapper').style.display = '';
+            document.getElementById('saldo_awal_wrapper').style.display = '';
             KTModal.getInstance(document.querySelector('#formModal')).show();
         });
 }

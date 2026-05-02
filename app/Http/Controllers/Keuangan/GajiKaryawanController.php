@@ -10,6 +10,7 @@ use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GajiKaryawanController extends Controller
 {
@@ -114,13 +115,44 @@ class GajiKaryawanController extends Controller
             $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
         }
 
-        $gaji->update($input);
+        DB::transaction(function () use ($gaji, $input) {
+            // Reverse saldo lama jika sudah selesai via bank (gaji selalu keluar)
+            if ($gaji->status === 'selesai' && $gaji->jenis_pembayaran === 'bank' && $gaji->account_bank_id) {
+                $bankLama = AccountBank::find($gaji->account_bank_id);
+                if ($bankLama) {
+                    $bankLama->increment('saldo', $gaji->thp);
+                }
+            }
+
+            $gaji->update($input);
+
+            // Apply saldo baru jika masih selesai via bank
+            $gaji->refresh();
+            if ($gaji->status === 'selesai' && $gaji->jenis_pembayaran === 'bank' && $gaji->account_bank_id) {
+                $bankBaru = AccountBank::find($gaji->account_bank_id);
+                if ($bankBaru) {
+                    $bankBaru->decrement('saldo', $gaji->thp);
+                }
+            }
+        });
+
         return redirect()->route('gaji.index')->with('success', 'Gaji karyawan berhasil diperbarui.');
     }
 
     public function destroy(GajiKaryawan $gaji)
     {
-        $gaji->delete();
+        DB::transaction(function () use ($gaji) {
+            // Reverse saldo jika sudah selesai via bank (gaji selalu keluar)
+            if ($gaji->status === 'selesai' && $gaji->jenis_pembayaran === 'bank' && $gaji->account_bank_id) {
+                $bank = AccountBank::find($gaji->account_bank_id);
+                if ($bank) {
+                    $bank->increment('saldo', $gaji->thp);
+                }
+            }
+
+            $gaji->delete();
+        });
+
         return redirect()->back()->with('success', 'Gaji karyawan berhasil dihapus.');
     }
 

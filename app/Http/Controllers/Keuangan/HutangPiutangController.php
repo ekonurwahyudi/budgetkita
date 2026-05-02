@@ -62,11 +62,6 @@ class HutangPiutangController extends Controller
 
         HutangPiutang::create($input);
 
-        // Jika hutang via bank → saldo bank bertambah (uang masuk)
-        if ($request->jenis === 'hutang' && $request->jenis_pembayaran === 'bank' && $request->filled('account_bank_id')) {
-            AccountBank::where('id', $request->account_bank_id)->increment('saldo', $input['nominal']);
-        }
-
         return redirect()->route('hutang-piutang.index')->with('success', 'Data berhasil ditambahkan.');
     }
 

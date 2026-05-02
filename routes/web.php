@@ -19,6 +19,7 @@ use App\Http\Controllers\Budidaya\AnggotaTambakController;
 use App\Http\Controllers\Budidaya\PanenController;
 use App\Http\Controllers\Budidaya\PemberianPakanController;
 use App\Http\Controllers\Budidaya\PemberianKimiaController;
+use App\Http\Controllers\Budidaya\KolamController;
 use App\Http\Controllers\Pengaturan\RoleController;
 use App\Http\Controllers\Keuangan\TransaksiKeuanganController;
 use App\Http\Controllers\Keuangan\GajiKaryawanController;
@@ -72,6 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('kategori-aset', KategoriAsetController::class)->except(['show'])->middleware('can:kategori-aset.view');
         Route::resource('account-bank', AccountBankController::class)->middleware('can:account-bank.view');
         Route::post('account-bank/transfer', [AccountBankController::class, 'transfer'])->name('account-bank.transfer')->middleware('can:account-bank.edit');
+        Route::post('account-bank/{account_bank}/sync-saldo', [AccountBankController::class, 'syncSaldo'])->name('account-bank.sync-saldo')->middleware('can:account-bank.edit');
     });
 
     // Budidaya
@@ -94,6 +96,14 @@ Route::middleware('auth')->group(function () {
 
         Route::get('pemberian-kimia/create', [PemberianKimiaController::class, 'create'])->name('pemberian-kimia.create')->middleware('can:pemberian-pakan.create');
         Route::resource('pemberian-kimia', PemberianKimiaController::class)->except(['create', 'edit', 'update'])->parameters(['pemberian-kimia' => 'pemberianKimia'])->middleware('can:pemberian-pakan.view');
+
+        // Kolam
+        Route::post('kolam', [KolamController::class, 'store'])->name('kolam.store');
+        Route::put('kolam/{kolam}', [KolamController::class, 'update'])->name('kolam.update');
+        Route::delete('kolam/{kolam}', [KolamController::class, 'destroy'])->name('kolam.destroy');
+        Route::get('kolam/{kolam}', [KolamController::class, 'show'])->name('kolam.show');
+        Route::post('kolam/{kolam}/parameter', [KolamController::class, 'storeParameter'])->name('kolam.parameter.store');
+        Route::delete('kolam-parameter/{parameter}', [KolamController::class, 'destroyParameter'])->name('kolam.parameter.destroy');
     });
 
     // Pengaturan

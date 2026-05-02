@@ -55,10 +55,16 @@
                                     <td>Rp {{ number_format($panen->total_penjualan ?? 0, 0, ',', '.') }}</td>
                                     <td>{{ $panen->pembeli ?? '-' }}</td>
                                     <td>
-                                        @if($panen->status === 'lunas')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                        @if($panen->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
+                                        @elseif($panen->status === 'cancel')
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Cancel</span>
+                                        @elseif($panen->status === 'proses')
+                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Proses</span>
+                                        @elseif($panen->status === 'pending')
+                                            <span class="kt-badge kt-badge-sm kt-badge-warning">Pending</span>
                                         @else
-                                            <span class="kt-badge kt-badge-sm kt-badge-warning">Belum Lunas</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-outline">Awaiting</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -99,23 +105,29 @@
                                     <td class="text-mono">{{ $trx->nomor_transaksi }}</td>
                                     <td>{{ $trx->tgl_kwitansi?->format('d/m/Y') ?? '-' }}</td>
                                     <td>
-                                        @if($trx->jenis_transaksi === 'pemasukan')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Pemasukan</span>
+                                        @if($trx->jenis_transaksi === 'uang_masuk')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Uang Masuk</span>
+                                        @elseif($trx->jenis_transaksi === 'uang_keluar')
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Uang Keluar</span>
                                         @else
-                                            <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Pengeluaran</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-outline">{{ ucfirst(str_replace('_',' ',$trx->jenis_transaksi)) }}</span>
                                         @endif
                                     </td>
                                     <td>{{ $trx->aktivitas ?? '-' }}</td>
-                                    <td>{{ $trx->kategoriTransaksi?->nama ?? '-' }}</td>
-                                    <td>{{ $trx->itemTransaksi?->nama ?? '-' }}</td>
+                                    <td>{{ $trx->kategoriTransaksi?->deskripsi ?? '-' }}</td>
+                                    <td>{{ $trx->itemTransaksi?->deskripsi ?? '-' }}</td>
                                     <td class="text-mono">Rp {{ number_format($trx->nominal ?? 0, 0, ',', '.') }}</td>
                                     <td>
-                                        @if($trx->status === 'approved')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success">Approved</span>
-                                        @elseif($trx->status === 'rejected')
-                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Rejected</span>
-                                        @else
+                                        @if($trx->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
+                                        @elseif($trx->status === 'cancel')
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Cancel</span>
+                                        @elseif($trx->status === 'proses')
+                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Proses</span>
+                                        @elseif($trx->status === 'pending')
                                             <span class="kt-badge kt-badge-sm kt-badge-warning">Pending</span>
+                                        @else
+                                            <span class="kt-badge kt-badge-sm kt-badge-outline">Awaiting</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -254,6 +266,53 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            {{-- Kolam --}}
+            <div class="kt-card">
+                <div class="kt-card-header">
+                    <h3 class="kt-card-title">Daftar Kolam</h3>
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openKolamModal()">
+                        <i class="ki-filled ki-plus-squared"></i> Tambah
+                    </button>
+                </div>
+                <div class="kt-card-table">
+                    <div class="kt-table-wrapper kt-scrollable">
+                        <table class="kt-table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Kolam</th>
+                                    <th>Status</th>
+                                    <th class="w-20">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($kolams as $kolam)
+                                <tr>
+                                    <td class="font-medium">{{ $kolam->nama_kolam }}</td>
+                                    <td>
+                                        @if($kolam->status === 'aktif')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Aktif</span>
+                                        @elseif($kolam->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Selesai</span>
+                                        @else
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Batal</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="inline-flex gap-1">
+                                            <a href="{{ route('kolam.show', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Detail"><i class="ki-filled ki-eye"></i></a>
+                                            <form method="POST" action="{{ route('kolam.destroy', $kolam) }}" onsubmit="return confirm('Hapus kolam ini?')">@csrf @method('DELETE')<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Hapus"><i class="ki-filled ki-trash"></i></button></form>
+                                        </span>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="3" class="text-center text-muted-foreground py-4">Belum ada kolam</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -503,6 +562,52 @@
                             <span class="kt-input-addon">Rp.</span>
                             <input class="kt-input" type="number" name="sisa_bayar" id="p_sisa_bayar" step="0.01" placeholder="0"/>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="kt-modal-footer justify-end">
+                <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-primary">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal Tambah Kolam --}}
+<div class="kt-modal" data-kt-modal="true" id="kolamModal">
+    <div class="kt-modal-content max-w-[500px] top-5 lg:top-[15%]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Tambah Kolam</h3>
+            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('kolam.store') }}">
+            @csrf
+            <input type="hidden" name="siklus_id" value="{{ $siklus->id }}">
+            <input type="hidden" name="blok_id" value="{{ $siklus->blok_id }}">
+            <div class="kt-modal-body flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium">Nama Kolam <span class="text-danger">*</span></label>
+                    <input type="text" name="nama_kolam" class="kt-input" required>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium">Status <span class="text-danger">*</span></label>
+                    <select name="status" class="kt-select" required>
+                        <option value="aktif">Aktif</option>
+                        <option value="selesai">Selesai</option>
+                        <option value="batal">Batal</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium">Akses User</label>
+                    <div class="flex flex-col gap-1 max-h-40 overflow-y-auto border border-border rounded-lg p-2">
+                        @foreach($users as $u)
+                        <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/40 px-2 py-1 rounded">
+                            <input type="checkbox" name="user_ids[]" value="{{ $u->id }}" class="size-4">
+                            {{ $u->nama }}
+                        </label>
+                        @endforeach
                     </div>
                 </div>
             </div>

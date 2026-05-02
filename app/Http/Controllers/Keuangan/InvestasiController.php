@@ -10,6 +10,7 @@ use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InvestasiController extends Controller
 {
@@ -93,11 +94,46 @@ class InvestasiController extends Controller
             $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
         }
 
-        $investasi->update($input);
+        DB::transaction(function () use ($investasi, $input) {
+            // Reverse saldo lama jika sudah selesai via bank (investasi selalu masuk)
+            if ($investasi->status === 'selesai' && $investasi->jenis_pembayaran === 'bank' && $investasi->account_bank_id) {
+                $bankLama = AccountBank::find($investasi->account_bank_id);
+                if ($bankLama) {
+                    $bankLama->decrement('saldo', $investasi->nominal);
+                }
+            }
+
+            $investasi->update($input);
+
+            // Apply saldo baru jika masih selesai via bank
+            $investasi->refresh();
+            if ($investasi->status === 'selesai' && $investasi->jenis_pembayaran === 'bank' && $investasi->account_bank_id) {
+                $bankBaru = AccountBank::find($investasi->account_bank_id);
+                if ($bankBaru) {
+                    $bankBaru->increment('saldo', $investasi->nominal);
+                }
+            }
+        });
+
         return redirect()->route('investasi.index')->with('success', 'Investasi berhasil diperbarui.');
     }
 
-    public function destroy(Investasi $investasi) { $investasi->delete(); return redirect()->back()->with('success', 'Investasi berhasil dihapus.'); }
+    public function destroy(Investasi $investasi)
+    {
+        DB::transaction(function () use ($investasi) {
+            // Reverse saldo jika sudah selesai via bank (investasi selalu masuk)
+            if ($investasi->status === 'selesai' && $investasi->jenis_pembayaran === 'bank' && $investasi->account_bank_id) {
+                $bank = AccountBank::find($investasi->account_bank_id);
+                if ($bank) {
+                    $bank->decrement('saldo', $investasi->nominal);
+                }
+            }
+
+            $investasi->delete();
+        });
+
+        return redirect()->back()->with('success', 'Investasi berhasil dihapus.');
+    }
     public function approve(Investasi $investasi) { app(ApprovalService::class)->approve($investasi); return redirect()->back()->with('success', 'Investasi berhasil di-approve.'); }
     public function reject(Investasi $investasi) { app(ApprovalService::class)->reject($investasi); return redirect()->back()->with('success', 'Investasi berhasil di-reject.'); }
 }

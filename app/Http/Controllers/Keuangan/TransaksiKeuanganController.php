@@ -16,6 +16,7 @@ use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TransaksiKeuanganController extends Controller
@@ -194,13 +195,56 @@ class TransaksiKeuanganController extends Controller
             $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $hapus)));
         }
 
-        $transaksi->update($input);
+        DB::transaction(function () use ($transaksi, $input) {
+            // Reverse saldo lama jika transaksi sudah selesai via bank
+            if ($transaksi->status === 'selesai' && $transaksi->jenis_pembayaran === 'bank' && $transaksi->account_bank_id) {
+                $bankLama = AccountBank::find($transaksi->account_bank_id);
+                if ($bankLama) {
+                    if ($transaksi->jenis_transaksi === 'uang_masuk') {
+                        $bankLama->decrement('saldo', $transaksi->nominal);
+                    } elseif ($transaksi->jenis_transaksi === 'uang_keluar') {
+                        $bankLama->increment('saldo', $transaksi->nominal);
+                    }
+                }
+            }
+
+            $transaksi->update($input);
+
+            // Apply saldo baru jika transaksi masih selesai via bank
+            $transaksi->refresh();
+            if ($transaksi->status === 'selesai' && $transaksi->jenis_pembayaran === 'bank' && $transaksi->account_bank_id) {
+                $bankBaru = AccountBank::find($transaksi->account_bank_id);
+                if ($bankBaru) {
+                    if ($transaksi->jenis_transaksi === 'uang_masuk') {
+                        $bankBaru->increment('saldo', $transaksi->nominal);
+                    } elseif ($transaksi->jenis_transaksi === 'uang_keluar') {
+                        $bankBaru->decrement('saldo', $transaksi->nominal);
+                    }
+                }
+            }
+        });
+
         return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil diperbarui.');
     }
 
     public function destroy(TransaksiKeuangan $transaksi)
     {
-        $transaksi->delete();
+        DB::transaction(function () use ($transaksi) {
+            // Reverse saldo jika transaksi sudah selesai via bank
+            if ($transaksi->status === 'selesai' && $transaksi->jenis_pembayaran === 'bank' && $transaksi->account_bank_id) {
+                $bank = AccountBank::find($transaksi->account_bank_id);
+                if ($bank) {
+                    if ($transaksi->jenis_transaksi === 'uang_masuk') {
+                        $bank->decrement('saldo', $transaksi->nominal);
+                    } elseif ($transaksi->jenis_transaksi === 'uang_keluar') {
+                        $bank->increment('saldo', $transaksi->nominal);
+                    }
+                }
+            }
+
+            $transaksi->delete();
+        });
+
         return redirect()->back()->with('success', 'Transaksi berhasil dihapus.');
     }
 

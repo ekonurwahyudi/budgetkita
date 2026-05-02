@@ -138,26 +138,43 @@
 
                     {{-- Eviden --}}
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-sm font-medium text-foreground">Eviden (bisa pilih banyak file)</label>
-                        <input type="file" name="eviden[]" class="kt-input" accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.xlsx,.xls" multiple>
-                        <p class="text-xs text-muted-foreground">Max 5MB per file. Format: JPG, PNG, PDF, Excel</p>
-                    </div>
-                    @if($hutangPiutang && !empty($hutangPiutang->eviden))
-                    <div class="flex flex-col gap-2">
-                        <label class="text-sm font-medium text-foreground">Eviden Tersimpan</label>
-                        @foreach($hutangPiutang->eviden as $path)
-                        <div class="flex items-center justify-between p-2 rounded-lg border border-border bg-accent/30">
-                            <div class="flex items-center gap-2 text-sm">
-                                <i class="ki-filled ki-file text-muted-foreground"></i>
-                                <a href="{{ Storage::url($path) }}" target="_blank" class="kt-link text-xs">{{ basename($path) }}</a>
+                        <label class="text-sm font-medium text-foreground">Eviden</label>
+                        <input type="file" name="eviden[]" id="evidenInput" class="kt-input" multiple accept="image/*,.pdf,.xlsx,.xls" onchange="previewEviden(this)">
+                        <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: JPG, PNG, PDF, Excel.</p>
+
+                        <div id="previewContainer" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
+
+                        @if($hutangPiutang && !empty($hutangPiutang->eviden))
+                        <div id="existingEviden" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2">
+                            @foreach($hutangPiutang->eviden as $idx => $ev)
+                            @php
+                                $isPdf = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.pdf']);
+                                $isExcel = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.xlsx', '.xls']);
+                                $url = \Illuminate\Support\Facades\Storage::url($ev);
+                            @endphp
+                            <div class="relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
+                                @if($isPdf)
+                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-full p-3">
+                                        <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
+                                        <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
+                                    </a>
+                                @elseif($isExcel)
+                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-full p-3">
+                                        <i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>
+                                        <span class="text-[10px] text-muted-foreground text-center truncate w-full">Excel</span>
+                                    </a>
+                                @else
+                                    <img src="{{ $url }}" class="w-full h-full object-cover" alt="Eviden {{ $idx + 1 }}">
+                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>
+                                @endif
+                                <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">
+                                    <i class="ki-filled ki-cross text-xs"></i>
+                                </button>
                             </div>
-                            <label class="flex items-center gap-1.5 text-xs text-danger cursor-pointer">
-                                <input type="checkbox" name="hapus_eviden[]" value="{{ $path }}" class="size-3"> Hapus
-                            </label>
+                            @endforeach
                         </div>
-                        @endforeach
+                        @endif
                     </div>
-                    @endif
                 </div>
 
                 {{-- Footer --}}
@@ -245,5 +262,69 @@ document.addEventListener('DOMContentLoaded', function() {
     calcSisa();
     onPembayaranChange();
 });
+
+function previewEviden(input) {
+    var container = document.getElementById('previewContainer');
+    container.innerHTML = '';
+    if (input.files) {
+        Array.from(input.files).forEach(function(file, index) {
+            var isPdf = file.type === 'application/pdf';
+            var isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel';
+            var div = document.createElement('div');
+            div.className = 'relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+            div.id = 'preview-' + index;
+            if (isPdf) {
+                div.innerHTML =
+                    '<div class="flex flex-col items-center justify-center w-full h-full p-3">' +
+                        '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
+                        '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>';
+            } else if (isExcel) {
+                div.innerHTML =
+                    '<div class="flex flex-col items-center justify-center w-full h-full p-3">' +
+                        '<i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>' +
+                        '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>';
+            } else {
+                var reader = new FileReader();
+                reader.onload = (function(d, i) {
+                    return function(e) {
+                        d.innerHTML =
+                            '<img src="' + e.target.result + '" class="w-full h-full object-cover" alt="Preview">' +
+                            '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>' +
+                            '<button type="button" onclick="removePreview(' + i + ')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">' +
+                                '<i class="ki-filled ki-cross text-xs"></i>' +
+                            '</button>';
+                    };
+                })(div, index);
+                reader.readAsDataURL(file);
+                container.appendChild(div);
+                return;
+            }
+            container.appendChild(div);
+        });
+    }
+}
+
+function removePreview(index) {
+    var el = document.getElementById('preview-' + index);
+    if (el) el.remove();
+}
+
+var hapusEvidenList = [];
+function hapusExistingEviden(path, elementId) {
+    if (!confirm('Yakin hapus eviden ini?')) return;
+    hapusEvidenList.push(path);
+    var form = document.querySelector('form[enctype="multipart/form-data"]');
+    document.querySelectorAll('input[name^="hapus_eviden["]').forEach(function(el) { el.remove(); });
+    hapusEvidenList.forEach(function(p, i) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'hapus_eviden[' + i + ']';
+        inp.value = p;
+        form.appendChild(inp);
+    });
+    document.getElementById(elementId).remove();
+}
 </script>
 @endpush

@@ -62,7 +62,7 @@ class ApprovalService
             return $model->items->sum('harga_total');
         }
 
-        return $model->thp ?? $model->total_penjualan ?? $model->nominal ?? 0;
+        return $model->thp ?? $model->total_penjualan ?? $model->nominal_pembelian ?? $model->nominal ?? 0;
     }
 
     private function getSaldoType(Model $model): string

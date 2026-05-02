@@ -10,6 +10,7 @@ use App\Services\ApprovalService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PembelianAsetController extends Controller
 {
@@ -41,6 +42,7 @@ class PembelianAsetController extends Controller
             'jenis_pembayaran'   => 'required|in:cash,bank',
             'account_bank_id'    => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan'            => 'nullable|string',
+            'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf',
         ]);
 
         $input = $request->only([
@@ -48,6 +50,14 @@ class PembelianAsetController extends Controller
             'nominal_pembelian', 'umur_manfaat', 'nilai_residu',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        if ($request->hasFile('eviden')) {
+            $paths = [];
+            foreach ($request->file('eviden') as $file) {
+                $paths[] = app(FileUploadService::class)->upload($file);
+            }
+            $input['eviden'] = $paths;
+        }
 
         PembelianAset::create($input);
         return redirect()->route('pembelian-aset.index')->with('success', 'Pembelian aset berhasil ditambahkan.');
@@ -78,6 +88,7 @@ class PembelianAsetController extends Controller
             'jenis_pembayaran'   => 'required|in:cash,bank',
             'account_bank_id'    => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan'            => 'nullable|string',
+            'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf',
         ]);
 
         $input = $request->only([
@@ -85,6 +96,18 @@ class PembelianAsetController extends Controller
             'nominal_pembelian', 'umur_manfaat', 'nilai_residu',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        if ($request->hasFile('eviden')) {
+            $existing = $pembelianAset->eviden ?? [];
+            foreach ($request->file('eviden') as $file) {
+                $existing[] = app(FileUploadService::class)->upload($file);
+            }
+            $input['eviden'] = $existing;
+        }
+        if ($request->filled('hapus_eviden')) {
+            $existing = $pembelianAset->eviden ?? [];
+            $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
+        }
 
         DB::transaction(function () use ($pembelianAset, $input) {
             // Reverse saldo lama jika sudah selesai via bank (pembelian selalu keluar)

@@ -138,51 +138,52 @@
         $chartLabels = $pakanByJenis->map(fn($item) => $item['name'] . ' (' . number_format($item['total'], 1) . ' kg)')->toJson();
         $chartSeries = $pakanByJenis->pluck('total')->map(fn($v) => (float) $v)->toJson();
     @endphp
-    <div class="kt-card min-w-0">
-        <div class="kt-card-header min-h-14">
-            <h3 class="kt-card-title">Grafik Pakan</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="kt-card min-w-0">
+            <div class="kt-card-header min-h-14">
+                <h3 class="kt-card-title">Stok Persediaan Pakan</h3>
+            </div>
+            <div class="kt-card-content py-4">
+                <div class="overflow-x-auto">
+                    <table class="kt-table kt-table-border w-full">
+                        <thead>
+                            <tr>
+                                <th class="text-center text-xs font-semibold w-10">No.</th>
+                                <th class="text-left text-xs font-semibold">Jenis Pakan</th>
+                                <th class="text-right text-xs font-semibold">Penggunaan (kg)</th>
+                                <th class="text-right text-xs font-semibold">Sisa (kg)</th>
+                                <th class="text-center text-xs font-semibold">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($pakanByJenis as $item)
+                            <tr>
+                                <td class="text-center text-sm">{{ $loop->iteration }}</td>
+                                <td class="text-sm">{{ $item['name'] }}</td>
+                                <td class="text-right text-sm text-mono">{{ number_format($item['total'], 2) }}</td>
+                                <td class="text-right text-sm text-mono @if($item['sisa'] < 5) text-red-500 font-semibold @endif">{{ number_format($item['sisa'], 2) }}</td>
+                                <td class="text-center">
+                                    @if($item['persediaan_id'])
+                                    <a href="{{ route('persediaan.show', $item['persediaan_id']) }}" class="kt-btn kt-btn-sm kt-btn-outline" title="Lihat Detail">
+                                        <i class="ki-filled ki-eye text-xs"></i>
+                                    </a>
+                                    @else
+                                    <span class="text-xs text-muted-foreground">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="kt-card-content py-4">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <div class="flex-1 min-w-0 flex flex-col items-center">
-                    <p class="text-sm font-medium text-foreground mb-3 text-center">Stok Persediaan Pakan</p>
-                    <div class="overflow-x-auto w-full">
-                        <table class="kt-table kt-table-border">
-                            <thead>
-                                <tr>
-                                    <th class="text-center text-xs font-semibold w-10">No.</th>
-                                    <th class="text-left text-xs font-semibold">Jenis Pakan</th>
-                                    <th class="text-right text-xs font-semibold">Penggunaan (kg)</th>
-                                    <th class="text-right text-xs font-semibold">Sisa (kg)</th>
-                                    <th class="text-center text-xs font-semibold">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($pakanByJenis as $item)
-                                <tr>
-                                    <td class="text-center text-sm">{{ $loop->iteration }}</td>
-                                    <td class="text-sm">{{ $item['name'] }}</td>
-                                    <td class="text-right text-sm text-mono">{{ number_format($item['total'], 2) }}</td>
-                                    <td class="text-right text-sm text-mono @if($item['sisa'] < 5) text-red-500 font-semibold @endif">{{ number_format($item['sisa'], 2) }}</td>
-                                    <td class="text-center">
-                                        @if($item['persediaan_id'])
-                                        <a href="{{ route('persediaan.show', $item['persediaan_id']) }}" class="kt-btn kt-btn-sm kt-btn-outline" title="Lihat Detail">
-                                            <i class="ki-filled ki-eye text-xs"></i>
-                                        </a>
-                                        @else
-                                        <span class="text-xs text-muted-foreground">-</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="w-full lg:w-[380px] shrink-0 flex flex-col items-center">
-                    <p class="text-sm font-medium text-foreground mb-3 text-center">Komposisi Jenis Pakan</p>
-                    <div id="pakanDonutChart" style="width:100%;max-width:380px;height:280px"></div>
-                </div>
+        <div class="kt-card min-w-0">
+            <div class="kt-card-header min-h-14">
+                <h3 class="kt-card-title">Komposisi Jenis Pakan</h3>
+            </div>
+            <div class="kt-card-content py-4 flex flex-col items-center justify-center">
+                <div id="pakanDonutChart" style="width:100%;max-width:320px;height:280px"></div>
             </div>
         </div>
     </div>

@@ -156,8 +156,8 @@
                         {{-- Eviden --}}
                         <div class="flex flex-col gap-1.5">
                             <label class="text-sm font-medium text-foreground">Eviden</label>
-                            <input type="file" name="eviden[]" id="evidenInput" class="kt-input" multiple accept="image/*,.pdf,.xlsx,.xls" onchange="previewEviden(this)">
-                            <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: JPG, PNG, PDF, Excel.</p>
+                            <input type="file" name="eviden[]" id="evidenInput" class="kt-input" multiple accept=".png,.jpg,.jpeg,.pdf" onchange="previewEviden(this)">
+                            <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: PNG, JPG, JPEG, PDF.</p>
 
                             {{-- Preview file yang baru dipilih --}}
                             <div id="previewContainer" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
@@ -168,7 +168,6 @@
                                 @foreach($transaksi->eviden as $idx => $ev)
                                 @php
                                     $isPdf = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.pdf']);
-                                    $isExcel = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.xlsx', '.xls']);
                                     $url = \Illuminate\Support\Facades\Storage::url($ev);
                                 @endphp
                                 <div class="relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
@@ -177,14 +176,11 @@
                                             <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
                                             <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
                                         </a>
-                                    @elseif($isExcel)
-                                        <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-full p-3">
-                                            <i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>
-                                            <span class="text-[10px] text-muted-foreground text-center truncate w-full">Excel</span>
-                                        </a>
                                     @else
-                                        <img src="{{ $url }}" class="w-full h-full object-cover" alt="Eviden {{ $idx + 1 }}">
-                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>
+                                        <img src="{{ $url }}" class="w-full h-full object-cover cursor-pointer lb-thumb" alt="Eviden {{ $idx + 1 }}" data-src="{{ $url }}">
+                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none flex items-center justify-center">
+                                            <i class="ki-filled ki-eye text-white text-2xl drop-shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></i>
+                                        </div>
                                     @endif
                                     <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">
                                         <i class="ki-filled ki-cross text-xs"></i>
@@ -208,6 +204,13 @@
             </form>
         </div>
     </div>
+</div>
+{{-- Lightbox Modal --}}
+<div id="lb-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;">
+    <button id="lb-close" style="position:absolute;top:1rem;right:1rem;color:#fff;font-size:1.5rem;background:none;border:none;cursor:pointer;">
+        <i class="ki-filled ki-cross" style="font-size:1.75rem;"></i>
+    </button>
+    <img id="lb-img" src="" style="max-width:100%;max-height:90vh;object-fit:contain;border-radius:0.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
 </div>
 @endsection
 
@@ -275,7 +278,6 @@ function previewEviden(input) {
     if (input.files) {
         Array.from(input.files).forEach(function(file, index) {
             var isPdf = file.type === 'application/pdf';
-            var isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel';
             var div = document.createElement('div');
             div.className = 'relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
             div.id = 'preview-' + index;
@@ -285,19 +287,15 @@ function previewEviden(input) {
                         '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
                         '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
                     '</div>';
-            } else if (isExcel) {
-                div.innerHTML =
-                    '<div class="flex flex-col items-center justify-center w-full h-full p-3">' +
-                        '<i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>' +
-                        '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
-                    '</div>';
             } else {
                 var reader = new FileReader();
                 reader.onload = (function(d, i) {
                     return function(e) {
                         d.innerHTML =
-                            '<img src="' + e.target.result + '" class="w-full h-full object-cover" alt="Preview">' +
-                            '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>' +
+                            '<img src="' + e.target.result + '" class="w-full h-full object-cover cursor-pointer lb-preview" alt="Preview">' +
+                            '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center pointer-events-none">' +
+                                '<i class="ki-filled ki-eye text-white text-2xl drop-shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></i>' +
+                            '</div>' +
                             '<button type="button" onclick="removePreview(' + i + ')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">' +
                                 '<i class="ki-filled ki-cross text-xs"></i>' +
                             '</button>';
@@ -359,6 +357,53 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($transaksi?->tambak_id)
     loadBlokByTambak('{{ $transaksi->blok_id }}');
     @endif
+
+    // Lightbox
+    var modal = document.getElementById('lb-modal');
+    var img = document.getElementById('lb-img');
+    var closeBtn = document.getElementById('lb-close');
+    if (modal) {
+        function openLb(src) {
+            img.src = src;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLb() {
+            modal.style.display = 'none';
+            img.src = '';
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('click', function(e) {
+            var thumb = e.target.closest('.lb-thumb');
+            if (thumb) {
+                e.preventDefault();
+                openLb(thumb.dataset.src);
+                return;
+            }
+            var preview = e.target.closest('.lb-preview');
+            if (preview) {
+                e.preventDefault();
+                openLb(preview.src);
+                return;
+            }
+        });
+
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeLb();
+        });
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal || e.target === img) {
+                closeLb();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLb();
+        });
+    }
 });
 </script>
 @endpush

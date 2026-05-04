@@ -15,4 +15,5 @@ class Kolam extends BaseModel
     public function blok() { return $this->belongsTo(Blok::class); }
     public function users() { return $this->belongsToMany(User::class, 'kolam_users'); }
     public function parameters() { return $this->hasMany(KolamParameter::class); }
+    public function pakan() { return $this->hasMany(PemberianPakan::class); }
 }

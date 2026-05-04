@@ -339,7 +339,7 @@
             </div>
 
 {{-- Parameter Air & Performa --}}
-            <div class="kt-card">
+            <!-- <div class="kt-card">
                 <div class="kt-card-header">
                     <h3 class="kt-card-title">Parameter Air & Performa</h3>
                 </div>
@@ -398,7 +398,7 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div> -->
 
             {{-- Info Kolam --}}
             <div class="kt-card">
@@ -702,7 +702,7 @@ function openKolamModal() {
     KTModal.getInstance(document.querySelector('#kolamModal')).show();
 }
 
-function editKolam(id, nama, tglBerdiri, totalTebar, status, userIds) {
+function editKolam(id, nama, tglBerdiri, totalTebar, status) {
     document.getElementById('kolamModalTitle').textContent = 'Edit Kolam';
     document.getElementById('kolamForm').action = "{{ route('kolam.update', ['kolam' => '__ID__']) }}".replace('__ID__', id);
     document.getElementById('kolamFormMethod').value = 'PUT';
@@ -710,9 +710,7 @@ function editKolam(id, nama, tglBerdiri, totalTebar, status, userIds) {
     document.getElementById('k_tgl_berdiri').value = tglBerdiri || '';
     document.getElementById('k_total_tebar').value = totalTebar || '';
     document.getElementById('k_status').value = status || 'aktif';
-    document.querySelectorAll('.k-user-cb').forEach(function(cb) {
-        cb.checked = userIds && userIds.indexOf(cb.dataset.userId) !== -1;
-    });
+    document.querySelectorAll('.k-user-cb').forEach(function(cb) { cb.checked = false; });
     KTModal.getInstance(document.querySelector('#kolamModal')).show();
 }
 </script>

@@ -47,7 +47,7 @@ class TransaksiKeuanganController extends Controller
         if ($request->filled('tgl_dari')) $query->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
         if ($request->filled('tgl_sampai')) $query->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
 
-        $data = $query->latest('tgl_kwitansi')->get();
+        $data = $query->latest()->get();
 
         $tambakIds2 = auth()->user()->tambaks()->pluck('tambaks.id');
         $kategoriTransaksis = KategoriTransaksi::orderBy('deskripsi')->get();
@@ -87,7 +87,7 @@ class TransaksiKeuanganController extends Controller
         if ($request->filled('tgl_dari')) $query->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
         if ($request->filled('tgl_sampai')) $query->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
 
-        $data = $query->latest('tgl_kwitansi')->get();
+        $data = $query->latest()->get();
         $filename = 'transaksi-keuangan-' . now()->format('Ymd-His') . '.xlsx';
 
         return Excel::download(new TransaksiKeuanganExport($data), $filename);
@@ -113,7 +113,7 @@ class TransaksiKeuanganController extends Controller
             'sumber_dana_id'        => 'required|uuid|exists:sumber_danas,id',
             'jenis_pembayaran'      => 'required|in:cash,bank',
             'account_bank_id'       => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
-            'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf,xlsx,xls',
+            'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
             'catatan'               => 'nullable|string',
         ]);
 
@@ -169,7 +169,7 @@ class TransaksiKeuanganController extends Controller
             'sumber_dana_id'        => 'required|uuid|exists:sumber_danas,id',
             'jenis_pembayaran'      => 'required|in:cash,bank',
             'account_bank_id'       => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
-            'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf,xlsx,xls',
+            'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
             'catatan'               => 'nullable|string',
         ]);
 

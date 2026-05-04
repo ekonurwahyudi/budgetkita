@@ -23,10 +23,14 @@ class PemberianKimiaController extends Controller
 
     public function index()
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
-        $data = PemberianPakan::with(['blok.tambak', 'siklus', 'itemPersediaan.kategoriPersediaan'])
-            ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))
-            ->latest()->get()
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $query = PemberianPakan::with(['blok.tambak', 'siklus', 'itemPersediaan.kategoriPersediaan']);
+        if ($hasTambak) {
+            $tambakIds = $user->tambaks()->pluck('tambaks.id');
+            $query->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
+        }
+        $data = $query->latest()->get()
             ->filter(fn($p) =>
                 $p->itemPersediaan?->kategoriPersediaan &&
                 stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
@@ -36,8 +40,11 @@ class PemberianKimiaController extends Controller
 
     public function create()
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
-        $tambaks = Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get();
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $tambaks = $hasTambak
+            ? Tambak::whereIn('id', $user->tambaks()->pluck('tambaks.id'))->orderBy('nama_tambak')->get()
+            : Tambak::orderBy('nama_tambak')->get();
 
         // Kategori selain pakan
         $kategoriPakan = KategoriPersediaan::where('deskripsi', 'ilike', '%pakan%')->pluck('id');

@@ -34,7 +34,7 @@
             {{-- Kanan: Search, Filter, Export, Tambah --}}
             <div class="flex items-center gap-2 flex-wrap">
                 <input type="text" placeholder="Cari kegiatan..." class="kt-input" style="width:200px"
-                       data-kt-datatable-search="#kt_datatable" value="{{ request('search') }}" />
+                       data-kt-datatable-search="#transaksi_table" value="{{ request('search') }}" />
 
                 {{-- Filter Button --}}
                 <button type="button" id="filter-btn" class="kt-btn kt-btn-outline flex items-center gap-2">
@@ -58,7 +58,7 @@
         </div>
 
         {{-- Table --}}
-        <div id="kt_datatable" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true">
+        <div id="transaksi_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="transaksi_v2">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>

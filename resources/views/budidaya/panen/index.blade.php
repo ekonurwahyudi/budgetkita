@@ -9,7 +9,7 @@
     <div class="kt-card">
         <div class="kt-card-header min-h-16">
             <form method="GET" class="flex items-center gap-2">
-                <input type="text" name="search" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#kt_datatable" value="{{ request('search') }}" />
+                <input type="text" name="search" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#panen_table" value="{{ request('search') }}" />
                 <select name="status" class="kt-select sm:w-40" onchange="this.form.submit()">
                     <option value="">-- Status --</option>
                     <option value="awaiting_approval" {{ request('status')=='awaiting_approval'?'selected':'' }}>Awaiting</option>
@@ -25,7 +25,7 @@
             </a>
             @endcan
         </div>
-        <div id="kt_datatable" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true">
+        <div id="panen_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="panen">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>

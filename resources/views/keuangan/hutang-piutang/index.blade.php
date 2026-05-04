@@ -8,14 +8,14 @@
 <div class="grid w-full space-y-5">
     <div class="kt-card">
         <div class="kt-card-header min-h-16">
-            <input type="text" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#kt_datatable" />
+            <input type="text" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#hutang_piutang_table" />
             @can('hutang-piutang.create')
             <a href="{{ route('hutang-piutang.create') }}" class="kt-btn kt-btn-outline">
                 <i class="ki-filled ki-plus-squared"></i> Tambah
             </a>
             @endcan
         </div>
-        <div id="kt_datatable" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true">
+        <div id="hutang_piutang_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="hutang_piutang">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>

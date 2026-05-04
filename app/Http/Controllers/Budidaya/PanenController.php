@@ -14,9 +14,13 @@ class PanenController extends Controller
 {
     public function index(Request $request)
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
-        $query = Panen::with(['siklus.blok.tambak', 'accountBank'])
-            ->whereHas('siklus.blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $query = Panen::with(['siklus.blok.tambak', 'accountBank']);
+        if ($hasTambak) {
+            $tambakIds = $user->tambaks()->pluck('tambaks.id');
+            $query->whereHas('siklus.blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
+        }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -26,10 +30,14 @@ class PanenController extends Controller
 
     public function create()
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
-        $sikluses = Siklus::where('status', 'aktif')->with('blok.tambak')
-            ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))
-            ->orderBy('nama_siklus')->get();
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $siklusQuery = Siklus::where('status', 'aktif')->with('blok.tambak');
+        if ($hasTambak) {
+            $tambakIds = $user->tambaks()->pluck('tambaks.id');
+            $siklusQuery->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
+        }
+        $sikluses = $siklusQuery->orderBy('nama_siklus')->get();
         $accountBanks = AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
         return view('budidaya.panen.form', [
             'panen' => null,
@@ -79,10 +87,14 @@ class PanenController extends Controller
 
     public function edit(Panen $panen)
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
-        $sikluses = Siklus::where('status', 'aktif')->with('blok.tambak')
-            ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))
-            ->orderBy('nama_siklus')->get();
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $siklusQuery = Siklus::where('status', 'aktif')->with('blok.tambak');
+        if ($hasTambak) {
+            $tambakIds = $user->tambaks()->pluck('tambaks.id');
+            $siklusQuery->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
+        }
+        $sikluses = $siklusQuery->orderBy('nama_siklus')->get();
         $accountBanks = AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
         return view('budidaya.panen.form', [
             'panen' => $panen,

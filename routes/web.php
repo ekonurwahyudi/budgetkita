@@ -86,6 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::get('blok/by-tambak/{tambak}', [BlokController::class, 'byTambak'])->name('blok.by-tambak');
         Route::resource('siklus', SiklusController::class)->parameters(['siklus' => 'siklus'])->middleware('can:siklus.view');
         Route::get('siklus/by-blok/{blok}', [SiklusController::class, 'byBlok'])->name('siklus.by-blok');
+        Route::get('kolam/by-siklus/{siklus}', [KolamController::class, 'bySiklus'])->name('kolam.by-siklus');
         Route::get('panen/create', [PanenController::class, 'create'])->name('panen.create')->middleware('can:panen.create');
         Route::resource('panen', PanenController::class)->except(['create'])->parameters(['panen' => 'panen'])->middleware('can:panen.view');
         Route::post('panen/{panen}/approve', [PanenController::class, 'approve'])->name('panen.approve');
@@ -104,6 +105,8 @@ Route::middleware('auth')->group(function () {
         Route::get('kolam/{kolam}', [KolamController::class, 'show'])->name('kolam.show');
         Route::get('kolam/{kolam}/export-parameter', [KolamController::class, 'exportParameter'])->name('kolam.parameter.export');
         Route::post('kolam/{kolam}/import-parameter', [KolamController::class, 'importParameter'])->name('kolam.parameter.import');
+        Route::post('kolam/{kolam}/pakan', [KolamController::class, 'storePakan'])->name('kolam.pakan.store');
+        Route::delete('kolam-pakan/{pakan}', [KolamController::class, 'destroyPakan'])->name('kolam.pakan.destroy');
         Route::post('kolam/{kolam}/parameter', [KolamController::class, 'storeParameter'])->name('kolam.parameter.store');
         Route::put('kolam-parameter/{parameter}', [KolamController::class, 'updateParameter'])->name('kolam.parameter.update');
         Route::delete('kolam-parameter/{parameter}', [KolamController::class, 'destroyParameter'])->name('kolam.parameter.destroy');

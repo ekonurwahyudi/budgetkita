@@ -6,10 +6,9 @@
 
 @push('styles')
 <style>
-.excel-card .kt-card-content { padding: 0 !important; }
 .excel-wrap {
     border: 1px solid #c0c8d4; border-radius: 6px;
-    max-height: 75vh; overflow: auto; position: relative;
+    max-height: 70vh; overflow: auto; position: relative;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     width: 0; min-width: 100%;
 }
@@ -75,6 +74,9 @@
 .excel-select:hover:not(:focus) { background: #f0f4ff; }
 .excel-input.save-ok { background: #bbf7d0 !important; }
 .excel-input.save-err { background: #fecaca !important; }
+.tab-btn { padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 600; border-bottom: 2px solid transparent; color: #6b7280; cursor: pointer; transition: all 0.15s; }
+.tab-btn:hover { color: #3b82f6; }
+.tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; }
 </style>
 @endpush
 
@@ -129,8 +131,70 @@
         </div>
     </div>
 
-    {{-- Parameter Harian --}}
-    <div class="kt-card excel-card">
+    {{-- Pakan Analytics --}}
+    @if($pakanByJenis->count())
+    @php
+        $chartLabels = $pakanByJenis->map(fn($item) => $item['name'] . ' (' . number_format($item['total'], 1) . ' kg)')->toJson();
+        $chartSeries = $pakanByJenis->pluck('total')->map(fn($v) => (float) $v)->toJson();
+    @endphp
+    <div class="kt-card">
+        <div class="kt-card-header min-h-14">
+            <h3 class="kt-card-title">Grafik Pakan</h3>
+        </div>
+        <div class="kt-card-content py-4">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-foreground mb-3">Stok Persediaan Pakan</p>
+                    <div class="overflow-x-auto">
+                        <table class="kt-table kt-table-border w-full">
+                            <thead>
+                                <tr>
+                                    <th class="text-center text-xs font-semibold w-10">No.</th>
+                                    <th class="text-left text-xs font-semibold">Jenis Pakan</th>
+                                    <th class="text-right text-xs font-semibold">Penggunaan (kg)</th>
+                                    <th class="text-right text-xs font-semibold">Sisa (kg)</th>
+                                    <th class="text-center text-xs font-semibold">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($pakanByJenis as $item)
+                                <tr>
+                                    <td class="text-center text-sm">{{ $loop->iteration }}</td>
+                                    <td class="text-sm">{{ $item['name'] }}</td>
+                                    <td class="text-right text-sm text-mono">{{ number_format($item['total'], 2) }}</td>
+                                    <td class="text-right text-sm text-mono @if($item['sisa'] < 5) text-red-500 font-semibold @endif">{{ number_format($item['sisa'], 2) }}</td>
+                                    <td class="text-center">
+                                        @if($item['persediaan_id'])
+                                        <a href="{{ route('persediaan.show', $item['persediaan_id']) }}" class="kt-btn kt-btn-sm kt-btn-outline" title="Lihat Detail">
+                                            <i class="ki-filled ki-eye text-xs"></i>
+                                        </a>
+                                        @else
+                                        <span class="text-xs text-muted-foreground">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="w-full lg:w-[380px] shrink-0">
+                    <p class="text-sm font-medium text-foreground mb-3">Komposisi Jenis Pakan</p>
+                    <div id="pakanDonutChart" style="width:100%;height:280px"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Tabs --}}
+    <div class="flex border-b border-gray-200 mb-0">
+        <button class="tab-btn active" data-tab="parameter" onclick="switchTab('parameter')">Parameter Harian</button>
+        <button class="tab-btn" data-tab="pakan" onclick="switchTab('pakan')">Pemberian Pakan</button>
+    </div>
+
+    {{-- Tab: Parameter Harian --}}
+    <div class="kt-card" id="tab-parameter">
         <div class="kt-card-header min-h-14">
             <h3 class="kt-card-title">Parameter Harian</h3>
             <div class="flex items-center gap-2">
@@ -216,6 +280,170 @@
             </table>
         </div>
     </div>
+
+    {{-- Tab: Pemberian Pakan --}}
+    <div class="kt-card hidden" id="tab-pakan">
+        <div class="kt-card-header min-h-16">
+            <h3 class="kt-card-title">Pemberian Pakan</h3>
+            <div class="flex items-center gap-2">
+                <select id="perPagePakan" class="kt-select kt-select-sm w-20" onchange="changePakanPerPage()">
+                    <option value="5" {{ request('per_page', 10) == 5 ? 'selected' : '' }}>5</option>
+                    <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                    <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                    <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                </select>
+                <span class="text-sm text-muted-foreground">dari {{ $pakanGroups->count() }} hari</span>
+            </div>
+        </div>
+        <div class="kt-card-content">
+            <div class="kt-scrollable" style="max-height:65vh">
+                <table class="kt-table kt-table-border" id="pakanGroupTable">
+                    <thead>
+                        <tr>
+                            <th class="w-10" rowspan="2">No</th>
+                            <th rowspan="2">Tanggal</th>
+                            <th rowspan="2">Jenis Pakan</th>
+                            <th colspan="4" class="!text-center" style="background:rgba(59,130,246,0.08)">Pemberian Pakan</th>
+                            <th rowspan="2" class="text-right">Jumlah Pakan</th>
+                            <th rowspan="2">Puasa</th>
+                            <th rowspan="2" class="text-right">Pakan Kumulatif</th>
+                        </tr>
+                        <tr>
+                            <th class="!text-center text-xs" style="background:rgba(59,130,246,0.08)">06:00</th>
+                            <th class="!text-center text-xs" style="background:rgba(59,130,246,0.08)">10:00</th>
+                            <th class="!text-center text-xs" style="background:rgba(59,130,246,0.08)">14:00</th>
+                            <th class="!text-center text-xs" style="background:rgba(59,130,246,0.08)">18:00</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($pagedPakan as $gi => $group)
+                            @php
+                                $rowNo = $pagedPakan->firstItem() + $gi;
+                                $kumulatif = $cumulativeByDate[$group['date']] ?? 0;
+                                $hasMultiItems = $group['items']->count() > 1;
+                            @endphp
+                            @if($hasMultiItems)
+                            <tr class="bg-muted/40 cursor-pointer" onclick="togglePakanGroup('{{ $loop->index }}')">
+                                <td class="font-medium">{{ $rowNo }}</td>
+                                <td>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-medium">{{ \Carbon\Carbon::parse($group['date'])->format('d/m/y') }}</span>
+                                        <span class="text-[0.65rem] text-muted-foreground">{{ \Carbon\Carbon::parse($group['date'])->translatedFormat('D') }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-sm">{{ $group['jenis_pakan'] ?: '-' }}</span>
+                                        <i class="ki-filled ki-down text-xs ms-1 transition-transform" id="pakan-icon-{{ $loop->index }}"></i>
+                                    </div>
+                                </td>
+                                @foreach(['06:00','10:00','14:00','18:00'] as $slot)
+                                @php $slotItems = $group['by_time'][$slot]; @endphp
+                                <td class="!text-center text-mono text-xs">
+                                    @if($slotItems->count())
+                                        @if($slotItems->count() === 1)
+                                            @php $si = $slotItems->first(); @endphp
+                                            @if($si->puasa)
+                                                <span class="kt-badge kt-badge-sm kt-badge-warning">Puasa</span>
+                                            @else
+                                                {{ number_format($si->jumlah_pakan, 2) }}
+                                            @endif
+                                        @else
+                                            <span class="text-xs font-medium">{{ number_format($slotItems->where('puasa', false)->sum('jumlah_pakan'), 2) }}</span>
+                                        @endif
+                                    @else
+                                        <span class="text-muted-foreground">·</span>
+                                    @endif
+                                </td>
+                                @endforeach
+                                <td class="text-right text-mono text-sm font-medium">{{ number_format($group['total_jumlah'], 2) }} {{ $group['unit'] }}</td>
+                                <td>
+                                    @if($group['is_puasa'])
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning">Ya</span>
+                                    @else
+                                        <span class="text-xs text-muted-foreground">Tidak</span>
+                                    @endif
+                                </td>
+                                <td class="text-right text-mono text-sm font-semibold text-primary">{{ number_format($kumulatif, 2) }}</td>
+                            </tr>
+                            @foreach($group['items']->sortBy(fn($i) => $i->tgl_pakan?->format('H:i') ?? '00:00') as $item)
+                            <tr class="pakan-child-{{ $loop->parent->index }} hidden" style="border-left:3px solid #3b82f6">
+                                <td></td>
+                                <td class="text-xs text-muted-foreground">{{ $item->tgl_pakan?->format('H:i') ?? '-' }}</td>
+                                <td class="ps-6">
+                                    @if($item->puasa)
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning" style="width:fit-content">Puasa</span>
+                                    @else
+                                        <span class="text-sm">{{ $item->itemPersediaan?->deskripsi ?? '-' }}</span>
+                                    @endif
+                                </td>
+                                <td class="!text-center text-mono text-xs">{{ $item->tgl_pakan?->format('H') === '06' ? number_format($item->jumlah_pakan, 2) : '' }}</td>
+                                <td class="!text-center text-mono text-xs">{{ $item->tgl_pakan?->format('H') === '10' ? number_format($item->jumlah_pakan, 2) : '' }}</td>
+                                <td class="!text-center text-mono text-xs">{{ $item->tgl_pakan?->format('H') === '14' ? number_format($item->jumlah_pakan, 2) : '' }}</td>
+                                <td class="!text-center text-mono text-xs">{{ $item->tgl_pakan?->format('H') === '18' ? number_format($item->jumlah_pakan, 2) : '' }}</td>
+                                <td class="text-right text-mono text-sm">{{ number_format($item->jumlah_pakan, 2) }} {{ $item->unit ?? 'kg' }}</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            @endforeach
+                            @else
+                            @php $item = $group['items']->first(); @endphp
+                            <tr>
+                                <td>{{ $rowNo }}</td>
+                                <td>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-medium">{{ \Carbon\Carbon::parse($group['date'])->format('d/m/y') }}</span>
+                                        <span class="text-[0.65rem] text-muted-foreground">{{ \Carbon\Carbon::parse($group['date'])->translatedFormat('D') }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if($item->puasa)
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning">Puasa</span>
+                                    @else
+                                        <span class="text-sm">{{ $item->itemPersediaan?->deskripsi ?? '-' }}</span>
+                                    @endif
+                                </td>
+                                @foreach(['06:00','10:00','14:00','18:00'] as $slot)
+                                @php $slotItems = $group['by_time'][$slot]; @endphp
+                                <td class="!text-center text-mono text-xs">
+                                    @if($slotItems->count())
+                                        @php $si = $slotItems->first(); @endphp
+                                        @if($si->puasa)
+                                            <span class="kt-badge kt-badge-sm kt-badge-warning">Puasa</span>
+                                        @else
+                                            {{ number_format($si->jumlah_pakan, 2) }}
+                                        @endif
+                                    @else
+                                        <span class="text-muted-foreground">·</span>
+                                    @endif
+                                </td>
+                                @endforeach
+                                <td class="text-right text-mono text-sm">{{ number_format($group['total_jumlah'], 2) }} {{ $group['unit'] }}</td>
+                                <td>
+                                    @if($item->puasa)
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning">Ya</span>
+                                    @else
+                                        <span class="text-xs text-muted-foreground">Tidak</span>
+                                    @endif
+                                </td>
+                                <td class="text-right text-mono text-sm font-semibold text-primary">{{ number_format($kumulatif, 2) }}</td>
+                            </tr>
+                            @endif
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if($pakanGroups->isEmpty())
+            <div class="py-8 text-center text-muted-foreground text-sm">Belum ada data pemberian pakan</div>
+            @endif
+        </div>
+        <div class="kt-card-footer flex items-center justify-between py-3 px-5 border-t">
+            <span class="text-sm text-muted-foreground">Menampilkan {{ $pagedPakan->firstItem() }}–{{ $pagedPakan->lastItem() }} dari {{ $pagedPakan->total() }} hari</span>
+            <div class="flex items-center gap-1">
+                {{ $pagedPakan->onEachSide(1)->appends(['per_page' => request('per_page', 10)])->links('pagination::tailwind') }}
+            </div>
+        </div>
+    </div>
 </div>
 
 {{-- Import Dialog --}}
@@ -242,33 +470,58 @@
 
 @push('scripts')
 <script>
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tab); });
+    document.getElementById('tab-parameter').classList.toggle('hidden', tab !== 'parameter');
+    document.getElementById('tab-pakan').classList.toggle('hidden', tab !== 'pakan');
+}
+
+function togglePakanGroup(id) {
+    var children = document.querySelectorAll('.pakan-child-' + id);
+    var icon = document.getElementById('pakan-icon-' + id);
+    if (!children.length) return;
+    var isHidden = children[0].classList.contains('hidden');
+    children.forEach(function(el) {
+        if (isHidden) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+    });
+    if (icon) {
+        if (isHidden) icon.classList.add('rotate-180');
+        else icon.classList.remove('rotate-180');
+    }
+}
+
+function changePakanPerPage() {
+    var val = document.getElementById('perPagePakan').value;
+    var url = new URL(window.location.href);
+    url.searchParams.set('per_page', val);
+    url.searchParams.set('pakan_page', 1);
+    window.location.href = url.toString();
+}
+
 var saveTimeout = null;
+var PARAM_UPDATE_URL = '{{ route("kolam.parameter.update", ["parameter" => "__ID__"]) }}'.replace('__ID__', '');
+var PARAM_DELETE_URL = '{{ route("kolam.parameter.destroy", ["parameter" => "__ID__"]) }}'.replace('__ID__', '');
 
 function ensureParameterExists(input, callback) {
     var id = input.dataset.id;
     if (id) { callback(id); return; }
-
     var dateStr = input.dataset.date;
     var row = input.closest('tr');
     var statusEl = row.querySelector('select[data-field="status"]');
-
     var data = new FormData();
     data.append('_token', '{{ csrf_token() }}');
     data.append('tgl_parameter', dateStr);
     data.append('status', statusEl ? statusEl.value : 'normal');
-
     var fields = ['ph_pagi','ph_sore','do_pagi','do_sore','suhu_pagi','suhu_sore','kecerahan_pagi','kecerahan_sore','salinitas','tinggi_air','warna_air','alk','ca','mg','mbw','masa','sr','pcr','perlakuan_harian'];
     fields.forEach(function(f) {
         var el = row.querySelector('[data-field="' + f + '"]');
         if (el && el.value) data.append(f, el.value);
     });
-
     fetch('{{ route('kolam.parameter.store', $kolam) }}', {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: data
+        method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: data
     }).then(function(r) {
-        if (!r.ok) throw new Error('Create failed: ' + r.status + ' ' + r.statusText);
+        if (!r.ok) throw new Error('Create failed: ' + r.status);
         return r.json();
     }).then(function(json) {
         var newId = json.parameter.id;
@@ -287,50 +540,31 @@ function ensureParameterExists(input, callback) {
     });
 }
 
-var PARAM_UPDATE_URL = '{{ route("kolam.parameter.update", ["parameter" => "__ID__"]) }}'.replace('__ID__', '');
-var PARAM_DELETE_URL = '{{ route("kolam.parameter.destroy", ["parameter" => "__ID__"]) }}'.replace('__ID__', '');
-
 function saveField(input) {
     var field = input.dataset.field;
     if (!field) return;
-
     ensureParameterExists(input, function(id) {
         var data = new FormData();
         data.append('_method', 'PUT');
         data.append('_token', '{{ csrf_token() }}');
         data.append(field, input.value);
-
         fetch(PARAM_UPDATE_URL + id, {
-            method: 'POST',
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            body: data
+            method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: data
         }).then(function(r) {
-            if (r.ok) {
-                input.classList.add('save-ok');
-                setTimeout(function() { input.classList.remove('save-ok'); }, 800);
-            } else {
-                input.classList.add('save-err');
-                setTimeout(function() { input.classList.remove('save-err'); }, 1500);
-            }
-        }).catch(function() {
-            input.classList.add('save-err');
-            setTimeout(function() { input.classList.remove('save-err'); }, 1500);
-        });
+            if (r.ok) { input.classList.add('save-ok'); setTimeout(function() { input.classList.remove('save-ok'); }, 800); }
+            else { input.classList.add('save-err'); setTimeout(function() { input.classList.remove('save-err'); }, 1500); }
+        }).catch(function() { input.classList.add('save-err'); setTimeout(function() { input.classList.remove('save-err'); }, 1500); });
     });
 }
 
 function deleteParam(btn, id) {
     if (!confirm('Hapus parameter ini?')) return;
     var row = btn.closest('tr');
-
     var data = new FormData();
     data.append('_method', 'DELETE');
     data.append('_token', '{{ csrf_token() }}');
-
     fetch(PARAM_DELETE_URL + id, {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-        body: data
+        method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: data
     }).then(function(r) {
         if (r.ok) {
             delete row.dataset.id;
@@ -342,12 +576,8 @@ function deleteParam(btn, id) {
             var olehTd = row.querySelector('td.td-oleh');
             if (olehTd) olehTd.textContent = '-';
             btn.closest('td.td-action').innerHTML = '';
-        } else {
-            alert('Gagal menghapus parameter.');
-        }
-    }).catch(function() {
-        alert('Gagal menghapus parameter.');
-    });
+        } else { alert('Gagal menghapus parameter.'); }
+    }).catch(function() { alert('Gagal menghapus parameter.'); });
 }
 
 function handleImport(input) {
@@ -360,18 +590,10 @@ function handleImport(input) {
 
 document.addEventListener('DOMContentLoaded', function() {
     var todayRow = document.querySelector('tr[data-date="{{ now()->format('Y-m-d') }}"]');
-    if (todayRow) {
-        setTimeout(function() {
-            todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
-    }
-
+    if (todayRow) { setTimeout(function() { todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }
     document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('param-field') && e.target.tagName === 'SELECT') {
-            saveField(e.target);
-        }
+        if (e.target.classList.contains('param-field') && e.target.tagName === 'SELECT') { saveField(e.target); }
     });
-
     document.addEventListener('input', function(e) {
         if (e.target.classList.contains('param-field') && e.target.tagName !== 'SELECT') {
             clearTimeout(saveTimeout);
@@ -381,4 +603,45 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+
+@if($pakanByJenis->count())
+@push('scripts')
+<script>
+(function initPakanChart() {
+    function renderChart() {
+        if (typeof ApexCharts === 'undefined') { console.warn('ApexCharts not loaded'); return; }
+        var donutEl = document.getElementById('pakanDonutChart');
+        if (!donutEl) { console.warn('pakanDonutChart element not found'); return; }
+        var w = donutEl.offsetWidth;
+        var h = donutEl.offsetHeight;
+        if (w === 0 || h === 0) { console.warn('Chart container has zero size, retrying...', w, h); setTimeout(renderChart, 200); return; }
+        var chartLabels = {!! $chartLabels !!};
+        var chartSeries = {!! $chartSeries !!};
+        var colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+        try {
+            var options = {
+                chart: { type: 'donut', width: '100%', height: 280, fontFamily: 'Onest, sans-serif', toolbar: { show: false }, animations: { enabled: true } },
+                series: chartSeries,
+                labels: chartLabels,
+                colors: colors.slice(0, chartLabels.length),
+                legend: { position: 'bottom', fontSize: '11px', itemMargin: { horizontal: 6, vertical: 4 } },
+                dataLabels: { enabled: false },
+                plotOptions: { pie: { donut: { size: '55%', labels: { show: true, name: { show: true, fontSize: '12px' }, value: { show: true, fontSize: '14px', fontWeight: 600, formatter: function(val) { return parseFloat(val).toFixed(1) + ' kg'; } }, total: { show: true, label: 'Total', formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0).toFixed(1) + ' kg'; } } } } },
+                tooltip: { y: { formatter: function(v) { return v.toFixed(2) + ' kg'; } } },
+                stroke: { width: 2 },
+                states: { hover: { filter: { type: 'none' } } }
+            };
+            var chart = new ApexCharts(donutEl, options);
+            chart.render();
+        } catch(e) { console.error('ApexCharts render error:', e); }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderChart);
+    } else {
+        renderChart();
+    }
+})();
+</script>
+@endpush
+@endif
 @endsection

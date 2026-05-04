@@ -14,7 +14,9 @@ class SiklusController extends Controller
 {
     public function index(Request $request)
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $tambakIds = $hasTambak ? $user->tambaks()->pluck('tambaks.id') : Tambak::pluck('id');
         $query = Siklus::with('blok.tambak')
             ->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
         if ($request->filled('blok_id')) {

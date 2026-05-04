@@ -4,13 +4,16 @@
     <title>@yield('title', 'Dashboard') - {{ config('app.name') }}</title>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="{{ asset('assets/media/brand-logos/favicon.png') }}" rel="shortcut icon"/>
     <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <style>:root { --font-sans: 'Onest', sans-serif; } body, * { font-family: 'Onest', sans-serif !important; }</style>
-    <link href="{{ asset('assets/vendors/apexcharts/apexcharts.css') }}" rel="stylesheet"/>
-    <link href="{{ asset('assets/vendors/keenicons/styles.bundle.css') }}" rel="stylesheet"/>
-    <link href="{{ asset('assets/css/styles.css') }}" rel="stylesheet"/>
+    <link href="{{ asset('assets/vendors/apexcharts/apexcharts.css') }}?v={{ config('app.asset_version', '1') }}" rel="stylesheet"/>
+    <link href="{{ asset('assets/vendors/keenicons/styles.bundle.css') }}?v={{ config('app.asset_version', '1') }}" rel="stylesheet"/>
+    <link href="{{ asset('assets/css/styles.css') }}?v={{ config('app.asset_version', '1') }}" rel="stylesheet"/>
     @stack('styles')
 </head>
 <body class="antialiased flex h-full text-base text-foreground bg-background demo1 kt-sidebar-fixed kt-header-fixed">
@@ -79,9 +82,9 @@
     @include('components.mobile-bottom-sheet')
 
     <!-- Scripts -->
-    <script src="{{ asset('assets/js/core.bundle.js') }}"></script>
-    <script src="{{ asset('assets/vendors/ktui/ktui.min.js') }}"></script>
-    <script src="{{ asset('assets/vendors/apexcharts/apexcharts.min.js') }}"></script>
+    <script src="{{ asset('assets/js/core.bundle.js') }}?v={{ config('app.asset_version', '1') }}"></script>
+    <script src="{{ asset('assets/vendors/ktui/ktui.min.js') }}?v={{ config('app.asset_version', '1') }}"></script>
+    <script src="{{ asset('assets/vendors/apexcharts/apexcharts.min.js') }}?v={{ config('app.asset_version', '1') }}"></script>
     <script>
     // No records found center fix
     document.addEventListener('DOMContentLoaded', function() {

@@ -11,14 +11,20 @@ class BlokController extends Controller
 {
     public function index(Request $request)
     {
-        $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
-        $query = Blok::with('tambak')->withCount('sikluses')
-            ->whereIn('tambak_id', $tambakIds);
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
+        $query = Blok::with('tambak')->withCount('sikluses');
+        if ($hasTambak) {
+            $tambakIds = $user->tambaks()->pluck('tambaks.id');
+            $query->whereIn('tambak_id', $tambakIds);
+        }
         if ($request->filled('tambak_id')) {
             $query->where('tambak_id', $request->tambak_id);
         }
         $data = $query->latest()->get();
-        $tambaks = Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get();
+        $tambaks = $hasTambak
+            ? Tambak::whereIn('id', $user->tambaks()->pluck('tambaks.id'))->orderBy('nama_tambak')->get()
+            : Tambak::orderBy('nama_tambak')->get();
         return view('budidaya.blok.index', compact('data', 'tambaks'));
     }
 

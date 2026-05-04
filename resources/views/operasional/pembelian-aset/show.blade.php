@@ -46,6 +46,10 @@
                                 <td class="text-sm pb-3 font-medium">{{ $pembelianAset->nama_aset }}</td>
                             </tr>
                             <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8 w-40">No. Transaksi</td>
+                                <td class="text-sm text-mono pb-3">{{ $pembelianAset->nomor_transaksi }}</td>
+                            </tr>
+                            <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Kategori</td>
                                 <td class="text-sm pb-3">{{ $pembelianAset->kategoriAset?->deskripsi ?? '-' }}</td>
                             </tr>

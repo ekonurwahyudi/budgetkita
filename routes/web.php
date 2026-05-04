@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
 
     // Keuangan
     Route::prefix('keuangan')->group(function () {
+        Route::get('laporan', [\App\Http\Controllers\Keuangan\LaporanKeuanganController::class, 'index'])->name('laporan-keuangan.index')->middleware('can:laporan-keuangan.view');
+        Route::get('laporan-export', [\App\Http\Controllers\Keuangan\LaporanKeuanganController::class, 'export'])->name('laporan-keuangan.export')->middleware('can:laporan-keuangan.view');
+
         Route::get('transaksi/create', [\App\Http\Controllers\Keuangan\TransaksiKeuanganController::class, 'create'])->name('transaksi.create')->middleware('can:transaksi-keuangan.create');
         Route::resource('transaksi', TransaksiKeuanganController::class)->except(['create'])->parameters(['transaksi' => 'transaksi'])->middleware('can:transaksi-keuangan.view');
         Route::post('transaksi/{transaksi}/approve', [TransaksiKeuanganController::class, 'approve'])->name('transaksi.approve');

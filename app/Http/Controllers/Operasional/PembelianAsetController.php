@@ -7,6 +7,7 @@ use App\Models\AccountBank;
 use App\Models\KategoriAset;
 use App\Models\PembelianAset;
 use App\Services\ApprovalService;
+use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,8 @@ class PembelianAsetController extends Controller
             'metode_depresiasi', 'persen_depresiasi',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVA');
 
         if ($input['metode_depresiasi'] !== 'persen') {
             $input['persen_depresiasi'] = null;

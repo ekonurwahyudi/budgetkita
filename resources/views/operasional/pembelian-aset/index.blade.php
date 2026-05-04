@@ -23,6 +23,7 @@
                     <thead>
                         <tr>
                             <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nama"><span class="kt-table-col"><span class="kt-table-col-label">Nama Aset</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="kategori"><span class="kt-table-col"><span class="kt-table-col-label">Kategori</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tgl Pembelian</span><span class="kt-table-col-sort"></span></span></th>
@@ -38,6 +39,7 @@
                         @foreach($data as $i => $item)
                         <tr>
                             <td>{{ $i + 1 }}</td>
+                            <td class="text-mono text-sm">{{ $item->nomor_transaksi }}</td>
                             <td>{{ $item->nama_aset }}</td>
                             <td>{{ $item->kategoriAset?->deskripsi ?? '-' }}</td>
                             <td>{{ $item->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>

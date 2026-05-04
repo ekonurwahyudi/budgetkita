@@ -7,7 +7,7 @@ use Carbon\Carbon;
 class PembelianAset extends BaseModel
 {
     protected $fillable = [
-        'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
+        'nomor_transaksi', 'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
         'umur_manfaat', 'nilai_residu', 'metode_depresiasi', 'persen_depresiasi',
         'jenis_pembayaran', 'account_bank_id', 'status', 'catatan', 'eviden',
     ];

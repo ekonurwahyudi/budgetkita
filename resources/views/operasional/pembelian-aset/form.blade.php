@@ -66,16 +66,50 @@
                         </div>
                         <div class="flex flex-col gap-1.5">
                             <label class="text-sm font-medium text-foreground">Umur Manfaat (Tahun) <span class="text-danger">*</span></label>
-                            <input type="number" name="umur_manfaat" class="kt-input" min="1" required value="{{ old('umur_manfaat', $pembelianAset?->umur_manfaat) }}" placeholder="Tahun" />
+                            <input type="number" name="umur_manfaat" id="umur_manfaat" class="kt-input" min="0" required value="{{ old('umur_manfaat', $pembelianAset?->umur_manfaat) }}" placeholder="Tahun" />
+                        </div>
+                    </div>
+
+                    {{-- Metode Depresiasi & Persen --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Metode Depresiasi <span class="text-danger">*</span></label>
+                            <select name="metode_depresiasi" id="metode_depresiasi" class="kt-select" required onchange="onMetodeDepresiasiChange()">
+                                <option value="garis_lurus" {{ old('metode_depresiasi', $pembelianAset?->metode_depresiasi ?? 'garis_lurus') === 'garis_lurus' ? 'selected' : '' }}>Garis Lurus</option>
+                                <option value="persen" {{ old('metode_depresiasi', $pembelianAset?->metode_depresiasi) === 'persen' ? 'selected' : '' }}>Persen (%)</option>
+                                <option value="tanpa" {{ old('metode_depresiasi', $pembelianAset?->metode_depresiasi) === 'tanpa' ? 'selected' : '' }}>Tanpa Depresiasi</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5" id="persen_depresiasi_wrap" style="{{ old('metode_depresiasi', $pembelianAset?->metode_depresiasi ?? 'garis_lurus') === 'persen' ? '' : 'display:none' }}">
+                            <label class="text-sm font-medium text-foreground">Persen Depresiasi (% per tahun) <span class="text-danger">*</span></label>
+                            <div class="kt-input-group">
+                                <input type="number" name="persen_depresiasi" id="persen_depresiasi" class="kt-input grow" min="0" max="100" step="0.01" value="{{ old('persen_depresiasi', $pembelianAset?->persen_depresiasi) }}" placeholder="0" onchange="updateDepresiasiPreview()" oninput="updateDepresiasiPreview()" />
+                                <span class="kt-input-addon">%</span>
+                            </div>
                         </div>
                     </div>
 
                     {{-- Nilai Residu --}}
-                    <div class="flex flex-col gap-1.5">
+                    <div class="flex flex-col gap-1.5" id="nilai_residu_wrap">
                         <label class="text-sm font-medium text-foreground">Nilai Residu <span class="text-danger">*</span></label>
                         <div class="kt-input-group">
                             <span class="kt-input-addon">Rp.</span>
                             <input class="kt-input money-input" type="text" id="nilai_residu_display" placeholder="0" data-target="nilai_residu_val" required/>
+                        </div>
+                    </div>
+
+                    {{-- Preview Depresiasi --}}
+                    <div id="depresiasi_preview" class="hidden rounded-xl border border-border bg-muted/50 p-4">
+                        <p class="text-sm font-medium text-foreground mb-2">Simulasi Depresiasi</p>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-muted-foreground">Depresiasi / Tahun:</span>
+                                <span class="font-semibold text-mono" id="preview_depresiasi_per_tahun">Rp 0</span>
+                            </div>
+                            <div>
+                                <span class="text-muted-foreground">Total Depresiasi ({{ old('umur_manfaat', $pembelianAset?->umur_manfaat ?? 0) }} thn):</span>
+                                <span class="font-semibold text-mono" id="preview_total_depresiasi">Rp 0</span>
+                            </div>
                         </div>
                     </div>
 
@@ -182,9 +216,75 @@ function onPembayaranChange() {
     }
 }
 
+function onMetodeDepresiasiChange() {
+    var metode = document.getElementById('metode_depresiasi').value;
+    var persenWrap = document.getElementById('persen_depresiasi_wrap');
+    var nilaiResiduWrap = document.getElementById('nilai_residu_wrap');
+    var umurManfaatEl = document.getElementById('umur_manfaat');
+
+    if (metode === 'persen') {
+        persenWrap.style.display = '';
+    } else {
+        persenWrap.style.display = 'none';
+        document.getElementById('persen_depresiasi').value = '';
+    }
+
+    if (metode === 'tanpa') {
+        nilaiResiduWrap.style.display = 'none';
+        document.getElementById('nilai_residu_display').value = '';
+        document.getElementById('nilai_residu_val').value = '0';
+        umurManfaatEl.value = '0';
+        document.getElementById('depresiasi_preview').classList.add('hidden');
+    } else {
+        nilaiResiduWrap.style.display = '';
+        updateDepresiasiPreview();
+    }
+}
+
+function formatRp(num) {
+    return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+}
+
+function updateDepresiasiPreview() {
+    var metode = document.getElementById('metode_depresiasi').value;
+    var nominal = parseInt(document.getElementById('nominal_pembelian_val').value) || 0;
+    var residu = parseInt(document.getElementById('nilai_residu_val').value) || 0;
+    var umur = parseInt(document.getElementById('umur_manfaat').value) || 0;
+    var persen = parseFloat(document.getElementById('persen_depresiasi')?.value) || 0;
+    var preview = document.getElementById('depresiasi_preview');
+
+    if (metode === 'tanpa' || nominal <= 0) {
+        preview.classList.add('hidden');
+        return;
+    }
+
+    var perTahun = 0;
+    if (metode === 'persen') {
+        perTahun = (nominal - residu) * (persen / 100);
+    } else {
+        if (umur <= 0) { preview.classList.add('hidden'); return; }
+        perTahun = (nominal - residu) / umur;
+    }
+
+    var total = perTahun * umur;
+    var maxDepresiasi = Math.max(0, nominal - residu);
+    if (total > maxDepresiasi) total = maxDepresiasi;
+
+    document.getElementById('preview_depresiasi_per_tahun').textContent = formatRp(perTahun);
+    var totalEl = document.getElementById('preview_total_depresiasi');
+    totalEl.textContent = formatRp(total) + ' (' + umur + ' thn)';
+
+    preview.classList.remove('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.money-input').forEach(initMoneyInput);
     onPembayaranChange();
+    onMetodeDepresiasiChange();
+
+    document.getElementById('nominal_pembelian_display').addEventListener('input', updateDepresiasiPreview);
+    document.getElementById('nilai_residu_display').addEventListener('input', updateDepresiasiPreview);
+    document.getElementById('umur_manfaat').addEventListener('input', updateDepresiasiPreview);
 });
 
 // Preview eviden sebelum submit

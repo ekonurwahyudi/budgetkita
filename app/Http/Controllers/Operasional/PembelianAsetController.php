@@ -37,19 +37,26 @@ class PembelianAsetController extends Controller
             'kategori_aset_id'   => 'required|uuid|exists:kategori_asets,id',
             'tgl_pembelian'      => 'required|date',
             'nominal_pembelian'  => 'required|numeric|min:0',
-            'umur_manfaat'       => 'required|integer|min:1',
+            'umur_manfaat'       => 'required|integer|min:0',
             'nilai_residu'       => 'required|numeric|min:0',
+            'metode_depresiasi'  => 'required|in:garis_lurus,persen,tanpa',
+            'persen_depresiasi'  => 'nullable|numeric|min:0|max:100|required_if:metode_depresiasi,persen',
             'jenis_pembayaran'   => 'required|in:cash,bank',
             'account_bank_id'    => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan'            => 'nullable|string',
-            'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf',
+            'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
         ]);
 
         $input = $request->only([
             'nama_aset', 'kategori_aset_id', 'tgl_pembelian',
             'nominal_pembelian', 'umur_manfaat', 'nilai_residu',
+            'metode_depresiasi', 'persen_depresiasi',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        if ($input['metode_depresiasi'] !== 'persen') {
+            $input['persen_depresiasi'] = null;
+        }
 
         if ($request->hasFile('eviden')) {
             $paths = [];
@@ -83,19 +90,26 @@ class PembelianAsetController extends Controller
             'kategori_aset_id'   => 'required|uuid|exists:kategori_asets,id',
             'tgl_pembelian'      => 'required|date',
             'nominal_pembelian'  => 'required|numeric|min:0',
-            'umur_manfaat'       => 'required|integer|min:1',
+            'umur_manfaat'       => 'required|integer|min:0',
             'nilai_residu'       => 'required|numeric|min:0',
+            'metode_depresiasi'  => 'required|in:garis_lurus,persen,tanpa',
+            'persen_depresiasi'  => 'nullable|numeric|min:0|max:100|required_if:metode_depresiasi,persen',
             'jenis_pembayaran'   => 'required|in:cash,bank',
             'account_bank_id'    => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan'            => 'nullable|string',
-            'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf',
+            'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
         ]);
 
         $input = $request->only([
             'nama_aset', 'kategori_aset_id', 'tgl_pembelian',
             'nominal_pembelian', 'umur_manfaat', 'nilai_residu',
+            'metode_depresiasi', 'persen_depresiasi',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        if ($input['metode_depresiasi'] !== 'persen') {
+            $input['persen_depresiasi'] = null;
+        }
 
         if ($request->hasFile('eviden')) {
             $existing = $pembelianAset->eviden ?? [];

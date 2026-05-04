@@ -61,6 +61,18 @@
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Umur Manfaat</td>
                                 <td class="text-sm pb-3">{{ $pembelianAset->umur_manfaat }} Tahun</td>
                             </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Metode Depresiasi</td>
+                                <td class="text-sm pb-3">
+                                    @if($pembelianAset->metode_depresiasi === 'persen')
+                                        <span class="kt-badge kt-badge-sm kt-badge-primary kt-badge-outline">Persen ({{ $pembelianAset->persen_depresiasi }}%)</span>
+                                    @elseif($pembelianAset->metode_depresiasi === 'tanpa')
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Tanpa Depresiasi</span>
+                                    @else
+                                        <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Garis Lurus</span>
+                                    @endif
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -97,6 +109,7 @@
     </div>
 
     {{-- Depresiasi Summary Cards --}}
+    @if($pembelianAset->metode_depresiasi !== 'tanpa')
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="kt-card">
             <div class="kt-card-content py-4 flex items-center gap-3">
@@ -106,6 +119,9 @@
                 <div>
                     <p class="text-xs text-muted-foreground">Depresiasi / Tahun</p>
                     <p class="text-base font-semibold text-mono">Rp {{ number_format($pembelianAset->depresiasi_per_tahun, 0, ',', '.') }}</p>
+                    @if($pembelianAset->metode_depresiasi === 'persen')
+                    <p class="text-[11px] text-muted-foreground">{{ $pembelianAset->persen_depresiasi }}% per tahun</p>
+                    @endif
                 </div>
             </div>
         </div>
@@ -143,6 +159,20 @@
             </div>
         </div>
     </div>
+    @else
+    <div class="kt-card">
+        <div class="kt-card-content py-4 flex items-center gap-3">
+            <div class="size-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                <i class="ki-filled ki-shield-check text-gray-500 text-lg"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium">Tanpa Depresiasi</p>
+                <p class="text-xs text-muted-foreground">Aset ini tidak memiliki depresiasi (seperti tanah)</p>
+                <p class="text-base font-semibold text-success text-mono mt-1">Nilai Buku: Rp {{ number_format($pembelianAset->nilai_buku_aset, 0, ',', '.') }}</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Eviden --}}
     @if(!empty($pembelianAset->eviden))

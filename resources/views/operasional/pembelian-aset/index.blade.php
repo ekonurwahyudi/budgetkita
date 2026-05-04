@@ -29,6 +29,7 @@
                             <th data-kt-datatable-column="nominal"><span class="kt-table-col"><span class="kt-table-col-label">Nominal</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nilai_buku"><span class="kt-table-col"><span class="kt-table-col-label">Nilai Buku</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="depresiasi"><span class="kt-table-col"><span class="kt-table-col-label">Depresiasi/Thn</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="metode"><span class="kt-table-col"><span class="kt-table-col-label">Metode</span></span></th>
                             <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th>
                             <th class="w-28" data-kt-datatable-column="aksi"></th>
                         </tr>
@@ -43,6 +44,15 @@
                             <td class="text-mono">Rp {{ number_format($item->nominal_pembelian, 0, ',', '.') }}</td>
                             <td class="text-mono">Rp {{ number_format($item->nilai_buku_aset, 0, ',', '.') }}</td>
                             <td class="text-mono">Rp {{ number_format($item->depresiasi_per_tahun, 0, ',', '.') }}</td>
+                            <td>
+                                @if($item->metode_depresiasi === 'persen')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary kt-badge-outline">{{ $item->persen_depresiasi }}%</span>
+                                @elseif($item->metode_depresiasi === 'tanpa')
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Tanpa</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Garis Lurus</span>
+                                @endif
+                            </td>
                             <td>
                                 @if($item->status === 'selesai')
                                     <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>

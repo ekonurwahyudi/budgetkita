@@ -4,6 +4,58 @@
 @section('page-title', 'Dashboard')
 @section('page-description', 'Ringkasan data keuangan, operasional & budidaya')
 
+@section('page-actions')
+<div class="relative" id="filterWrapper">
+    <button type="button" onclick="toggleFilter()" class="kt-btn kt-btn-outline kt-btn-sm">
+        <i class="ki-filled ki-filter-search"></i> Filter
+    </button>
+    <div id="filterPanel" class="hidden absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-xl shadow-lg p-4" style="z-index:9999;">
+        <form method="GET" class="flex flex-col gap-3">
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-muted-foreground">Blok</label>
+                <select name="blok_id" class="kt-select kt-select-sm">
+                    <option value="">Semua Blok</option>
+                    @foreach($bloks as $b)
+                    <option value="{{ $b->id }}" {{ $filterBlok == $b->id ? 'selected' : '' }}>{{ $b->nama_blok }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-muted-foreground">Siklus</label>
+                <select name="siklus_id" class="kt-select kt-select-sm">
+                    <option value="">Semua Siklus</option>
+                    @foreach($sikluses as $s)
+                    <option value="{{ $s->id }}" {{ $filterSiklus == $s->id ? 'selected' : '' }}>{{ $s->nama_siklus }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-muted-foreground">Dari Tanggal</label>
+                <div class="kt-input kt-input-sm">
+                    <i class="ki-outline ki-calendar"></i>
+                    <input class="grow" name="date_from" data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
+                           placeholder="Pilih tanggal" readonly type="text" value="{{ $filterDateFrom ?? '' }}"/>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-medium text-muted-foreground">Sampai Tanggal</label>
+                <div class="kt-input kt-input-sm">
+                    <i class="ki-outline ki-calendar"></i>
+                    <input class="grow" name="date_to" data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
+                           placeholder="Pilih tanggal" readonly type="text" value="{{ $filterDateTo ?? '' }}"/>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 pt-2 border-t border-border">
+                <button type="submit" class="kt-btn kt-btn-primary kt-btn-sm flex-1">Terapkan</button>
+                @if($filterBlok || $filterSiklus || $filterDateFrom || $filterDateTo)
+                <a href="{{ route('dashboard') }}" class="kt-btn kt-btn-outline kt-btn-sm">Reset</a>
+                @endif
+            </div>
+        </form>
+    </div>
+</div>
+@endsection
+
 @section('content')
 @if(!$hasTambak)
 <div class="flex flex-col items-center justify-center py-20 gap-6">
@@ -42,89 +94,67 @@
 @else
 <div class="flex flex-col gap-5 lg:gap-7.5">
 
-    {{-- Row 1: 4 mini stat cards (kiri) + chart earnings (kanan) --}}
+    {{-- Row 1: 3 stat cards + chart --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
-        {{-- 4 mini cards 2x2 --}}
-        <div class="grid grid-cols-2 gap-5">
-            {{-- Pendapatan --}}
-            <div class="kt-card">
-                <div class="kt-card-content p-5 lg:p-6">
-                    <div class="flex items-center justify-center size-9 rounded-lg mb-3" style="background:rgba(23,198,83,0.12);">
-                        <i class="ki-filled ki-dollar text-base" style="color:#17c653;"></i>
+        {{-- 3 stat cards --}}
+        <div class="flex flex-col gap-4">
+            {{-- Total Investasi --}}
+            <a href="{{ route('investasi.index') }}" class="kt-card hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer group">
+                <div class="kt-card-content p-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(114,57,234,0.12);">
+                                <i class="ki-filled ki-graph-up text-lg" style="color:#7239ea;"></i>
+                            </div>
+                            <div>
+                                <p class="text-xl font-bold text-mono leading-tight">Rp {{ number_format($totalInvestasi, 0, ',', '.') }}</p>
+                                <p class="text-xs text-secondary-foreground">Total Investasi</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
                     </div>
-                    <p class="text-2xl font-bold text-mono leading-none mb-1">
-                        @if($pendapatan >= 1000000)
-                            {{ number_format($pendapatan/1000000, 1, ',', '.') }}jt
-                        @else
-                            {{ number_format($pendapatan/1000, 0, ',', '.') }}rb
-                        @endif
-                    </p>
-                    <p class="text-xs text-secondary-foreground">Total Pendapatan</p>
                 </div>
-            </div>
-            {{-- Pengeluaran --}}
-            <div class="kt-card">
-                <div class="kt-card-content p-5 lg:p-6">
-                    <div class="flex items-center justify-center size-9 rounded-lg mb-3" style="background:rgba(241,65,108,0.12);">
-                        <i class="ki-filled ki-minus-circle text-base" style="color:#f1416c;"></i>
+            </a>
+            {{-- Total Pendapatan --}}
+            <a href="{{ route('transaksi.index', ['jenis_transaksi' => 'uang_masuk']) }}" class="kt-card hover:ring-2 hover:ring-green-500/30 transition-all cursor-pointer group">
+                <div class="kt-card-content p-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(23,198,83,0.12);">
+                                <i class="ki-filled ki-dollar text-lg" style="color:#17c653;"></i>
+                            </div>
+                            <div>
+                                <p class="text-xl font-bold text-mono text-green-600 leading-tight">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
+                                <p class="text-xs text-secondary-foreground">Total Pendapatan</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-medium text-green-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
                     </div>
-                    <p class="text-2xl font-bold text-mono leading-none mb-1">
-                        @if($pengeluaran >= 1000000)
-                            {{ number_format($pengeluaran/1000000, 1, ',', '.') }}jt
-                        @else
-                            {{ number_format($pengeluaran/1000, 0, ',', '.') }}rb
-                        @endif
-                    </p>
-                    <p class="text-xs text-secondary-foreground">Total Pengeluaran</p>
                 </div>
-            </div>
-            {{-- Hutang --}}
-            <div class="kt-card">
-                <div class="kt-card-content p-5 lg:p-6">
-                    <div class="flex items-center justify-center size-9 rounded-lg mb-3" style="background:rgba(255,199,0,0.12);">
-                        <i class="ki-filled ki-bill text-base" style="color:#ffc700;"></i>
+            </a>
+            {{-- Total Pengeluaran --}}
+            <a href="{{ route('transaksi.index', ['jenis_transaksi' => 'uang_keluar']) }}" class="kt-card hover:ring-2 hover:ring-red-500/30 transition-all cursor-pointer group">
+                <div class="kt-card-content p-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(241,65,108,0.12);">
+                                <i class="ki-filled ki-minus-circle text-lg" style="color:#f1416c;"></i>
+                            </div>
+                            <div>
+                                <p class="text-xl font-bold text-mono text-red-600 leading-tight">Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
+                                <p class="text-xs text-secondary-foreground">Total Pengeluaran</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-medium text-red-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
                     </div>
-                    <p class="text-2xl font-bold text-mono leading-none mb-1">
-                        @if($totalHutang >= 1000000)
-                            {{ number_format($totalHutang/1000000, 1, ',', '.') }}jt
-                        @else
-                            {{ number_format($totalHutang/1000, 0, ',', '.') }}rb
-                        @endif
-                    </p>
-                    <p class="text-xs text-secondary-foreground">Total Hutang</p>
                 </div>
-            </div>
-            {{-- Piutang --}}
-            <div class="kt-card">
-                <div class="kt-card-content p-5 lg:p-6">
-                    <div class="flex items-center justify-center size-9 rounded-lg mb-3" style="background:rgba(0,158,247,0.12);">
-                        <i class="ki-filled ki-handshake text-base" style="color:#009ef7;"></i>
-                    </div>
-                    <p class="text-2xl font-bold text-mono leading-none mb-1">
-                        @if($totalPiutang >= 1000000)
-                            {{ number_format($totalPiutang/1000000, 1, ',', '.') }}jt
-                        @else
-                            {{ number_format($totalPiutang/1000, 0, ',', '.') }}rb
-                        @endif
-                    </p>
-                    <p class="text-xs text-secondary-foreground">Total Piutang</p>
-                </div>
-            </div>
+            </a>
         </div>
 
-        {{-- Chart Penjualan (Earnings style) --}}
+        {{-- Chart Penjualan --}}
         <div class="kt-card lg:col-span-2">
-            <div class="kt-card-header border-b border-border pb-4">
-                <div class="flex flex-col gap-0.5">
-                    <h3 class="text-base font-semibold text-foreground">Penjualan Bulanan</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="text-2xl font-bold text-mono">Rp {{ number_format($penjualanChart->sum()/1000000, 1, ',', '.') }}jt</span>
-                        @php $totalPenjualan = $penjualanChart->sum(); @endphp
-                        @if($totalPenjualan > 0)
-                        <span class="text-xs font-medium text-[#17c653] bg-[#17c653]/10 px-2 py-0.5 rounded-full">Total 12 Bln</span>
-                        @endif
-                    </div>
-                </div>
+            <div class="kt-card-header border-b border-border">
+                <h3 class="kt-card-title">Hasil Panen</h3>
             </div>
             <div class="kt-card-content p-4">
                 <div id="chart_penjualan"></div>
@@ -132,7 +162,7 @@
         </div>
     </div>
 
-    {{-- Row 2: Highlights (Laba/Rugi breakdown) + Pendapatan vs Pengeluaran --}}
+    {{-- Row 2: Highlights + Pendapatan vs Pengeluaran --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
         {{-- Highlights panel --}}
         <div class="kt-card">
@@ -141,7 +171,7 @@
             </div>
             <div class="kt-card-content p-5 flex flex-col gap-4">
                 <div>
-                    <p class="text-xs text-secondary-foreground mb-1">Laba / Rugi Bersih</p>
+                    <!-- <p class="text-xs text-secondary-foreground mb-1">Laba / Rugi Bersih</p> -->
                     <div class="flex items-center gap-2">
                         <span class="text-2xl font-bold text-mono {{ $labaRugi >= 0 ? 'text-[#17c653]' : 'text-[#f1416c]' }}">
                             {{ $labaRugi >= 0 ? '+' : '-' }} Rp {{ number_format(abs($labaRugi)/1000000, 1, ',', '.') }}jt
@@ -151,11 +181,10 @@
                         </span>
                     </div>
                 </div>
-                {{-- Progress bar pendapatan vs pengeluaran --}}
                 @php
-                    $total = $pendapatan + $pengeluaran;
-                    $pctPendapatan = $total > 0 ? round($pendapatan / $total * 100) : 0;
-                    $pctPengeluaran = $total > 0 ? round($pengeluaran / $total * 100) : 0;
+                    $total = $totalPendapatan + $totalPengeluaran;
+                    $pctPendapatan = $total > 0 ? round($totalPendapatan / $total * 100) : 0;
+                    $pctPengeluaran = $total > 0 ? round($totalPengeluaran / $total * 100) : 0;
                 @endphp
                 <div class="flex gap-1 h-2 rounded-full overflow-hidden">
                     <div class="rounded-full" style="width:{{ $pctPendapatan }}%; background:#17c653;"></div>
@@ -166,25 +195,35 @@
                     <span class="flex items-center gap-1.5"><span class="size-2 rounded-full inline-block" style="background:#f1416c;"></span> Pengeluaran {{ $pctPengeluaran }}%</span>
                 </div>
                 <div class="border-t border-border pt-4 flex flex-col gap-3">
-                    <div class="flex items-center justify-between">
+                    <!-- <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-geolocation text-primary"></i> Tambak</div>
                         <span class="text-sm font-semibold text-mono">{{ $totalTambak }}</span>
+                    </div> -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-grid text-[#009ef7]"></i> Blok</div>
+                        <span class="text-sm font-semibold text-mono">{{ $totalBlok }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-grid text-[#009ef7]"></i> Blok/Kolam</div>
-                        <span class="text-sm font-semibold text-mono">{{ $totalBlok }}</span>
+                        <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-abstract-28 text-[#009ef7]"></i> Kolam Aktif</div>
+                        <span class="text-sm font-semibold text-mono">{{ $kolamAktif }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-arrows-circle text-[#17c653]"></i> Siklus Aktif</div>
                         <span class="text-sm font-semibold text-mono">{{ $siklusAktif }}</span>
                     </div>
-                    <div class="flex items-center justify-between">
+                    <!-- <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-parcel text-[#ffc700]"></i> Stok Item</div>
-                        <span class="text-sm font-semibold text-mono">{{ $stokPersediaan }}</span>
-                    </div>
+                        <span class="text-sm font-semibold text-mono">{{ $stokPersediaanCount }}</span>
+                    </div> -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2 text-sm"><i class="ki-filled ki-bank text-[#7239ea]"></i> Nilai Aset</div>
                         <span class="text-sm font-semibold text-mono">Rp {{ number_format($nilaiAset/1000000, 1, ',', '.') }}jt</span>
+                    </div>
+                    <div class="border-t border-border pt-3 mt-1">
+                        <p class="text-xs text-muted-foreground mb-1">Total Revenue</p>
+                        <p class="text-lg font-bold text-mono {{ $labaRugi >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                            {{ $labaRugi >= 0 ? '+' : '' }}Rp {{ number_format($labaRugi, 0, ',', '.') }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -192,11 +231,11 @@
 
         {{-- Pendapatan vs Pengeluaran chart --}}
         <div class="kt-card lg:col-span-2">
-            <div class="kt-card-header">
+            <div class="kt-card-header border-b border-border">
                 <h3 class="kt-card-title">Pendapatan vs Pengeluaran</h3>
-                <div class="flex items-center gap-3 text-xs text-secondary-foreground">
-                    <span class="flex items-center gap-1.5"><span class="size-2 rounded-full inline-block" style="background:#17c653;"></span> Pendapatan</span>
-                    <span class="flex items-center gap-1.5"><span class="size-2 rounded-full inline-block" style="background:#f1416c;"></span> Pengeluaran</span>
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="flex items-center gap-1.5"><span class="size-2 rounded-full" style="background:#17c653;"></span> Pendapatan</span>
+                    <span class="flex items-center gap-1.5"><span class="size-2 rounded-full" style="background:#f1416c;"></span> Pengeluaran</span>
                 </div>
             </div>
             <div class="kt-card-content p-4">
@@ -205,16 +244,96 @@
         </div>
     </div>
 
-    {{-- Row 3: Top Stok (full width horizontal bar) --}}
+    {{-- Row 3: Stok Persediaan Table --}}
     <div class="kt-card">
         <div class="kt-card-header">
             <div>
-                <h3 class="kt-card-title">Top 10 Stok Persediaan</h3>
+                <h3 class="kt-card-title">Stok Persediaan</h3>
                 <p class="text-xs text-secondary-foreground mt-0.5">Item dengan stok terbanyak</p>
             </div>
+            <a href="{{ route('persediaan.index') }}" class="kt-btn kt-btn-sm kt-btn-outline">
+                Lihat Semua <i class="ki-filled ki-arrow-right text-xs"></i>
+            </a>
         </div>
         <div class="kt-card-content p-4">
-            <div id="chart_stok"></div>
+            @if($stokPersediaan->count())
+            <div class="overflow-x-auto">
+                <table class="kt-table kt-table-border w-full">
+                    <thead>
+                        <tr>
+                            <th class="text-center text-xs font-semibold w-10">No.</th>
+                            <th class="text-left text-xs font-semibold">Kategori</th>
+                            <th class="text-left text-xs font-semibold">Item</th>
+                            <th class="text-right text-xs font-semibold">Stok</th>
+                            <th class="text-center text-xs font-semibold">Satuan</th>
+                            <th class="text-center text-xs font-semibold">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($stokPersediaan as $item)
+                        @php
+                            $qtyKg = $item->unit === 'ton' ? $item->qty * 1000 : $item->qty;
+                            $isLow = $qtyKg < 1000;
+                        @endphp
+                        <tr>
+                            <td class="text-center text-sm">{{ $loop->iteration }}</td>
+                            <td class="text-sm">{{ $item->itemPersediaan?->kategoriPersediaan?->deskripsi ?? '-' }}</td>
+                            <td class="text-sm font-medium">{{ $item->itemPersediaan?->deskripsi ?? '-' }}</td>
+                            <td class="text-right text-sm text-mono font-semibold">{{ number_format($item->qty, 2) }}</td>
+                            <td class="text-center text-sm">{{ $item->unit ?? '-' }}</td>
+                            <td class="text-center">
+                                @if($isLow)
+                                    <span class="kt-badge kt-badge-sm kt-badge-destructive">Kurang</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Aman</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @else
+            <div class="py-8 text-center text-muted-foreground text-sm">Belum ada stok persediaan</div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Row 4: Account Bank Cards --}}
+    <div class="kt-card">
+        <div class="kt-card-header">
+            <h3 class="kt-card-title">Saldo Rekening</h3>
+            <a href="{{ route('account-bank.index') }}" class="kt-btn kt-btn-sm kt-btn-outline">
+                Kelola Rekening <i class="ki-filled ki-arrow-right text-xs"></i>
+            </a>
+        </div>
+        <div class="kt-card-content p-4">
+            @if($accountBanks->count())
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                @foreach($accountBanks as $bank)
+                <a href="{{ route('account-bank.show', $bank) }}" class="rounded-xl border border-border bg-muted/30 p-4 hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="flex items-center justify-center size-9 rounded-lg bg-primary/10">
+                            <i class="ki-filled ki-bank text-base text-primary"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold truncate">{{ $bank->nama_bank }}</p>
+                            <p class="text-xs text-muted-foreground truncate">{{ $bank->nama_pemilik ?? '-' }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-muted-foreground">Saldo</p>
+                            <p class="text-lg font-bold text-mono text-primary">Rp {{ number_format($bank->saldo, 0, ',', '.') }}</p>
+                        </div>
+                        <span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">Lihat Mutasi <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+            @else
+            <div class="py-8 text-center text-muted-foreground text-sm">Belum ada rekening bank</div>
+            @endif
         </div>
     </div>
 
@@ -222,7 +341,18 @@
 
 @push('scripts')
 <script>
+function toggleFilter() {
+    document.getElementById('filterPanel').classList.toggle('hidden');
+}
 document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        var panel = document.getElementById('filterPanel');
+        var wrapper = document.getElementById('filterWrapper');
+        if (panel && wrapper && !wrapper.contains(e.target)) {
+            panel.classList.add('hidden');
+        }
+    });
+
     var months = @json(array_values($allMonths->toArray()));
     var shortMonths = months.map(function(m) {
         var p = m.split('-');
@@ -233,7 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var baseGrid = { borderColor: 'rgba(0,0,0,0.06)', strokeDashArray: 4, padding: { left: 0, right: 0 } };
     var baseFont = { fontFamily: 'Onest, sans-serif' };
 
-    // Chart 1: Penjualan (Area)
     new ApexCharts(document.querySelector('#chart_penjualan'), {
         chart: Object.assign({ type: 'area', height: 200, toolbar: { show: false }, sparkline: { enabled: false } }, baseFont),
         series: [{ name: 'Penjualan', data: @json(array_values($penjualanChart->toArray())) }],
@@ -248,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function() {
         markers: { size: 0 },
     }).render();
 
-    // Chart 2: Pendapatan vs Pengeluaran (Bar)
     new ApexCharts(document.querySelector('#chart_pendapatan_pengeluaran'), {
         chart: Object.assign({ type: 'bar', height: 260, toolbar: { show: false } }, baseFont),
         series: [
@@ -264,22 +392,6 @@ document.addEventListener('DOMContentLoaded', function() {
         legend: { show: false },
         grid: baseGrid,
     }).render();
-
-    // Chart 3: Top Stok
-    var stokData = @json($topStok->map(fn($s) => ['name' => \Illuminate\Support\Str::limit($s->itemPersediaan?->deskripsi ?? '-', 22), 'qty' => (float)$s->qty])->values());
-    if (stokData.length > 0) {
-        new ApexCharts(document.querySelector('#chart_stok'), {
-            chart: Object.assign({ type: 'bar', height: Math.max(180, stokData.length * 30), toolbar: { show: false } }, baseFont),
-            series: [{ name: 'Stok', data: stokData.map(function(s) { return s.qty; }) }],
-            xaxis: { categories: stokData.map(function(s) { return s.name; }), labels: { style: { fontSize: '11px', colors: '#99a1b7' } } },
-            yaxis: { labels: { style: { fontSize: '11px', colors: '#99a1b7' } } },
-            plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '50%', borderRadiusApplication: 'end' } },
-            colors: ['#7239ea'],
-            dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 500, colors: ['#fff'] }, formatter: function(v) { return Number(v).toLocaleString('id-ID'); } },
-            tooltip: { y: { formatter: function(v) { return Number(v).toLocaleString('id-ID'); } } },
-            grid: baseGrid,
-        }).render();
-    }
 });
 </script>
 @endpush

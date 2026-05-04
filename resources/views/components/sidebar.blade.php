@@ -128,7 +128,7 @@ $keuanganMainMenus = [
                 {{-- BUDIDAYA --}}
                 @php
                 $budidayaMenus = [
-                    ['url' => '/budidaya/blok', 'icon' => 'ki-scan-barcode', 'label' => 'Daftar Blok/Kolam', 'perm' => 'blok.view'],
+                    ['url' => '/budidaya/blok', 'icon' => 'ki-scan-barcode', 'label' => 'Daftar Blok', 'perm' => 'blok.view'],
                     ['url' => '/budidaya/panen', 'icon' => 'ki-basket', 'label' => 'Panen', 'perm' => 'panen.view'],
                 ];
                 $pakanMenus = [

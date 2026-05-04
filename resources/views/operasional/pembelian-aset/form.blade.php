@@ -148,19 +148,20 @@
                         @if($pembelianAset && !empty($pembelianAset->eviden))
                         <div id="existingEviden" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2">
                             @foreach($pembelianAset->eviden as $idx => $ev)
-                            <div class="relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
+                            <div class="relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
                                 @if(Str::endsWith(strtolower($ev), ['.pdf']))
-                                    <a href="{{ Storage::url($ev) }}" target="_blank" class="flex flex-col items-center justify-center w-full h-full p-3">
+                                    <a href="{{ Storage::url($ev) }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
                                         <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
                                         <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
                                     </a>
                                 @else
-                                    <img src="{{ Storage::url($ev) }}" class="w-full h-full object-cover" alt="Eviden {{ $idx + 1 }}">
-                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>
+                                    <img src="{{ Storage::url($ev) }}" class="w-full h-24 object-cover" alt="Eviden {{ $idx + 1 }}">
                                 @endif
-                                <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">
-                                    <i class="ki-filled ki-cross text-xs"></i>
-                                </button>
+                                <div class="flex items-center justify-end px-2 py-1.5 border-t border-border">
+                                    <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">
+                                        <i class="ki-filled ki-cross text-[10px]"></i>
+                                    </button>
+                                </div>
                             </div>
                             @endforeach
                         </div>
@@ -296,24 +297,27 @@ function previewEviden(input) {
             var reader = new FileReader();
             reader.onload = function(e) {
                 var div = document.createElement('div');
-                div.className = 'relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+                div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
                 div.id = 'preview-' + index;
                 if (file.type === 'application/pdf') {
                     div.innerHTML =
-                        '<div class="flex flex-col items-center justify-center w-full h-full p-3">' +
+                        '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
                             '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
                             '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
                         '</div>' +
-                        '<button type="button" onclick="removePreview(' + index + ')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">' +
-                            '<i class="ki-filled ki-cross text-xs"></i>' +
-                        '</button>';
+                        '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                            '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                                '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                            '</button>' +
+                        '</div>';
                 } else {
                     div.innerHTML =
-                        '<img src="' + e.target.result + '" class="w-full h-full object-cover" alt="Preview">' +
-                        '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>' +
-                        '<button type="button" onclick="removePreview(' + index + ')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">' +
-                            '<i class="ki-filled ki-cross text-xs"></i>' +
-                        '</button>';
+                        '<img src="' + e.target.result + '" class="w-full h-24 object-cover" alt="Preview">' +
+                        '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                            '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                                '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                            '</button>' +
+                        '</div>';
                 }
                 container.appendChild(div);
             };

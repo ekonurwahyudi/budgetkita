@@ -53,23 +53,42 @@
                     {{-- Eviden --}}
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium text-foreground">Eviden (bisa pilih banyak file)</label>
-                        <input type="file" name="eviden[]" class="kt-input" accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.xlsx,.xls" multiple>
+                        <input type="file" name="eviden[]" id="evidenInput" class="kt-input" accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.xlsx,.xls" multiple onchange="previewEviden(this)">
                         <p class="text-xs text-muted-foreground">Max 5MB per file. Format: JPG, PNG, PDF, Excel</p>
+                        <div id="previewContainer" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
                     </div>
                     @if($pembelianPersediaan && !empty($pembelianPersediaan->eviden))
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-foreground">Eviden Tersimpan</label>
-                        @foreach($pembelianPersediaan->eviden as $path)
-                        <div class="flex items-center justify-between p-2 rounded-lg border border-border bg-accent/30">
-                            <div class="flex items-center gap-2 text-sm">
-                                <i class="ki-filled ki-file text-muted-foreground"></i>
-                                <a href="{{ Storage::url($path) }}" target="_blank" class="kt-link text-xs">{{ basename($path) }}</a>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                            @foreach($pembelianPersediaan->eviden as $idx => $path)
+                            @php
+                                $isPdf = \Illuminate\Support\Str::endsWith(strtolower($path), ['.pdf']);
+                                $isExcel = \Illuminate\Support\Str::endsWith(strtolower($path), ['.xlsx', '.xls']);
+                                $url = \Illuminate\Support\Facades\Storage::url($path);
+                            @endphp
+                            <div class="relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all">
+                                @if($isPdf)
+                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
+                                        <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
+                                        <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
+                                    </a>
+                                @elseif($isExcel)
+                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
+                                        <i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>
+                                        <span class="text-[10px] text-muted-foreground text-center truncate w-full">Excel</span>
+                                    </a>
+                                @else
+                                    <img src="{{ $url }}" class="w-full h-24 object-cover" alt="Eviden {{ $idx + 1 }}">
+                                @endif
+                                <div class="flex items-center justify-end px-2 py-1.5 border-t border-border">
+                                    <label class="flex items-center gap-1.5 text-xs text-danger cursor-pointer">
+                                        <input type="checkbox" name="hapus_eviden[]" value="{{ $path }}" class="size-3"> Hapus
+                                    </label>
+                                </div>
                             </div>
-                            <label class="flex items-center gap-1.5 text-xs text-danger cursor-pointer">
-                                <input type="checkbox" name="hapus_eviden[]" value="{{ $path }}" class="size-3"> Hapus
-                            </label>
+                            @endforeach
                         </div>
-                        @endforeach
                     </div>
                     @endif
 
@@ -129,6 +148,64 @@
 
 @push('scripts')
 <script>
+function previewEviden(input) {
+    var container = document.getElementById('previewContainer');
+    container.innerHTML = '';
+    if (input.files) {
+        Array.from(input.files).forEach(function(file, index) {
+            var isPdf = file.type === 'application/pdf';
+            var isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel';
+            var div = document.createElement('div');
+            div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+            div.id = 'preview-' + index;
+            if (isPdf) {
+                div.innerHTML =
+                    '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
+                        '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
+                        '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                        '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                            '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                        '</button>' +
+                    '</div>';
+            } else if (isExcel) {
+                div.innerHTML =
+                    '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
+                        '<i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>' +
+                        '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                        '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                            '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                        '</button>' +
+                    '</div>';
+            } else {
+                var reader = new FileReader();
+                reader.onload = (function(d, i) {
+                    return function(e) {
+                        d.innerHTML =
+                            '<img src="' + e.target.result + '" class="w-full h-24 object-cover" alt="Preview">' +
+                            '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                                '<button type="button" onclick="removePreview(' + i + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                                    '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                                '</button>' +
+                            '</div>';
+                    };
+                })(div, index);
+                reader.readAsDataURL(file);
+                container.appendChild(div);
+                return;
+            }
+            container.appendChild(div);
+        });
+    }
+}
+function removePreview(index) {
+    var el = document.getElementById('preview-' + index);
+    if (el) el.remove();
+}
+
 var itemIndex = 0;
 var itemOptions = @json($itemPersediaans->map(fn($ip) => ['id' => $ip->id, 'kategori_id' => $ip->kategori_persediaan_id, 'label' => $ip->kode_item_persediaan . ' - ' . $ip->deskripsi]));
 var kategoriOptions = @json($kategoriPersediaans->map(fn($k) => ['id' => $k->id, 'label' => $k->deskripsi]));

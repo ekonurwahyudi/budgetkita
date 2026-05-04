@@ -152,24 +152,25 @@
                                 $isExcel = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.xlsx', '.xls']);
                                 $url = \Illuminate\Support\Facades\Storage::url($ev);
                             @endphp
-                            <div class="relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
+                            <div class="relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
                                 @if($isPdf)
-                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-full p-3">
+                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
                                         <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
                                         <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
                                     </a>
                                 @elseif($isExcel)
-                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-full p-3">
+                                    <a href="{{ $url }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
                                         <i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>
                                         <span class="text-[10px] text-muted-foreground text-center truncate w-full">Excel</span>
                                     </a>
                                 @else
-                                    <img src="{{ $url }}" class="w-full h-full object-cover" alt="Eviden {{ $idx + 1 }}">
-                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>
+                                    <img src="{{ $url }}" class="w-full h-24 object-cover" alt="Eviden {{ $idx + 1 }}">
                                 @endif
-                                <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">
-                                    <i class="ki-filled ki-cross text-xs"></i>
-                                </button>
+                                <div class="flex items-center justify-end px-2 py-1.5 border-t border-border">
+                                    <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">
+                                        <i class="ki-filled ki-cross text-[10px]"></i>
+                                    </button>
+                                </div>
                             </div>
                             @endforeach
                         </div>
@@ -271,30 +272,41 @@ function previewEviden(input) {
             var isPdf = file.type === 'application/pdf';
             var isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel';
             var div = document.createElement('div');
-            div.className = 'relative group aspect-square rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+            div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
             div.id = 'preview-' + index;
             if (isPdf) {
                 div.innerHTML =
-                    '<div class="flex flex-col items-center justify-center w-full h-full p-3">' +
+                    '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
                         '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
                         '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                        '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                            '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                        '</button>' +
                     '</div>';
             } else if (isExcel) {
                 div.innerHTML =
-                    '<div class="flex flex-col items-center justify-center w-full h-full p-3">' +
+                    '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
                         '<i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>' +
                         '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                        '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                            '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                        '</button>' +
                     '</div>';
             } else {
                 var reader = new FileReader();
                 reader.onload = (function(d, i) {
                     return function(e) {
                         d.innerHTML =
-                            '<img src="' + e.target.result + '" class="w-full h-full object-cover" alt="Preview">' +
-                            '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none"></div>' +
-                            '<button type="button" onclick="removePreview(' + i + ')" class="absolute top-1.5 right-1.5 size-6 rounded-full bg-destructive/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" title="Hapus">' +
-                                '<i class="ki-filled ki-cross text-xs"></i>' +
-                            '</button>';
+                            '<img src="' + e.target.result + '" class="w-full h-24 object-cover" alt="Preview">' +
+                            '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                                '<button type="button" onclick="removePreview(' + i + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                                    '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                                '</button>' +
+                            '</div>';
                     };
                 })(div, index);
                 reader.readAsDataURL(file);

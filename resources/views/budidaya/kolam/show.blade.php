@@ -9,9 +9,10 @@
 .excel-wrap {
     border: 1px solid #c0c8d4; border-radius: 6px;
     max-height: 70vh; overflow: auto; position: relative;
+    min-width: 0;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    width: 0; min-width: 100%;
 }
+.excel-wrap .excel-table { min-width: max-content; }
 .excel-table { border-collapse: separate; border-spacing: 0; }
 .excel-table thead th {
     position: sticky; top: 0; z-index: 30;
@@ -81,7 +82,7 @@
 @endpush
 
 @section('content')
-<div class="grid w-full space-y-5">
+<div class="grid w-full space-y-5 min-w-0">
     {{-- Header Info --}}
     <div class="kt-card">
         <div class="kt-card-header min-h-14">
@@ -137,16 +138,16 @@
         $chartLabels = $pakanByJenis->map(fn($item) => $item['name'] . ' (' . number_format($item['total'], 1) . ' kg)')->toJson();
         $chartSeries = $pakanByJenis->pluck('total')->map(fn($v) => (float) $v)->toJson();
     @endphp
-    <div class="kt-card">
+    <div class="kt-card min-w-0">
         <div class="kt-card-header min-h-14">
             <h3 class="kt-card-title">Grafik Pakan</h3>
         </div>
         <div class="kt-card-content py-4">
             <div class="flex flex-col lg:flex-row gap-6">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-foreground mb-3">Stok Persediaan Pakan</p>
-                    <div class="overflow-x-auto">
-                        <table class="kt-table kt-table-border w-full">
+                <div class="flex-1 min-w-0 flex flex-col items-center">
+                    <p class="text-sm font-medium text-foreground mb-3 text-center">Stok Persediaan Pakan</p>
+                    <div class="overflow-x-auto w-full">
+                        <table class="kt-table kt-table-border">
                             <thead>
                                 <tr>
                                     <th class="text-center text-xs font-semibold w-10">No.</th>
@@ -178,9 +179,9 @@
                         </table>
                     </div>
                 </div>
-                <div class="w-full lg:w-[380px] shrink-0">
-                    <p class="text-sm font-medium text-foreground mb-3">Komposisi Jenis Pakan</p>
-                    <div id="pakanDonutChart" style="width:100%;height:280px"></div>
+                <div class="w-full lg:w-[380px] shrink-0 flex flex-col items-center">
+                    <p class="text-sm font-medium text-foreground mb-3 text-center">Komposisi Jenis Pakan</p>
+                    <div id="pakanDonutChart" style="width:100%;max-width:380px;height:280px"></div>
                 </div>
             </div>
         </div>
@@ -194,7 +195,7 @@
     </div>
 
     {{-- Tab: Parameter Harian --}}
-    <div class="kt-card" id="tab-parameter">
+    <div class="kt-card overflow-hidden min-w-0" id="tab-parameter">
         <div class="kt-card-header min-h-14">
             <h3 class="kt-card-title">Parameter Harian</h3>
             <div class="flex items-center gap-2">
@@ -282,7 +283,7 @@
     </div>
 
     {{-- Tab: Pemberian Pakan --}}
-    <div class="kt-card hidden" id="tab-pakan">
+    <div class="kt-card hidden overflow-hidden min-w-0" id="tab-pakan">
         <div class="kt-card-header min-h-16">
             <h3 class="kt-card-title">Pemberian Pakan</h3>
             <div class="flex items-center gap-2">
@@ -295,9 +296,9 @@
                 <span class="text-sm text-muted-foreground">dari {{ $pakanGroups->count() }} hari</span>
             </div>
         </div>
-        <div class="kt-card-content">
-            <div class="kt-scrollable" style="max-height:65vh">
-                <table class="kt-table kt-table-border" id="pakanGroupTable">
+        <div class="kt-card-content min-w-0">
+            <div class="overflow-auto" style="max-height:65vh">
+                <table class="kt-table kt-table-border min-w-max" id="pakanGroupTable">
                     <thead>
                         <tr>
                             <th class="w-10" rowspan="2">No</th>
@@ -588,6 +589,30 @@ function handleImport(input) {
     dialog.showModal();
 }
 
+function initPakanDonutChart() {
+    var donutEl = document.getElementById('pakanDonutChart');
+    if (!donutEl) return;
+    if (typeof ApexCharts === 'undefined') { setTimeout(initPakanDonutChart, 300); return; }
+    var chartLabels = {!! $pakanByJenis->count() ? $chartLabels : '[]' !!};
+    var chartSeries = {!! $pakanByJenis->count() ? $chartSeries : '[]' !!};
+    if (!chartLabels.length || !chartSeries.length) return;
+    var colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+    try {
+        new ApexCharts(donutEl, {
+            chart: { type: 'donut', height: 280, fontFamily: 'Onest, sans-serif', toolbar: { show: false } },
+            series: chartSeries,
+            labels: chartLabels,
+            colors: colors.slice(0, chartLabels.length),
+            legend: { position: 'bottom', fontSize: '11px', itemMargin: { horizontal: 6, vertical: 4 } },
+            dataLabels: { enabled: false },
+            plotOptions: { pie: { donut: { size: '55%', labels: { show: true, name: { show: true, fontSize: '12px' }, value: { show: true, fontSize: '14px', fontWeight: 600, formatter: function(val) { return parseFloat(val).toFixed(1) + ' kg'; } }, total: { show: true, label: 'Total', formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0).toFixed(1) + ' kg'; } } } } } },
+            tooltip: { y: { formatter: function(v) { return v.toFixed(2) + ' kg'; } } },
+            stroke: { width: 2 },
+            states: { hover: { filter: { type: 'none' } } }
+        }).render();
+    } catch(e) { console.error('ApexCharts render error:', e); }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     var todayRow = document.querySelector('tr[data-date="{{ now()->format('Y-m-d') }}"]');
     if (todayRow) { setTimeout(function() { todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }
@@ -600,48 +625,8 @@ document.addEventListener('DOMContentLoaded', function() {
             saveTimeout = setTimeout(function() { saveField(e.target); }, 800);
         }
     });
+    initPakanDonutChart();
 });
 </script>
 @endpush
-
-@if($pakanByJenis->count())
-@push('scripts')
-<script>
-(function initPakanChart() {
-    function renderChart() {
-        if (typeof ApexCharts === 'undefined') { console.warn('ApexCharts not loaded'); return; }
-        var donutEl = document.getElementById('pakanDonutChart');
-        if (!donutEl) { console.warn('pakanDonutChart element not found'); return; }
-        var w = donutEl.offsetWidth;
-        var h = donutEl.offsetHeight;
-        if (w === 0 || h === 0) { console.warn('Chart container has zero size, retrying...', w, h); setTimeout(renderChart, 200); return; }
-        var chartLabels = {!! $chartLabels !!};
-        var chartSeries = {!! $chartSeries !!};
-        var colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
-        try {
-            var options = {
-                chart: { type: 'donut', width: '100%', height: 280, fontFamily: 'Onest, sans-serif', toolbar: { show: false }, animations: { enabled: true } },
-                series: chartSeries,
-                labels: chartLabels,
-                colors: colors.slice(0, chartLabels.length),
-                legend: { position: 'bottom', fontSize: '11px', itemMargin: { horizontal: 6, vertical: 4 } },
-                dataLabels: { enabled: false },
-                plotOptions: { pie: { donut: { size: '55%', labels: { show: true, name: { show: true, fontSize: '12px' }, value: { show: true, fontSize: '14px', fontWeight: 600, formatter: function(val) { return parseFloat(val).toFixed(1) + ' kg'; } }, total: { show: true, label: 'Total', formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0).toFixed(1) + ' kg'; } } } } },
-                tooltip: { y: { formatter: function(v) { return v.toFixed(2) + ' kg'; } } },
-                stroke: { width: 2 },
-                states: { hover: { filter: { type: 'none' } } }
-            };
-            var chart = new ApexCharts(donutEl, options);
-            chart.render();
-        } catch(e) { console.error('ApexCharts render error:', e); }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderChart);
-    } else {
-        renderChart();
-    }
-})();
-</script>
-@endpush
-@endif
 @endsection

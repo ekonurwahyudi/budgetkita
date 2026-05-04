@@ -41,17 +41,26 @@ class RolePermissionSeeder extends Seeder
             'roles' => ['view', 'create', 'edit', 'delete'],
         ];
 
+        $modules = ['masterdata', 'keuangan', 'operasional', 'budidaya'];
+
+        // Build list of valid permission names
+        $validPermissions = [];
         foreach ($pages as $page => $actions) {
             foreach ($actions as $action) {
-                Permission::firstOrCreate(['name' => "{$page}.{$action}"]);
+                $validPermissions[] = "{$page}.{$action}";
             }
         }
-
-        // Also keep old module-level permissions for backward compat with sidebar @can
-        $modules = ['masterdata', 'keuangan', 'operasional', 'budidaya'];
         foreach ($modules as $mod) {
-            Permission::firstOrCreate(['name' => "{$mod}.view"]);
+            $validPermissions[] = "{$mod}.view";
         }
+
+        // Create or update permissions — also remove orphaned ones
+        foreach ($validPermissions as $perm) {
+            Permission::firstOrCreate(['name' => $perm]);
+        }
+
+        // Delete orphaned permissions that are not in our list
+        Permission::whereNotIn('name', $validPermissions)->delete();
 
         // Owner: full access
         $owner = Role::firstOrCreate(['name' => 'Owner']);

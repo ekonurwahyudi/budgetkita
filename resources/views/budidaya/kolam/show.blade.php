@@ -17,23 +17,36 @@
 .excel-table thead th {
     position: sticky; top: 0; z-index: 30;
     background: #3b82f6; color: #fff;
-    font-size: 0.68rem; font-weight: 600;
-    padding: 0.4rem 0.35rem; text-align: center; white-space: nowrap;
+    font-size: 0.62rem; font-weight: 600;
+    padding: 0.25rem 0.2rem; text-align: center; white-space: nowrap;
     border-bottom: 1px solid #2563eb; border-right: 1px solid #2563eb;
     box-shadow: 0 1px 2px rgba(37,99,235,0.3);
 }
 .excel-table thead th.th-corner { position: sticky; left: 0; z-index: 40; background: #2563eb; }
 .excel-table thead th.th-corner-action { position: sticky; right: 0; z-index: 40; background: #2563eb; }
 .excel-table thead tr.th-group th {
-    background: #2563eb; font-size: 0.65rem; padding: 0.25rem 0.35rem;
+    background: #2563eb; font-size: 0.6rem; padding: 0.18rem 0.2rem;
     border-bottom: 1px solid #1d4ed8; border-right: 1px solid #1d4ed8;
 }
 .excel-table thead tr.th-sub th {
-    background: #3b82f6; font-size: 0.6rem;
+    background: #3b82f6; font-size: 0.56rem;
     border-bottom: 2px solid #1d4ed8; border-right: 1px solid #2563eb;
+    width: 48px;
 }
 .excel-table tbody td {
     padding: 0; border-bottom: 1px solid #d1d5db; border-right: 1px solid #d1d5db;
+}
+.excel-table tbody td.td-date {
+    position: sticky; left: 0; z-index: 10;
+    background: #fff; padding: 0.2rem 0.3rem;
+    font-size: 0.68rem; font-weight: 600; white-space: nowrap;
+    font-variant-numeric: tabular-nums; width: 75px;
+    border-right: 2px solid #93c5fd;
+}
+.excel-table tbody td.td-action {
+    position: sticky; right: 0; z-index: 10;
+    background: #fff; padding: 0.2rem; text-align: center; width: 28px;
+    border-left: 2px solid #93c5fd;
 }
 .excel-table tbody tr:nth-child(even) td:not(.td-date):not(.td-action) { background: #f9fafb; }
 .excel-table tbody tr:hover td { background: #eff6ff !important; }
@@ -42,24 +55,24 @@
 .excel-table tbody tr.row-today td:not(.td-date):not(.td-action):not(.td-oleh) { background: #eff6ff !important; }
 .excel-table tbody td.td-date {
     position: sticky; left: 0; z-index: 10;
-    background: #fff; padding: 0.35rem 0.5rem;
-    font-size: 0.73rem; font-weight: 600; white-space: nowrap;
-    font-variant-numeric: tabular-nums; min-width: 105px;
+    background: #fff; padding: 0.25rem 0.35rem;
+    font-size: 0.7rem; font-weight: 600; white-space: nowrap;
+    font-variant-numeric: tabular-nums; min-width: 80px;
     border-right: 2px solid #93c5fd;
 }
 .excel-table tbody td.td-action {
     position: sticky; right: 0; z-index: 10;
-    background: #fff; padding: 0.35rem; text-align: center; min-width: 36px;
+    background: #fff; padding: 0.25rem; text-align: center; min-width: 30px;
     border-left: 2px solid #93c5fd;
 }
-.excel-table tbody td.td-num { min-width: 72px; }
-.excel-table tbody td.td-text { min-width: 110px; }
-.excel-table tbody td.td-status { min-width: 88px; }
-.excel-table tbody td.td-oleh { min-width: 72px; padding: 0 0.35rem; font-size: 0.68rem; color: #6b7280; white-space: nowrap; text-align: center; }
+.excel-table tbody td.td-num { width: 48px; }
+.excel-table tbody td.td-text { width: 55px; }
+.excel-table tbody td.td-status { width: 50px; }
+.excel-table tbody td.td-oleh { width: 48px; padding: 0 0.2rem; font-size: 0.65rem; color: #6b7280; white-space: nowrap; text-align: center; }
 .excel-input {
     width: 100%; border: none; outline: none; background: transparent;
-    padding: 0.35rem 0.4rem; font-size: 0.73rem; font-variant-numeric: tabular-nums;
-    height: 30px; box-sizing: border-box;
+    padding: 0.2rem 0.15rem; font-size: 0.68rem; font-variant-numeric: tabular-nums;
+    height: 26px; box-sizing: border-box;
 }
 .excel-input:focus { background: #dbeafe; box-shadow: inset 0 0 0 2px #3b82f6; position: relative; z-index: 5; }
 .excel-input::-webkit-outer-spin-button,
@@ -68,8 +81,8 @@
 .excel-input:hover:not(:focus) { background: #f0f4ff; }
 .excel-select {
     width: 100%; border: none; outline: none; background: transparent;
-    padding: 0.35rem 0.4rem; font-size: 0.68rem; cursor: pointer;
-    -webkit-appearance: none; appearance: none; height: 30px; box-sizing: border-box;
+    padding: 0.2rem 0.15rem; font-size: 0.63rem; cursor: pointer;
+    -webkit-appearance: none; appearance: none; height: 26px; box-sizing: border-box;
 }
 .excel-select:focus { background: #dbeafe; box-shadow: inset 0 0 0 2px #3b82f6; }
 .excel-select:hover:not(:focus) { background: #f0f4ff; }

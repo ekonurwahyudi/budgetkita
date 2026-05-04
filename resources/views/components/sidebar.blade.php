@@ -32,10 +32,10 @@
 
                 {{-- KEUANGAN --}}
                 @php
-                $keuanganMainMenus = [
+$keuanganMainMenus = [
+                    ['url' => '/keuangan/laporan', 'icon' => 'ki-chart-line-up', 'label' => 'Laporan Keuangan', 'perm' => 'laporan-keuangan.view'],
                     ['url' => '/keuangan/transaksi', 'icon' => 'ki-cheque', 'label' => 'Transaksi Keuangan', 'perm' => 'transaksi-keuangan.view'],
                     ['url' => '/masterdata/account-bank', 'icon' => 'ki-two-credit-cart', 'label' => 'Account Bank', 'perm' => 'account-bank.view'],
-                    ['url' => '/keuangan/laporan', 'icon' => 'ki-chart-line-up', 'label' => 'Laporan Keuangan', 'perm' => 'laporan-keuangan.view'],
                 ];
                 $transaksiLainnyaMenus = [
                     ['url' => '/keuangan/gaji', 'icon' => 'ki-people', 'label' => 'Gaji Karyawan', 'perm' => 'gaji-karyawan.view'],

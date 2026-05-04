@@ -154,6 +154,11 @@
                     @endif
                 </button>
 
+                <a href="{{ route('neraca-keuangan.index') }}"
+                   class="kt-btn flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0">
+                    <i class="ki-filled ki-calculator"></i> Neraca
+                </a>
+
                 <a href="{{ route('laporan-keuangan.export', request()->query()) }}"
                    class="kt-btn flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white border-0">
                     <i class="ki-filled ki-file-sheet"></i> Export

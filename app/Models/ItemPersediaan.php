@@ -10,4 +10,9 @@ class ItemPersediaan extends BaseModel
     {
         return $this->belongsTo(KategoriPersediaan::class);
     }
+
+    public function persediaan()
+    {
+        return $this->hasOne(Persediaan::class, 'item_persediaan_id');
+    }
 }

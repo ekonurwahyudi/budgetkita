@@ -87,16 +87,8 @@ class SiklusController extends Controller
         $uangKeluarTransaksi = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
 
         $totalPanen = $siklus->panens->sum('total_penjualan');
-        $uangMasuk = $uangMasukTransaksi + $totalPanen;
 
-        $biayaPakanKimia = \App\Models\RiwayatPersediaan::where('siklus_id', $siklus->id)
-            ->where('jenis', 'pengeluaran')
-            ->sum('harga_total');
-        $uangKeluar = $uangKeluarTransaksi + $biayaPakanKimia;
-
-        $keuntunganKerugian = $uangMasuk - $uangKeluar;
-
-        $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan')
+        $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan', 'itemPersediaan.persediaan')
             ->where('siklus_id', $siklus->id)
             ->latest('tgl_pakan')
             ->get();
@@ -105,8 +97,9 @@ class SiklusController extends Controller
             !$p->itemPersediaan?->kategoriPersediaan ||
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') !== false
         )->map(function($p) {
-            $persediaan = \App\Models\Persediaan::where('item_persediaan_id', $p->item_persediaan_id)->first();
-            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan->harga_per_unit ?? 0);
+            $persediaan = $p->itemPersediaan?->persediaan;
+            $p->harga_unit = $persediaan?->harga_per_unit ?? 0;
+            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan?->harga_per_unit ?? 0);
             return $p;
         })->values();
 
@@ -114,10 +107,24 @@ class SiklusController extends Controller
             $p->itemPersediaan?->kategoriPersediaan &&
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
         )->map(function($p) {
-            $persediaan = \App\Models\Persediaan::where('item_persediaan_id', $p->item_persediaan_id)->first();
-            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan->harga_per_unit ?? 0);
+            $persediaan = $p->itemPersediaan?->persediaan;
+            $p->harga_unit = $persediaan?->harga_per_unit ?? 0;
+            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan?->harga_per_unit ?? 0);
             return $p;
         })->values();
+
+        $uangMasuk = $uangMasukTransaksi + $totalPanen;
+
+        // Data detail untuk modal
+        $detailPanen = $siklus->panens;
+        $detailTransaksiMasuk = $transaksis->where('jenis_transaksi', 'uang_masuk');
+        $detailTransaksiKeluar = $transaksis->where('jenis_transaksi', 'uang_keluar');
+        $totalBiayaPakan = $pemberianPakans->sum('biaya');
+        $totalBiayaKimia = $pemberianKimia->sum('biaya');
+
+        $uangKeluar = $uangKeluarTransaksi + $totalBiayaPakan + $totalBiayaKimia;
+
+        $keuntunganKerugian = $uangMasuk - $uangKeluar;
 
         $kolams = \App\Models\Kolam::with(['users'])
             ->where('siklus_id', $siklus->id)
@@ -141,7 +148,9 @@ class SiklusController extends Controller
         return view('budidaya.siklus.show', compact(
             'siklus', 'transaksis', 'pemberianPakans', 'pemberianKimia',
             'accountBanks', 'kolams', 'users',
-            'uangMasuk', 'uangKeluar', 'keuntunganKerugian'
+            'uangMasuk', 'uangKeluar', 'keuntunganKerugian',
+            'detailPanen', 'detailTransaksiMasuk', 'detailTransaksiKeluar',
+            'totalBiayaPakan', 'totalBiayaKimia'
         ));
     }
 

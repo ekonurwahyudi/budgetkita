@@ -47,7 +47,7 @@
                         {{-- Aktivitas --}}
                         <div class="flex flex-col gap-1.5">
                             <label class="text-sm font-medium text-foreground">Aktivitas/Kegiatan <span class="text-danger">*</span></label>
-                            <textarea name="aktivitas" id="aktivitas" class="kt-input" rows="3" style="height: 94px;" required>{{ old('aktivitas', $transaksi?->aktivitas) }}</textarea>
+                            <textarea name="aktivitas" id="aktivitas" class="kt-input" rows="3" style="height: 60px;" required>{{ old('aktivitas', $transaksi?->aktivitas) }}</textarea>
                         </div>
 
                         {{-- Kategori & Item --}}
@@ -147,11 +147,6 @@
                             </div>
                         </div>
 
-                        {{-- Catatan --}}
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-medium text-foreground">Catatan</label>
-                            <textarea name="catatan" id="catatan" class="kt-input" rows="3" style="height: 94px;">{{ old('catatan', $transaksi?->catatan) }}</textarea>
-                        </div>
 
                         {{-- Eviden --}}
                         <div class="flex flex-col gap-1.5">
@@ -186,6 +181,12 @@
                                 @endforeach
                             </div>
                             @endif
+                        </div>
+
+                         {{-- Catatan --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Catatan</label>
+                            <textarea name="catatan" id="catatan" class="kt-input" rows="3" style="height: 94px;">{{ old('catatan', $transaksi?->catatan) }}</textarea>
                         </div>
                     </div>
                 </div>

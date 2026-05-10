@@ -21,8 +21,8 @@
                 @if($pembelianAset) @method('PUT') @endif
                 <input type="hidden" name="jenis_pembayaran" id="jenis_pembayaran" value="bank">
                 <input type="hidden" name="account_bank_id" id="account_bank_id" value="{{ old('account_bank_id', $pembelianAset?->account_bank_id) }}">
-                <input type="hidden" name="nominal_pembelian" id="nominal_pembelian_val" value="{{ old('nominal_pembelian', (int)($pembelianAset?->nominal_pembelian ?? 0)) }}">
-                <input type="hidden" name="nilai_residu" id="nilai_residu_val" value="{{ old('nilai_residu', (int)($pembelianAset?->nilai_residu ?? 0)) }}">
+                <input type="hidden" name="nominal_pembelian" id="nominal_pembelian_val" value="{{ old('nominal_pembelian', (int)($pembelianAset?->nominal_pembelian ?? 0)) ?: '0' }}">
+                <input type="hidden" name="nilai_residu" id="nilai_residu_val" value="{{ old('nilai_residu', (int)($pembelianAset?->nilai_residu ?? 0)) ?: '0' }}">
 
                 <div class="flex flex-col gap-5 max-w-2xl">
                     {{-- Nama Aset --}}
@@ -91,10 +91,10 @@
 
                     {{-- Nilai Residu --}}
                     <div class="flex flex-col gap-1.5" id="nilai_residu_wrap">
-                        <label class="text-sm font-medium text-foreground">Nilai Residu <span class="text-danger">*</span></label>
+                        <label class="text-sm font-medium text-foreground">Nilai Residu (Optional)</label>
                         <div class="kt-input-group">
                             <span class="kt-input-addon">Rp.</span>
-                            <input class="kt-input money-input" type="text" id="nilai_residu_display" placeholder="0" data-target="nilai_residu_val" required/>
+                            <input class="kt-input money-input" type="text" id="nilai_residu_display" placeholder="0" data-target="nilai_residu_val"/>
                         </div>
                     </div>
 
@@ -132,14 +132,37 @@
                     {{-- Catatan --}}
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium text-foreground">Catatan</label>
-                        <textarea name="catatan" class="kt-input" rows="3">{{ old('catatan', $pembelianAset?->catatan) }}</textarea>
+                        <textarea name="catatan" class="kt-input" rows="3"style="height: 60px;">{{ old('catatan', $pembelianAset?->catatan) }}</textarea>
+                    </div>
+
+                    {{-- Foto Aset --}}
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-foreground">Foto Aset</label>
+                        <input type="file" name="foto_aset[]" id="fotoAsetInput" class="kt-input" multiple accept=".png,.jpg,.jpeg" onchange="previewFotoAset(this)">
+                        <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: PNG, JPG, JPEG. Bisa lebih dari 1 file.</p>
+                        <div id="fotoAsetPreview" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
+                        @if($pembelianAset && !empty($pembelianAset->foto_aset))
+                        <div id="existingFotoAset" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2">
+                            @foreach($pembelianAset->foto_aset as $idx => $f)
+                            @php $fotoUrl = \Illuminate\Support\Facades\Storage::url($f); @endphp
+                            <div class="relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-foto-{{ $idx }}">
+                                <img src="{{ $fotoUrl }}" class="w-full h-24 object-cover cursor-pointer lb-thumb" alt="Foto Aset {{ $idx + 1 }}" data-src="{{ $fotoUrl }}">
+                                <div class="flex items-center justify-end px-2 py-1.5 border-t border-border">
+                                    <button type="button" onclick="hapusExistingFoto('{{ $idx }}', 'existing-foto-{{ $idx }}', '{{ $f }}')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">
+                                        <i class="ki-filled ki-cross text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
                     </div>
 
                     {{-- Eviden --}}
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium text-foreground">Eviden</label>
-                        <input type="file" name="eviden[]" id="evidenInput" class="kt-input" multiple accept="image/*,.pdf" onchange="previewEviden(this)">
-                        <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: JPG, PNG, PDF.</p>
+                        <input type="file" name="eviden[]" id="evidenInput" class="kt-input" multiple accept=".png,.jpg,.jpeg,.pdf" onchange="previewEviden(this)">
+                        <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: PNG, JPG, JPEG, PDF.</p>
 
                         {{-- Preview file yang baru dipilih --}}
                         <div id="previewContainer" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
@@ -148,14 +171,18 @@
                         @if($pembelianAset && !empty($pembelianAset->eviden))
                         <div id="existingEviden" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2">
                             @foreach($pembelianAset->eviden as $idx => $ev)
+                            @php
+                                $isPdf = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.pdf']);
+                                $evUrl = \Illuminate\Support\Facades\Storage::url($ev);
+                            @endphp
                             <div class="relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
-                                @if(Str::endsWith(strtolower($ev), ['.pdf']))
-                                    <a href="{{ Storage::url($ev) }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
+                                @if($isPdf)
+                                    <a href="{{ $evUrl }}" target="_blank" class="flex flex-col items-center justify-center w-full h-24 p-3">
                                         <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
                                         <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
                                     </a>
                                 @else
-                                    <img src="{{ Storage::url($ev) }}" class="w-full h-24 object-cover" alt="Eviden {{ $idx + 1 }}">
+                                    <img src="{{ $evUrl }}" class="w-full h-24 object-cover cursor-pointer lb-thumb" alt="Eviden {{ $idx + 1 }}" data-src="{{ $evUrl }}">
                                 @endif
                                 <div class="flex items-center justify-end px-2 py-1.5 border-t border-border">
                                     <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">
@@ -181,6 +208,13 @@
         </div>
     </div>
 </div>
+{{-- Lightbox Modal --}}
+<div id="lb-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;">
+    <button id="lb-close" style="position:absolute;top:1rem;right:1rem;color:#fff;font-size:1.5rem;background:none;border:none;cursor:pointer;">
+        <i class="ki-filled ki-cross" style="font-size:1.75rem;"></i>
+    </button>
+    <img id="lb-img" src="" style="max-width:100%;max-height:90vh;object-fit:contain;border-radius:0.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+</div>
 @endsection
 
 @push('scripts')
@@ -196,10 +230,15 @@ function parseMoney(val) {
 function initMoneyInput(el) {
     var target = document.getElementById(el.dataset.target);
     var initVal = parseInt(target.value) || 0;
-    el.value = initVal > 0 ? formatMoney(initVal) : '';
+    el.value = initVal > 0 ? formatMoney(initVal) : '0';
     el.addEventListener('input', function() {
         var raw = parseMoney(this.value);
-        this.value = raw > 0 ? formatMoney(raw) : '';
+        this.value = raw > 0 ? formatMoney(raw) : '0';
+        target.value = raw;
+    });
+    el.addEventListener('blur', function() {
+        var raw = parseMoney(this.value);
+        this.value = raw > 0 ? formatMoney(raw) : '0';
         target.value = raw;
     });
 }
@@ -232,12 +271,16 @@ function onMetodeDepresiasiChange() {
 
     if (metode === 'tanpa') {
         nilaiResiduWrap.style.display = 'none';
-        document.getElementById('nilai_residu_display').value = '';
+        document.getElementById('nilai_residu_display').value = '0';
         document.getElementById('nilai_residu_val').value = '0';
         umurManfaatEl.value = '0';
         document.getElementById('depresiasi_preview').classList.add('hidden');
     } else {
         nilaiResiduWrap.style.display = '';
+        if (document.getElementById('nilai_residu_display').value === '') {
+            document.getElementById('nilai_residu_display').value = '0';
+            document.getElementById('nilai_residu_val').value = '0';
+        }
         updateDepresiasiPreview();
     }
 }
@@ -286,6 +329,53 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('nominal_pembelian_display').addEventListener('input', updateDepresiasiPreview);
     document.getElementById('nilai_residu_display').addEventListener('input', updateDepresiasiPreview);
     document.getElementById('umur_manfaat').addEventListener('input', updateDepresiasiPreview);
+
+    // Lightbox
+    var modal = document.getElementById('lb-modal');
+    var img = document.getElementById('lb-img');
+    var closeBtn = document.getElementById('lb-close');
+    if (modal) {
+        function openLb(src) {
+            img.src = src;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLb() {
+            modal.style.display = 'none';
+            img.src = '';
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('click', function(e) {
+            var thumb = e.target.closest('.lb-thumb');
+            if (thumb) {
+                e.preventDefault();
+                openLb(thumb.dataset.src);
+                return;
+            }
+            var preview = e.target.closest('.lb-preview');
+            if (preview) {
+                e.preventDefault();
+                openLb(preview.src);
+                return;
+            }
+        });
+
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeLb();
+        });
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal || e.target === img) {
+                closeLb();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLb();
+        });
+    }
 });
 
 // Preview eviden sebelum submit
@@ -294,34 +384,40 @@ function previewEviden(input) {
     container.innerHTML = '';
     if (input.files) {
         Array.from(input.files).forEach(function(file, index) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var div = document.createElement('div');
-                div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
-                div.id = 'preview-' + index;
-                if (file.type === 'application/pdf') {
-                    div.innerHTML =
-                        '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
-                            '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
-                            '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
-                        '</div>' +
-                        '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
-                            '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
-                                '<i class="ki-filled ki-cross text-[10px]"></i>' +
-                            '</button>' +
-                        '</div>';
-                } else {
-                    div.innerHTML =
-                        '<img src="' + e.target.result + '" class="w-full h-24 object-cover" alt="Preview">' +
-                        '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
-                            '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
-                                '<i class="ki-filled ki-cross text-[10px]"></i>' +
-                            '</button>' +
-                        '</div>';
-                }
+            var isPdf = file.type === 'application/pdf';
+            var div = document.createElement('div');
+            div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+            div.id = 'preview-' + index;
+            if (isPdf) {
+                div.innerHTML =
+                    '<div class="flex flex-col items-center justify-center w-full h-24 p-3">' +
+                        '<i class="ki-filled ki-document text-3xl text-primary mb-2"></i>' +
+                        '<span class="text-[10px] text-muted-foreground text-center truncate w-full">' + file.name + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                        '<button type="button" onclick="removePreview(' + index + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                            '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                        '</button>' +
+                    '</div>';
                 container.appendChild(div);
-            };
-            reader.readAsDataURL(file);
+            } else {
+                var reader = new FileReader();
+                reader.onload = (function(d, i) {
+                    return function(e) {
+                        d.innerHTML =
+                            '<img src="' + e.target.result + '" class="w-full h-24 object-cover cursor-pointer lb-preview" alt="Preview">' +
+                            '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                                '<button type="button" onclick="removePreview(' + i + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                                    '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                                '</button>' +
+                            '</div>';
+                    };
+                })(div, index);
+                reader.readAsDataURL(file);
+                container.appendChild(div);
+                return;
+            }
+            container.appendChild(div);
         });
     }
 }
@@ -329,7 +425,6 @@ function previewEviden(input) {
 function removePreview(index) {
     var el = document.getElementById('preview-' + index);
     if (el) el.remove();
-    // Note: file tetap akan terkirim karena input file asli tidak diubah
 }
 
 var hapusEvidenList = [];
@@ -337,12 +432,58 @@ function hapusExistingEviden(path, elementId) {
     if (!confirm('Yakin hapus eviden ini?')) return;
     hapusEvidenList.push(path);
     var form = document.querySelector('form[enctype="multipart/form-data"]');
-    // hapus input hidden lama
     document.querySelectorAll('input[name^="hapus_eviden["]').forEach(function(el) { el.remove(); });
     hapusEvidenList.forEach(function(p, i) {
         var inp = document.createElement('input');
         inp.type = 'hidden';
         inp.name = 'hapus_eviden[' + i + ']';
+        inp.value = p;
+        form.appendChild(inp);
+    });
+    document.getElementById(elementId).remove();
+}
+
+function previewFotoAset(input) {
+    var container = document.getElementById('fotoAsetPreview');
+    container.innerHTML = '';
+    if (input.files) {
+        Array.from(input.files).forEach(function(file, index) {
+            var reader = new FileReader();
+            var div = document.createElement('div');
+            div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+            div.id = 'foto-preview-' + index;
+            reader.onload = (function(d, i) {
+                return function(e) {
+                    d.innerHTML =
+                        '<img src="' + e.target.result + '" class="w-full h-24 object-cover cursor-pointer lb-preview" alt="Preview">' +
+                        '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+                            '<button type="button" onclick="removeFotoPreview(' + i + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                                '<i class="ki-filled ki-cross text-[10px]"></i>' +
+                            '</button>' +
+                        '</div>';
+                };
+            })(div, index);
+            reader.readAsDataURL(file);
+            container.appendChild(div);
+        });
+    }
+}
+
+function removeFotoPreview(index) {
+    var el = document.getElementById('foto-preview-' + index);
+    if (el) el.remove();
+}
+
+var hapusFotoList = [];
+function hapusExistingFoto(idx, elementId, path) {
+    if (!confirm('Yakin hapus foto ini?')) return;
+    hapusFotoList.push(path);
+    var form = document.querySelector('form[enctype="multipart/form-data"]');
+    document.querySelectorAll('input[name^="hapus_foto["]').forEach(function(el) { el.remove(); });
+    hapusFotoList.forEach(function(p, i) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'hapus_foto[' + i + ']';
         inp.value = p;
         form.appendChild(inp);
     });

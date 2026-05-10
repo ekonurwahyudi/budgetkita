@@ -7,6 +7,7 @@ use App\Models\AccountBank;
 use App\Models\Panen;
 use App\Models\Siklus;
 use App\Services\ApprovalService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -77,6 +78,13 @@ class PanenController extends Controller
         }
 
         Panen::create($input);
+
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            'Panen Baru Menunggu Approval',
+            'Data panen siklus ' . $input['siklus_id'] . ' memerlukan persetujuan.',
+            route('panen.index')
+        );
+
         return redirect()->route('panen.index')->with('success', 'Data panen berhasil ditambahkan.');
     }
 
@@ -194,6 +202,13 @@ class PanenController extends Controller
         $panen->load(['kolam.siklus']);
         app(ApprovalService::class)->approve($panen);
 
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Panen Disetujui',
+            'Data panen telah disetujui.',
+            'info',
+            route('panen.index')
+        );
+
         if ($panen->tipe_panen === 'full' && $panen->kolam_id) {
             $panen->kolam->update(['status' => 'selesai']);
 
@@ -212,6 +227,12 @@ class PanenController extends Controller
     public function reject(Panen $panen)
     {
         app(ApprovalService::class)->reject($panen);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Panen Ditolak',
+            'Data panen telah ditolak.',
+            'warning',
+            route('panen.index')
+        );
         return redirect()->back()->with('success', 'Panen berhasil di-reject.');
     }
 }

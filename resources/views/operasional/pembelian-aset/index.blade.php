@@ -23,9 +23,10 @@
                     <thead>
                         <tr>
                             <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
+                            <th class="w-14" data-kt-datatable-column="foto"><span class="kt-table-col"><span class="kt-table-col-label">Foto</span></span></th>
                             <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nama"><span class="kt-table-col"><span class="kt-table-col-label">Nama Aset</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="kategori"><span class="kt-table-col"><span class="kt-table-col-label">Kategori</span><span class="kt-table-col-sort"></span></span></th>
+                            <!-- <th data-kt-datatable-column="kategori"><span class="kt-table-col"><span class="kt-table-col-label">Kategori</span><span class="kt-table-col-sort"></span></span></th> -->
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tgl Pembelian</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nominal"><span class="kt-table-col"><span class="kt-table-col-label">Nominal</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nilai_buku"><span class="kt-table-col"><span class="kt-table-col-label">Nilai Buku</span><span class="kt-table-col-sort"></span></span></th>
@@ -39,9 +40,18 @@
                         @foreach($data as $i => $item)
                         <tr>
                             <td>{{ $i + 1 }}</td>
+                            <td>
+                                @if(!empty($item->foto_aset) && $item->foto_aset[0])
+                                <img src="{{ \Illuminate\Support\Facades\Storage::url($item->foto_aset[0]) }}" class="size-10 rounded-lg object-cover" alt="Foto">
+                                @else
+                                <div class="size-10 rounded-lg bg-muted flex items-center justify-center">
+                                    <i class="ki-filled ki-image text-muted-foreground text-sm"></i>
+                                </div>
+                                @endif
+                            </td>
                             <td class="text-mono text-sm whitespace-nowrap">{{ $item->nomor_transaksi }}</td>
                             <td>{{ $item->nama_aset }}</td>
-                            <td>{{ $item->kategoriAset?->deskripsi ?? '-' }}</td>
+                            <!-- <td>{{ $item->kategoriAset?->deskripsi ?? '-' }}</td> -->
                             <td>{{ $item->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>
                             <td class="text-mono whitespace-nowrap">Rp {{ number_format($item->nominal_pembelian, 0, ',', '.') }}</td>
                             <td class="text-mono whitespace-nowrap">Rp {{ number_format($item->nilai_buku_aset, 0, ',', '.') }}</td>

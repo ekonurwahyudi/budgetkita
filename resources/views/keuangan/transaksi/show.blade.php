@@ -30,6 +30,10 @@
                 @endif
             </div>
             <div class="flex items-center gap-2">
+                @if($transaksi->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
+                <form method="POST" action="{{ route('transaksi.approve', $transaksi) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
+                <form method="POST" action="{{ route('transaksi.reject', $transaksi) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($transaksi->status, ['awaiting_approval','pending']))
                 @can('transaksi-keuangan.edit')
                 <a href="{{ route('transaksi.edit', $transaksi) }}" class="kt-btn kt-btn-sm kt-btn-outline">

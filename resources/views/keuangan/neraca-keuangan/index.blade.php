@@ -88,8 +88,8 @@
                     </div>
                 </div>
                 <a href="{{ route('neraca-keuangan.export', ['tahun' => $tahun, 'tanggal_cutoff' => $tanggalCutoff]) }}"
-                   class="kt-btn flex items-center gap-2 kt-badge-success text-white border-0">
-                    <i class="ki-filled ki-file-sheet"></i> Export Excel
+                   class="kt-btn flex items-center gap-2 text-white border-0" style="background-color:#16a34a;">
+                    <i class="ki-filled ki-tablet-text-up"></i> Export Excel
                 </a>
             </div>
         </div>

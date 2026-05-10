@@ -45,8 +45,8 @@
                 </button>
 
                 <a href="{{ route('transaksi.export', request()->query()) }}"
-                   class="kt-btn flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white border-0">
-                    <i class="ki-filled ki-file-sheet"></i> Export
+                   class="kt-btn flex items-center gap-2 text-white border-0" style="background-color:#16a34a;">
+                    <i class="ki-filled ki-tablet-text-up"></i> Export Excel
                 </a>
 
                 @can('transaksi-keuangan.create')
@@ -115,8 +115,8 @@
                             <td class="text-end">
                                 <span class="inline-flex gap-2.5">
                                     @if($item->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
-                                    <form method="POST" action="{{ route('transaksi.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-success" title="Approve"><i class="ki-filled ki-check"></i></button></form>
-                                    <form method="POST" action="{{ route('transaksi.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
+                                    <form method="POST" action="{{ route('transaksi.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm kt-btn-icon" title="Approve"><i class="ki-filled ki-check"></i></button></form>
+                                    <form method="POST" action="{{ route('transaksi.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm kt-btn-icon" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
                                     @endif
                                     <a href="{{ route('transaksi.show', $item) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Lihat"><i class="ki-filled ki-eye"></i></a>
                                     @can('transaksi-keuangan.edit')

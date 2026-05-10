@@ -73,8 +73,8 @@
                             <td class="text-end">
                                 <span class="inline-flex gap-2.5">
                                     @if($item->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
-                                    <form method="POST" action="{{ route('hutang-piutang.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-success" title="Approve"><i class="ki-filled ki-check"></i></button></form>
-                                    <form method="POST" action="{{ route('hutang-piutang.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
+                                    <form method="POST" action="{{ route('hutang-piutang.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm kt-btn-icon" title="Approve"><i class="ki-filled ki-check"></i></button></form>
+                                    <form method="POST" action="{{ route('hutang-piutang.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm kt-btn-icon" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
                                     @endif
 
                                     {{-- Tombol Bayar: tampil jika belum lunas dan status selesai --}}

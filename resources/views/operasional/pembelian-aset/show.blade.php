@@ -23,6 +23,10 @@
                 @endif
             </div>
             <div class="flex items-center gap-2">
+                @if($pembelianAset->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
+                <form method="POST" action="{{ route('pembelian-aset.approve', $pembelianAset) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
+                <form method="POST" action="{{ route('pembelian-aset.reject', $pembelianAset) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($pembelianAset->status, ['awaiting_approval','pending']))
                 @can('pembelian-aset.edit')
                 <a href="{{ route('pembelian-aset.edit', $pembelianAset) }}" class="kt-btn kt-btn-sm kt-btn-outline">
@@ -173,6 +177,30 @@
                 <p class="text-sm font-medium">Tanpa Depresiasi</p>
                 <p class="text-xs text-muted-foreground">Aset ini tidak memiliki depresiasi (seperti tanah)</p>
                 <p class="text-base font-semibold text-success text-mono mt-1">Nilai Buku: Rp {{ number_format($pembelianAset->nilai_buku_aset, 0, ',', '.') }}</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Foto Aset --}}
+    @if(!empty($pembelianAset->foto_aset))
+    <div class="kt-card">
+        <div class="kt-card-header min-h-14">
+            <h3 class="kt-card-title">Foto Aset</h3>
+            <span class="text-sm text-muted-foreground">{{ count($pembelianAset->foto_aset) }} foto</span>
+        </div>
+        <div class="kt-card-content py-4">
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                @foreach($pembelianAset->foto_aset as $idx => $f)
+                @php $fotoUrl = \Illuminate\Support\Facades\Storage::url($f); @endphp
+                <div class="lb-thumb group relative aspect-square rounded-xl border border-border overflow-hidden bg-muted cursor-pointer hover:ring-2 hover:ring-primary hover:shadow-md transition-all"
+                     data-src="{{ $fotoUrl }}">
+                    <img src="{{ $fotoUrl }}" class="w-full h-full object-cover" alt="Foto Aset {{ $idx + 1 }}">
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center pointer-events-none">
+                        <i class="ki-filled ki-eye text-white text-2xl drop-shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                    </div>
+                </div>
+                @endforeach
             </div>
         </div>
     </div>

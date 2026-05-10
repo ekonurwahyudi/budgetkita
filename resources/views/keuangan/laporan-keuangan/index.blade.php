@@ -160,8 +160,8 @@
                 </a>
 
                 <a href="{{ route('laporan-keuangan.export', request()->query()) }}"
-                   class="kt-btn flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white border-0">
-                    <i class="ki-filled ki-file-sheet"></i> Export
+                   class="kt-btn flex items-center gap-2 text-white border-0" style="background-color:#16a34a;">
+                    <i class="ki-filled ki-tablet-text-up"></i> Export Excel
                 </a>
             </div>
         </div>

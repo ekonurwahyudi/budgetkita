@@ -10,6 +10,7 @@ use App\Models\PembelianPersediaanItem;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -70,6 +71,12 @@ class PembelianPersediaanController extends Controller
                 'harga_total'        => $hargaTotal,
             ]);
         }
+
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            'Pembelian Persediaan Menunggu Approval',
+            'Pembelian persediaan No. ' . $pembelian->nomor_transaksi . ' memerlukan persetujuan.',
+            route('pembelian-persediaan.show', $pembelian->id)
+        );
 
         return redirect()->route('pembelian-persediaan.index')->with('success', 'Pembelian persediaan berhasil ditambahkan.');
     }
@@ -186,12 +193,24 @@ class PembelianPersediaanController extends Controller
     {
         $pembelianPersediaan->load('items');
         app(ApprovalService::class)->approve($pembelianPersediaan);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Pembelian Persediaan Disetujui',
+            'Pembelian persediaan No. ' . $pembelianPersediaan->nomor_transaksi . ' telah disetujui.',
+            'info',
+            route('pembelian-persediaan.show', $pembelianPersediaan->id)
+        );
         return redirect()->back()->with('success', 'Pembelian persediaan berhasil di-approve.');
     }
 
     public function reject(PembelianPersediaan $pembelianPersediaan)
     {
         app(ApprovalService::class)->reject($pembelianPersediaan);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Pembelian Persediaan Ditolak',
+            'Pembelian persediaan No. ' . $pembelianPersediaan->nomor_transaksi . ' telah ditolak.',
+            'warning',
+            route('pembelian-persediaan.show', $pembelianPersediaan->id)
+        );
         return redirect()->back()->with('success', 'Pembelian persediaan berhasil di-reject.');
     }
 }

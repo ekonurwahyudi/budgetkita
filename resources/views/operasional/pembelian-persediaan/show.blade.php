@@ -10,6 +10,10 @@
         <div class="kt-card-header min-h-14">
             <h3 class="kt-card-title">{{ $pembelianPersediaan->nomor_transaksi }}</h3>
             <div class="flex items-center gap-2">
+                @if($pembelianPersediaan->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
+                <form method="POST" action="{{ route('pembelian-persediaan.approve', $pembelianPersediaan) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
+                <form method="POST" action="{{ route('pembelian-persediaan.reject', $pembelianPersediaan) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($pembelianPersediaan->status, ['awaiting_approval','pending']))
                 @can('pembelian-persediaan.edit')
                 <a href="{{ route('pembelian-persediaan.edit', $pembelianPersediaan) }}" class="kt-btn kt-btn-sm kt-btn-outline">
@@ -77,13 +81,32 @@
             @if(!empty($pembelianPersediaan->eviden))
             <div class="mt-4">
                 <p class="text-sm font-medium text-foreground mb-2">Eviden</p>
-                <div class="flex flex-col gap-2">
-                    @foreach($pembelianPersediaan->eviden as $path)
-                    <a href="{{ Storage::url($path) }}" target="_blank"
-                       class="flex items-center gap-2 p-2 rounded-lg border border-border hover:bg-accent/40 text-sm kt-link">
-                        <i class="ki-filled ki-file text-muted-foreground"></i>
-                        {{ basename($path) }}
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                    @foreach($pembelianPersediaan->eviden as $idx => $ev)
+                    @php
+                        $isPdf = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.pdf']);
+                        $isExcel = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.xlsx', '.xls']);
+                        $url = \Illuminate\Support\Facades\Storage::url($ev);
+                    @endphp
+                    @if($isPdf)
+                    <a href="{{ $url }}" target="_blank" class="group relative aspect-square rounded-xl border border-border overflow-hidden bg-muted flex flex-col items-center justify-center p-3 hover:shadow-md hover:border-primary/50 transition-all">
+                        <i class="ki-filled ki-document text-3xl text-primary mb-2"></i>
+                        <span class="text-[10px] text-muted-foreground text-center truncate w-full">PDF</span>
                     </a>
+                    @elseif($isExcel)
+                    <a href="{{ $url }}" target="_blank" class="group relative aspect-square rounded-xl border border-border overflow-hidden bg-muted flex flex-col items-center justify-center p-3 hover:shadow-md hover:border-primary/50 transition-all">
+                        <i class="ki-filled ki-excel text-3xl text-green-600 mb-2"></i>
+                        <span class="text-[10px] text-muted-foreground text-center truncate w-full">Excel</span>
+                    </a>
+                    @else
+                    <div class="lb-thumb group relative aspect-square rounded-xl border border-border overflow-hidden bg-muted cursor-pointer hover:ring-2 hover:ring-primary hover:shadow-md transition-all"
+                         data-src="{{ $url }}">
+                        <img src="{{ $url }}" class="w-full h-full object-cover" alt="Eviden {{ $idx + 1 }}">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center pointer-events-none">
+                            <i class="ki-filled ki-eye text-white text-2xl drop-shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </div>
+                    </div>
+                    @endif
                     @endforeach
                 </div>
             </div>
@@ -132,4 +155,55 @@
         </div>
     </div>
 </div>
+
+{{-- Lightbox Modal --}}
+<div id="lb-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;">
+    <button id="lb-close" style="position:absolute;top:1rem;right:1rem;color:#fff;font-size:1.5rem;background:none;border:none;cursor:pointer;">
+        <i class="ki-filled ki-cross" style="font-size:1.75rem;"></i>
+    </button>
+    <img id="lb-img" src="" style="max-width:100%;max-height:90vh;object-fit:contain;border-radius:0.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+</div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = document.getElementById('lb-modal');
+    if (!modal) return;
+    var img = document.getElementById('lb-img');
+    var closeBtn = document.getElementById('lb-close');
+
+    function open(src) {
+        img.src = src;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    function close() {
+        modal.style.display = 'none';
+        img.src = '';
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.lb-thumb').forEach(function(el) {
+        el.addEventListener('click', function() {
+            open(this.dataset.src);
+        });
+    });
+
+    closeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        close();
+    });
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal || e.target === img) {
+            close();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') close();
+    });
+});
+</script>
+@endpush

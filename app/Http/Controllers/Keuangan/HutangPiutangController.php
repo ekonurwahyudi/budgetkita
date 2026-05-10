@@ -10,6 +10,7 @@ use App\Models\KategoriHutangPiutang;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
@@ -63,7 +64,14 @@ class HutangPiutangController extends Controller
             $input['eviden'] = $paths;
         }
 
-        HutangPiutang::create($input);
+        $hp = HutangPiutang::create($input);
+
+        $jenis = $input['jenis'] === 'hutang' ? 'Hutang' : 'Piutang';
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            $jenis . ' Baru Menunggu Approval',
+            $jenis . ' "' . $input['aktivitas'] . '" sebesar Rp ' . number_format($input['nominal'], 0, ',', '.') . ' memerlukan persetujuan.',
+            route('hutang-piutang.show', $hp->id)
+        );
 
         return redirect()->route('hutang-piutang.index')->with('success', 'Data berhasil ditambahkan.');
     }
@@ -221,6 +229,6 @@ class HutangPiutangController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
-    public function approve(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->approve($hutangPiutang); return redirect()->back()->with('success', 'Data berhasil di-approve.'); }
-    public function reject(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->reject($hutangPiutang); return redirect()->back()->with('success', 'Data berhasil di-reject.'); }
+    public function approve(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->approve($hutangPiutang); $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang'; app(NotifikasiService::class)->kirimKeRole('Owner', $jenis . ' Disetujui', $jenis . ' "' . $hutangPiutang->aktivitas . '" telah disetujui.', 'info', route('hutang-piutang.show', $hutangPiutang->id)); return redirect()->back()->with('success', 'Data berhasil di-approve.'); }
+    public function reject(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->reject($hutangPiutang); $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang'; app(NotifikasiService::class)->kirimKeRole('Owner', $jenis . ' Ditolak', $jenis . ' "' . $hutangPiutang->aktivitas . '" telah ditolak.', 'warning', route('hutang-piutang.show', $hutangPiutang->id)); return redirect()->back()->with('success', 'Data berhasil di-reject.'); }
 }

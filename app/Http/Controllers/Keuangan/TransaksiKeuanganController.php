@@ -15,6 +15,7 @@ use App\Models\TransaksiKeuangan;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -135,7 +136,14 @@ class TransaksiKeuanganController extends Controller
             $input['eviden'] = $paths;
         }
 
-        TransaksiKeuangan::create($input);
+        $transaksi = TransaksiKeuangan::create($input);
+
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            'Transaksi Baru Menunggu Approval',
+            'Transaksi "' . $input['aktivitas'] . '" sebesar Rp ' . number_format($input['nominal'], 0, ',', '.') . ' memerlukan persetujuan.',
+            route('transaksi.show', $transaksi->id)
+        );
+
         return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil ditambahkan.');
     }
 
@@ -253,12 +261,24 @@ class TransaksiKeuanganController extends Controller
     public function approve(TransaksiKeuangan $transaksi)
     {
         app(ApprovalService::class)->approve($transaksi);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Transaksi Disetujui',
+            'Transaksi "' . $transaksi->aktivitas . '" telah disetujui.',
+            'info',
+            route('transaksi.show', $transaksi->id)
+        );
         return redirect()->back()->with('success', 'Transaksi berhasil di-approve.');
     }
 
     public function reject(TransaksiKeuangan $transaksi)
     {
         app(ApprovalService::class)->reject($transaksi);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Transaksi Ditolak',
+            'Transaksi "' . $transaksi->aktivitas . '" telah ditolak.',
+            'warning',
+            route('transaksi.show', $transaksi->id)
+        );
         return redirect()->back()->with('success', 'Transaksi berhasil di-reject.');
     }
 

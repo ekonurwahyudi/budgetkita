@@ -346,7 +346,7 @@
             <h3 class="text-base font-semibold text-foreground" id="modalTitle">Data Transaksi</h3>
             <div style="display:flex; align-items:center; gap:0.5rem;">
                 <button type="button" onclick="exportModalToExcel()" style="background:var(--primary); color:#fff; border:none; cursor:pointer; padding:0.35rem 0.75rem; border-radius:0.375rem; font-size:0.75rem; font-weight:500; display:flex; align-items:center; gap:0.25rem;">
-                    <i class="ki-filled ki-excel"></i> Export Excel
+                    <i class="ki-filled ki-tablet-text-up"></i> Export Excel
                 </button>
                 <button type="button" onclick="closeTransactionModal()" style="background:none; border:none; cursor:pointer; padding:0.25rem; color:var(--muted-foreground);">
                     <i class="ki-filled ki-cross" style="font-size:1.25rem;"></i>

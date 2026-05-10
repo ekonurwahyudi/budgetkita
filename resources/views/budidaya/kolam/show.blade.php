@@ -217,7 +217,7 @@
                     <i class="ki-filled ki-upload-file"></i> Import
                 </button>
                 <a href="{{ route('kolam.parameter.export', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-outline">
-                    <i class="ki-filled ki-download"></i> Export
+                    <i class="ki-filled ki-tablet-text-up"></i> Export Excel
                 </a>
             </div>
             <input type="file" id="importFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleImport(this)">

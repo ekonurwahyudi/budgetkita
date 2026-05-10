@@ -9,7 +9,7 @@ class PembelianAset extends BaseModel
     protected $fillable = [
         'nomor_transaksi', 'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
         'umur_manfaat', 'nilai_residu', 'metode_depresiasi', 'persen_depresiasi',
-        'jenis_pembayaran', 'account_bank_id', 'status', 'catatan', 'eviden',
+        'jenis_pembayaran', 'account_bank_id', 'status', 'catatan', 'eviden', 'foto_aset',
     ];
 
     protected function casts(): array
@@ -20,6 +20,7 @@ class PembelianAset extends BaseModel
             'nilai_residu' => 'decimal:2',
             'persen_depresiasi' => 'decimal:2',
             'eviden' => 'array',
+            'foto_aset' => 'array',
         ];
     }
 

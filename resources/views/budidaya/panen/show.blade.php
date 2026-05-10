@@ -10,6 +10,10 @@
         <div class="kt-card-header min-h-14">
             <h3 class="kt-card-title">Detail Panen</h3>
             <div class="flex items-center gap-2">
+                @if($panen->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
+                <form method="POST" action="{{ route('panen.approve', $panen) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
+                <form method="POST" action="{{ route('panen.reject', $panen) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                @endif
                 @can('panen.edit')
                 @if(auth()->user()->hasRole('Owner') || in_array($panen->status, ['awaiting_approval','pending']))
                 <a href="{{ route('panen.edit', $panen) }}" class="kt-btn kt-btn-sm kt-btn-outline">

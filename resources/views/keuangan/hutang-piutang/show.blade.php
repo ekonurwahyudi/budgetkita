@@ -28,6 +28,10 @@
                 @endif
             </div>
             <div class="flex items-center gap-2">
+                @if($hutangPiutang->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
+                <form method="POST" action="{{ route('hutang-piutang.approve', $hutangPiutang) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
+                <form method="POST" action="{{ route('hutang-piutang.reject', $hutangPiutang) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($hutangPiutang->status, ['awaiting_approval','pending']))
                 @can('hutang-piutang.edit')
                 <a href="{{ route('hutang-piutang.edit', $hutangPiutang) }}" class="kt-btn kt-btn-sm kt-btn-outline">

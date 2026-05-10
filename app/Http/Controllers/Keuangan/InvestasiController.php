@@ -9,6 +9,7 @@ use App\Models\KategoriInvestasi;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -54,7 +55,14 @@ class InvestasiController extends Controller
             $input['eviden'] = $paths;
         }
 
-        Investasi::create($input);
+        $investasi = Investasi::create($input);
+
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            'Investasi Baru Menunggu Approval',
+            'Investasi "' . $input['deskripsi'] . '" sebesar Rp ' . number_format($input['nominal'], 0, ',', '.') . ' memerlukan persetujuan.',
+            route('investasi.show', $investasi->id)
+        );
+
         return redirect()->route('investasi.index')->with('success', 'Investasi berhasil ditambahkan.');
     }
 
@@ -138,6 +146,6 @@ class InvestasiController extends Controller
 
         return redirect()->back()->with('success', 'Investasi berhasil dihapus.');
     }
-    public function approve(Investasi $investasi) { app(ApprovalService::class)->approve($investasi); return redirect()->back()->with('success', 'Investasi berhasil di-approve.'); }
-    public function reject(Investasi $investasi) { app(ApprovalService::class)->reject($investasi); return redirect()->back()->with('success', 'Investasi berhasil di-reject.'); }
+    public function approve(Investasi $investasi) { app(ApprovalService::class)->approve($investasi); app(NotifikasiService::class)->kirimKeRole('Owner', 'Investasi Disetujui', 'Investasi "' . $investasi->deskripsi . '" telah disetujui.', 'info', route('investasi.show', $investasi->id)); return redirect()->back()->with('success', 'Investasi berhasil di-approve.'); }
+    public function reject(Investasi $investasi) { app(ApprovalService::class)->reject($investasi); app(NotifikasiService::class)->kirimKeRole('Owner', 'Investasi Ditolak', 'Investasi "' . $investasi->deskripsi . '" telah ditolak.', 'warning', route('investasi.show', $investasi->id)); return redirect()->back()->with('success', 'Investasi berhasil di-reject.'); }
 }

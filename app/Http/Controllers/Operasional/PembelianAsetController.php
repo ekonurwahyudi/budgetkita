@@ -9,6 +9,7 @@ use App\Models\PembelianAset;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -38,26 +39,34 @@ class PembelianAsetController extends Controller
             'kategori_aset_id'   => 'required|uuid|exists:kategori_asets,id',
             'tgl_pembelian'      => 'required|date',
             'nominal_pembelian'  => 'required|numeric|min:0',
-            'umur_manfaat'       => 'required|integer|min:0',
-            'nilai_residu'       => 'required|numeric|min:0',
+            'umur_manfaat'       => 'nullable|integer|min:0',
+            'nilai_residu'       => 'nullable|numeric|min:0',
             'metode_depresiasi'  => 'required|in:garis_lurus,persen,tanpa',
-            'persen_depresiasi'  => 'nullable|numeric|min:0|max:100|required_if:metode_depresiasi,persen',
+            'persen_depresiasi'  => 'nullable|numeric|min:0|max:100',
             'jenis_pembayaran'   => 'required|in:cash,bank',
             'account_bank_id'    => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan'            => 'nullable|string',
             'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
+            'foto_aset.*'        => 'nullable|file|max:5120|mimes:jpg,jpeg,png',
         ]);
 
         $input = $request->only([
             'nama_aset', 'kategori_aset_id', 'tgl_pembelian',
-            'nominal_pembelian', 'umur_manfaat', 'nilai_residu',
-            'metode_depresiasi', 'persen_depresiasi',
+            'nominal_pembelian', 'metode_depresiasi',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
 
+        $input['umur_manfaat'] = $request->input('umur_manfaat') ?: 0;
+        $input['nilai_residu'] = $request->input('nilai_residu') ?: 0;
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVA');
 
-        if ($input['metode_depresiasi'] !== 'persen') {
+        if ($input['metode_depresiasi'] === 'persen') {
+            $input['persen_depresiasi'] = $request->input('persen_depresiasi') ?: 0;
+        } elseif ($input['metode_depresiasi'] === 'tanpa') {
+            $input['persen_depresiasi'] = null;
+            $input['umur_manfaat'] = 0;
+            $input['nilai_residu'] = 0;
+        } else {
             $input['persen_depresiasi'] = null;
         }
 
@@ -69,7 +78,22 @@ class PembelianAsetController extends Controller
             $input['eviden'] = $paths;
         }
 
-        PembelianAset::create($input);
+        if ($request->hasFile('foto_aset')) {
+            $fotos = [];
+            foreach ($request->file('foto_aset') as $file) {
+                $fotos[] = app(FileUploadService::class)->upload($file);
+            }
+            $input['foto_aset'] = $fotos;
+        }
+
+        $aset = PembelianAset::create($input);
+
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            'Pembelian Aset Menunggu Approval',
+            'Pembelian aset "' . $input['nama_aset'] . '" sebesar Rp ' . number_format($input['nominal_pembelian'], 0, ',', '.') . ' memerlukan persetujuan.',
+            route('pembelian-aset.show', $aset->id)
+        );
+
         return redirect()->route('pembelian-aset.index')->with('success', 'Pembelian aset berhasil ditambahkan.');
     }
 
@@ -93,24 +117,33 @@ class PembelianAsetController extends Controller
             'kategori_aset_id'   => 'required|uuid|exists:kategori_asets,id',
             'tgl_pembelian'      => 'required|date',
             'nominal_pembelian'  => 'required|numeric|min:0',
-            'umur_manfaat'       => 'required|integer|min:0',
-            'nilai_residu'       => 'required|numeric|min:0',
+            'umur_manfaat'       => 'nullable|integer|min:0',
+            'nilai_residu'       => 'nullable|numeric|min:0',
             'metode_depresiasi'  => 'required|in:garis_lurus,persen,tanpa',
-            'persen_depresiasi'  => 'nullable|numeric|min:0|max:100|required_if:metode_depresiasi,persen',
+            'persen_depresiasi'  => 'nullable|numeric|min:0|max:100',
             'jenis_pembayaran'   => 'required|in:cash,bank',
             'account_bank_id'    => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan'            => 'nullable|string',
             'eviden.*'           => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
+            'foto_aset.*'        => 'nullable|file|max:5120|mimes:jpg,jpeg,png',
         ]);
 
         $input = $request->only([
             'nama_aset', 'kategori_aset_id', 'tgl_pembelian',
-            'nominal_pembelian', 'umur_manfaat', 'nilai_residu',
-            'metode_depresiasi', 'persen_depresiasi',
+            'nominal_pembelian', 'metode_depresiasi',
             'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
 
-        if ($input['metode_depresiasi'] !== 'persen') {
+        $input['umur_manfaat'] = $request->input('umur_manfaat') ?: 0;
+        $input['nilai_residu'] = $request->input('nilai_residu') ?: 0;
+
+        if ($input['metode_depresiasi'] === 'persen') {
+            $input['persen_depresiasi'] = $request->input('persen_depresiasi') ?: 0;
+        } elseif ($input['metode_depresiasi'] === 'tanpa') {
+            $input['persen_depresiasi'] = null;
+            $input['umur_manfaat'] = 0;
+            $input['nilai_residu'] = 0;
+        } else {
             $input['persen_depresiasi'] = null;
         }
 
@@ -124,6 +157,18 @@ class PembelianAsetController extends Controller
         if ($request->filled('hapus_eviden')) {
             $existing = $pembelianAset->eviden ?? [];
             $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
+        }
+
+        if ($request->hasFile('foto_aset')) {
+            $existing = $pembelianAset->foto_aset ?? [];
+            foreach ($request->file('foto_aset') as $file) {
+                $existing[] = app(FileUploadService::class)->upload($file);
+            }
+            $input['foto_aset'] = $existing;
+        }
+        if ($request->filled('hapus_foto')) {
+            $existing = $pembelianAset->foto_aset ?? [];
+            $input['foto_aset'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_foto', []))));
         }
 
         DB::transaction(function () use ($pembelianAset, $input) {
@@ -170,12 +215,24 @@ class PembelianAsetController extends Controller
     public function approve(PembelianAset $pembelianAset)
     {
         app(ApprovalService::class)->approve($pembelianAset);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Pembelian Aset Disetujui',
+            'Pembelian aset "' . $pembelianAset->nama_aset . '" telah disetujui.',
+            'info',
+            route('pembelian-aset.show', $pembelianAset->id)
+        );
         return redirect()->back()->with('success', 'Pembelian aset berhasil di-approve.');
     }
 
     public function reject(PembelianAset $pembelianAset)
     {
         app(ApprovalService::class)->reject($pembelianAset);
+        app(NotifikasiService::class)->kirimKeRole('Owner',
+            'Pembelian Aset Ditolak',
+            'Pembelian aset "' . $pembelianAset->nama_aset . '" telah ditolak.',
+            'warning',
+            route('pembelian-aset.show', $pembelianAset->id)
+        );
         return redirect()->back()->with('success', 'Pembelian aset berhasil di-reject.');
     }
 }

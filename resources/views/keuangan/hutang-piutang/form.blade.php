@@ -177,7 +177,7 @@
                                         <span class="text-[10px] text-muted-foreground text-center truncate w-full">Excel</span>
                                     </a>
                                 @else
-                                    <img src="{{ $url }}" class="w-full h-24 object-cover" alt="Eviden {{ $idx + 1 }}">
+                                    <img src="{{ $url }}" class="w-full h-24 object-cover cursor-pointer lb-thumb" alt="Eviden {{ $idx + 1 }}" data-src="{{ $url }}">
                                 @endif
                                 <div class="flex items-center justify-end px-2 py-1.5 border-t border-border">
                                     <button type="button" onclick="hapusExistingEviden('{{ $ev }}', 'existing-ev-{{ $idx }}')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">
@@ -202,6 +202,13 @@
             </form>
         </div>
     </div>
+</div>
+{{-- Lightbox Modal --}}
+<div id="lb-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;">
+    <button id="lb-close" style="position:absolute;top:1rem;right:1rem;color:#fff;font-size:1.5rem;background:none;border:none;cursor:pointer;">
+        <i class="ki-filled ki-cross" style="font-size:1.75rem;"></i>
+    </button>
+    <img id="lb-img" src="" style="max-width:100%;max-height:90vh;object-fit:contain;border-radius:0.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
 </div>
 @endsection
 
@@ -276,6 +283,32 @@ document.addEventListener('DOMContentLoaded', function() {
     initMoney('nominal_bayar_display', 'nominal_bayar_val', calcSisa);
     calcSisa();
     onPembayaranChange();
+
+    // Lightbox
+    var modal = document.getElementById('lb-modal');
+    var img = document.getElementById('lb-img');
+    var closeBtn = document.getElementById('lb-close');
+    if (modal) {
+        function openLb(src) {
+            img.src = src;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLb() {
+            modal.style.display = 'none';
+            img.src = '';
+            document.body.style.overflow = '';
+        }
+        document.addEventListener('click', function(e) {
+            var thumb = e.target.closest('.lb-thumb');
+            if (thumb) { e.preventDefault(); openLb(thumb.dataset.src); return; }
+            var preview = e.target.closest('.lb-preview');
+            if (preview) { e.preventDefault(); openLb(preview.src); return; }
+        });
+        closeBtn.addEventListener('click', function(e) { e.stopPropagation(); closeLb(); });
+        modal.addEventListener('click', function(e) { if (e.target === modal || e.target === img) closeLb(); });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLb(); });
+    }
 });
 
 function previewEviden(input) {
@@ -315,7 +348,7 @@ function previewEviden(input) {
                 reader.onload = (function(d, i) {
                     return function(e) {
                         d.innerHTML =
-                            '<img src="' + e.target.result + '" class="w-full h-24 object-cover" alt="Preview">' +
+                            '<img src="' + e.target.result + '" class="w-full h-24 object-cover cursor-pointer lb-preview" alt="Preview">' +
                             '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
                                 '<button type="button" onclick="removePreview(' + i + ')" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
                                     '<i class="ki-filled ki-cross text-[10px]"></i>' +

@@ -23,6 +23,10 @@
                 @endif
             </div>
             <div class="flex items-center gap-2">
+                @if($investasi->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
+                <form method="POST" action="{{ route('investasi.approve', $investasi) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
+                <form method="POST" action="{{ route('investasi.reject', $investasi) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($investasi->status, ['awaiting_approval','pending']))
                 @can('investasi.edit')
                 <a href="{{ route('investasi.edit', $investasi) }}" class="kt-btn kt-btn-sm kt-btn-outline">

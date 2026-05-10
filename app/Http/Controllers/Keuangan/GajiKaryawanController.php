@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -65,7 +66,15 @@ class GajiKaryawanController extends Controller
             $input['eviden'] = $paths;
         }
 
-        GajiKaryawan::create($input);
+        $gaji = GajiKaryawan::create($input);
+
+        $user = User::find($input['user_id']);
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            'Gaji Karyawan Baru Menunggu Approval',
+            'Gaji ' . ($user?->name ?? 'Karyawan') . ' sebesar Rp ' . number_format($input['thp'], 0, ',', '.') . ' memerlukan persetujuan.',
+            route('gaji.show', $gaji->id)
+        );
+
         return redirect()->route('gaji.index')->with('success', 'Gaji karyawan berhasil ditambahkan.');
     }
 
@@ -163,12 +172,26 @@ class GajiKaryawanController extends Controller
     public function approve(GajiKaryawan $gaji)
     {
         app(ApprovalService::class)->approve($gaji);
+        app(NotifikasiService::class)->kirim(
+            $gaji->user_id,
+            'Gaji Disetujui',
+            'Gaji Anda sebesar Rp ' . number_format($gaji->thp, 0, ',', '.') . ' telah disetujui.',
+            'info',
+            route('gaji.show', $gaji->id)
+        );
         return redirect()->back()->with('success', 'Gaji berhasil di-approve.');
     }
 
     public function reject(GajiKaryawan $gaji)
     {
         app(ApprovalService::class)->reject($gaji);
+        app(NotifikasiService::class)->kirim(
+            $gaji->user_id,
+            'Gaji Ditolak',
+            'Gaji Anda sebesar Rp ' . number_format($gaji->thp, 0, ',', '.') . ' telah ditolak.',
+            'warning',
+            route('gaji.show', $gaji->id)
+        );
         return redirect()->back()->with('success', 'Gaji berhasil di-reject.');
     }
 }

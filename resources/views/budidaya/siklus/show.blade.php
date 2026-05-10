@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Detail Siklus - ' . $siklus->nama_siklus)
 @section('page-title', 'Detail Siklus')
@@ -13,7 +13,7 @@
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center justify-center size-10 rounded-lg shrink-0" style="background:rgba(23,198,83,0.12);">
-                        <i class="ki-filled ki-graph-up text-lg" style="color:#17c653;"></i>
+                        <i class="ki-filled ki-basket text-lg" style="color:#17c653;"></i>
                     </div>
                     <div>
                         <p class="text-xs text-secondary-foreground">Uang Masuk</p>
@@ -43,7 +43,7 @@
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center justify-center size-10 rounded-lg shrink-0" style="background:rgba(241,65,108,0.12);">
-                        <i class="ki-filled ki-graph-down text-lg" style="color:#f1416c;"></i>
+                        <i class="ki-filled ki-cheque text-lg" style="color:#f1416c;"></i>
                     </div>
                     <div>
                         <p class="text-xs text-secondary-foreground">Uang Keluar</p>
@@ -80,11 +80,11 @@
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
                     <div class="flex items-center justify-center size-10 rounded-lg shrink-0" style="background:rgba({{ $isProfit ? '23,198,83' : '241,65,108' }},0.12);">
-                        <i class="ki-filled ki-{{ $isProfit ? 'trend-up' : 'trend-down' }} text-lg" style="color:{{ $isProfit ? '#17c653' : '#f1416c' }};"></i>
+                        <i class="ki-filled ki-wallet text-lg" style="color:{{ $isProfit ? '#17c653' : '#f1416c' }};"></i>
                     </div>
                     <div>
                         <p class="text-xs text-secondary-foreground">{{ $isProfit ? 'Keuntungan' : 'Kerugian' }}</p>
-                        <p class="text-lg font-bold text-mono {{ $isProfit ? 'text-green-600' : 'text-red-600' }} leading-tight">Rp {{ number_format(abs($keuntunganKerugian ?? 0), 0, ',', '.') }}</p>
+                        <p class="text-lg font-bold text-mono {{ $isProfit ? 'text-green-600' : 'text-red-600' }} leading-tight">{{ $isProfit ? '' : '-' }}Rp {{ number_format(abs($keuntunganKerugian ?? 0), 0, ',', '.') }}</p>
                     </div>
                 </div>
             </div>

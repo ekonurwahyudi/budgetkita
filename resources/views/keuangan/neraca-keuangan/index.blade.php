@@ -28,25 +28,25 @@
     <div class="kt-card">
         <div class="kt-card-content py-4 px-5 flex items-center justify-between flex-wrap gap-3">
             <form method="GET" class="flex items-center gap-3" action="{{ route('neraca-keuangan.index') }}">
-                <label class="text-sm font-medium text-foreground shrink-0">Cut Off:</label>
+                <label class="text-sm font-medium text-foreground shrink-0">Pilih tanggal:</label>
                 <select name="tanggal_cutoff" id="filterCutoff" class="kt-select" onchange="this.form.submit()">
                     @foreach($cutoffs as $cutoff)
                         <option value="{{ $cutoff->tanggal_cutoff->format('Y-m-d') }}" {{ $tanggalCutoff === $cutoff->tanggal_cutoff->format('Y-m-d') ? 'selected' : '' }}>
-                            {{ $cutoff->label ?: ('Per ' . $cutoff->tanggal_cutoff->format('d M Y')) }} ({{ $cutoff->tahun }})
+                            {{ $cutoff->label ? $cutoff->label . ' — ' : '' }}{{ $cutoff->tanggal_cutoff->format('d M Y') }}
                         </option>
                     @endforeach
                     @if($cutoffs->isEmpty())
                         <option value="{{ $tanggalCutoff }}">{{ \Carbon\Carbon::parse($tanggalCutoff)->format('d M Y') }}</option>
                     @endif
                 </select>
-                <button type="submit" class="kt-btn kt-btn-sm kt-btn-primary shrink-0">
-                    <i class="ki-filled ki-magnifying-glass"></i> Tampilkan
+                <button type="submit" class="kt-btn kt-btn-primary shrink-0">
+                    <i class="ki-filled ki-tablet-text-up"></i> Tampilkan
                 </button>
             </form>
             <div class="flex items-center gap-2">
                 <div class="relative">
-                    <button type="button" class="kt-btn kt-btn-sm bg-yellow-500 hover:bg-yellow-600 text-white border-0" onclick="toggleCutoffDropdown()">
-                        <i class="ki-filled ki-plus"></i> Simpan Cut Off
+                    <button type="button" class="kt-btn bg-yellow-500 hover:bg-yellow-600 text-white border-0" onclick="toggleCutoffDropdown()">
+                        <i class="ki-filled ki-calculator"></i>Cut Off Data
                     </button>
                     <div id="cutoffDropdown" class="hidden absolute top-full right-0 mt-2 z-50 bg-white rounded-lg shadow-xl border border-border w-80">
                         <div class="px-4 py-3 border-b border-border flex items-center justify-between">
@@ -81,14 +81,14 @@
                                 </div>
                             </div>
                             <div class="px-4 py-3 border-t border-border flex justify-end gap-2">
-                                <button type="button" onclick="document.getElementById('cutoffDropdown').classList.add('hidden')" class="kt-btn kt-btn-sm kt-btn-secondary">Batal</button>
-                                <button type="submit" class="kt-btn kt-btn-sm kt-btn-primary">Simpan</button>
+<button type="button" onclick="document.getElementById('cutoffDropdown').classList.add('hidden')" class="kt-btn kt-btn-secondary">Batal</button>
+                            <button type="submit" class="kt-btn kt-btn-primary">Simpan</button>
                             </div>
                         </form>
                     </div>
                 </div>
                 <a href="{{ route('neraca-keuangan.export', ['tahun' => $tahun, 'tanggal_cutoff' => $tanggalCutoff]) }}"
-                   class="kt-btn kt-btn-sm flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white border-0">
+                   class="kt-btn flex items-center gap-2 kt-badge-success text-white border-0">
                     <i class="ki-filled ki-file-sheet"></i> Export Excel
                 </a>
             </div>

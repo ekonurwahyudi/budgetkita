@@ -7,7 +7,7 @@ class GajiKaryawan extends BaseModel
     protected $fillable = [
         'nomor_transaksi', 'user_id', 'gaji_pokok', 'upah_lembur', 'bonus',
         'thp', 'pajak', 'bpjs', 'potongan', 'jenis_pembayaran',
-        'account_bank_id', 'eviden', 'status',
+        'account_bank_id', 'eviden', 'status', 'created_at',
     ];
 
     protected function casts(): array
@@ -16,7 +16,7 @@ class GajiKaryawan extends BaseModel
             'gaji_pokok' => 'decimal:2', 'upah_lembur' => 'decimal:2',
             'bonus' => 'decimal:2', 'thp' => 'decimal:2',
             'pajak' => 'decimal:2', 'bpjs' => 'decimal:2', 'potongan' => 'decimal:2',
-            'eviden' => 'array',
+            'eviden' => 'array', 'created_at' => 'datetime',
         ];
     }
 

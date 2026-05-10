@@ -10,10 +10,10 @@
         <i class="ki-filled ki-filter-search"></i> Filter
     </button>
     <div id="filterPanel" class="hidden absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-xl shadow-lg p-4" style="z-index:9999;">
-        <form method="GET" class="flex flex-col gap-3">
+        <form method="GET" action="{{ route('dashboard') }}" class="flex flex-col gap-3">
             <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-medium text-muted-foreground">Blok</label>
-                <select name="blok_id" class="kt-select kt-select-sm">
+                <select name="blok_id" id="filterBlok" class="kt-select kt-select-sm" onchange="loadSiklusForBlok()">
                     <option value="">Semua Blok</option>
                     @foreach($bloks as $b)
                     <option value="{{ $b->id }}" {{ $filterBlok == $b->id ? 'selected' : '' }}>{{ $b->nama_blok }}</option>
@@ -22,7 +22,7 @@
             </div>
             <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-medium text-muted-foreground">Siklus</label>
-                <select name="siklus_id" class="kt-select kt-select-sm">
+                <select name="siklus_id" id="filterSiklus" class="kt-select kt-select-sm">
                     <option value="">Semua Siklus</option>
                     @foreach($sikluses as $s)
                     <option value="{{ $s->id }}" {{ $filterSiklus == $s->id ? 'selected' : '' }}>{{ $s->nama_siklus }}</option>
@@ -116,7 +116,7 @@
                 </div>
             </a>
             {{-- Total Pendapatan --}}
-            <a href="{{ route('transaksi.index', ['jenis_transaksi' => 'uang_masuk']) }}" class="kt-card hover:ring-2 hover:ring-green-500/30 transition-all cursor-pointer group">
+            <div class="kt-card hover:ring-2 hover:ring-green-500/30 transition-all cursor-pointer">
                 <div class="kt-card-content p-5">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -128,12 +128,12 @@
                                 <p class="text-xs text-secondary-foreground">Total Pendapatan</p>
                             </div>
                         </div>
-                        <span class="text-xs font-medium text-green-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                        <button type="button" onclick="event.stopPropagation(); openTransactionModal('pendapatan');" class="text-xs font-medium text-green-600 hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></button>
                     </div>
                 </div>
-            </a>
+            </div>
             {{-- Total Pengeluaran --}}
-            <a href="{{ route('transaksi.index', ['jenis_transaksi' => 'uang_keluar']) }}" class="kt-card hover:ring-2 hover:ring-red-500/30 transition-all cursor-pointer group">
+            <div class="kt-card hover:ring-2 hover:ring-red-500/30 transition-all cursor-pointer">
                 <div class="kt-card-content p-5">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -145,10 +145,10 @@
                                 <p class="text-xs text-secondary-foreground">Total Pengeluaran</p>
                             </div>
                         </div>
-                        <span class="text-xs font-medium text-red-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                        <button type="button" onclick="event.stopPropagation(); openTransactionModal('pengeluaran');" class="text-xs font-medium text-red-600 hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></button>
                     </div>
                 </div>
-            </a>
+            </div>
         </div>
 
         {{-- Chart Penjualan --}}
@@ -339,10 +339,144 @@
 
 </div>
 
+{{-- Modal Transaksi --}}
+<div id="transactionModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:80rem; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;" onclick="event.stopPropagation();">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:1rem; border-bottom:1px solid var(--border);">
+            <h3 class="text-base font-semibold text-foreground" id="modalTitle">Data Transaksi</h3>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <button type="button" onclick="exportModalToExcel()" style="background:var(--primary); color:#fff; border:none; cursor:pointer; padding:0.35rem 0.75rem; border-radius:0.375rem; font-size:0.75rem; font-weight:500; display:flex; align-items:center; gap:0.25rem;">
+                    <i class="ki-filled ki-excel"></i> Export Excel
+                </button>
+                <button type="button" onclick="closeTransactionModal()" style="background:none; border:none; cursor:pointer; padding:0.25rem; color:var(--muted-foreground);">
+                    <i class="ki-filled ki-cross" style="font-size:1.25rem;"></i>
+                </button>
+            </div>
+        </div>
+        <div style="overflow:auto; padding:1rem; flex:1;">
+            <table class="kt-table kt-table-border w-full" id="modalTable" style="font-size:0.75rem;">
+                <thead>
+                    <tr>
+                        <th class="text-center text-xs font-semibold w-10">No.</th>
+                        <th class="text-left text-xs font-semibold">No. Transaksi</th>
+                        <th class="text-center text-xs font-semibold">Tipe</th>
+                        <th class="text-center text-xs font-semibold">Sumber</th>
+                        <th class="text-left text-xs font-semibold">Jenis</th>
+                        <th class="text-center text-xs font-semibold">Tanggal</th>
+                        <th class="text-left text-xs font-semibold">Aktivitas</th>
+                        <th class="text-left text-xs font-semibold">Kategori</th>
+                        <th class="text-right text-xs font-semibold">Nominal</th>
+                        <th class="text-center text-xs font-semibold">Status</th>
+                        <th class="text-left text-xs font-semibold">Bank</th>
+                    </tr>
+                </thead>
+                <tbody id="modalTableBody">
+                    <tr><td colspan="11" class="text-center py-8 text-muted-foreground">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 function toggleFilter() {
     document.getElementById('filterPanel').classList.toggle('hidden');
+}
+function loadSiklusForBlok() {
+    var blokId = document.getElementById('filterBlok').value;
+    var sel = document.getElementById('filterSiklus');
+    sel.innerHTML = '<option value="">Semua Siklus</option>';
+    if (!blokId) return;
+    fetch('/budidaya/siklus/by-blok/' + blokId)
+        .then(r => r.json())
+        .then(sikluses => {
+            sikluses.filter(s => s.status === 'aktif').forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.nama_siklus;
+                sel.appendChild(opt);
+            });
+        });
+}
+function openTransactionModal(jenis) {
+    console.log('Opening modal for:', jenis);
+    var modal = document.getElementById('transactionModal');
+    var title = document.getElementById('modalTitle');
+    var tbody = document.getElementById('modalTableBody');
+    title.textContent = jenis === 'pendapatan' ? 'Data Pendapatan' : 'Data Pengeluaran';
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-muted-foreground">Memuat data...</td></tr>';
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    document.body.style.overflow = 'hidden';
+
+    var params = new URLSearchParams({
+        jenis: jenis,
+        blok_id: document.getElementById('filterBlok').value,
+        siklus_id: document.getElementById('filterSiklus').value,
+        date_from: document.querySelector('input[name="date_from"]').value,
+        date_to: document.querySelector('input[name="date_to"]').value
+    });
+
+    fetch('{{ route("dashboard.transactions") }}?' + params.toString())
+        .then(r => r.json())
+        .then(data => {
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-muted-foreground">Tidak ada data</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(function(d) {
+                var sumberBadge = '';
+                if (d.sumber === 'Transaksi') sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-outline">Transaksi</span>';
+                else if (d.sumber === 'Panen') sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-info">Panen</span>';
+                else if (d.sumber === 'Gaji') sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-primary">Gaji</span>';
+                else if (d.sumber === 'Pembelian Aset') sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-warning">Aset</span>';
+                else if (d.sumber === 'Pembelian Persediaan') sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-success">Persediaan</span>';
+                else if (d.sumber === 'Pembayaran Hutang') sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-destructive">Hutang</span>';
+                else sumberBadge = '<span class="kt-badge kt-badge-sm kt-badge-outline">' + d.sumber + '</span>';
+
+                return '<tr>' +
+                    '<td class="text-center text-sm">' + d.no + '</td>' +
+                    '<td class="text-sm text-mono">' + d.nomor_transaksi + '</td>' +
+                    '<td class="text-center"><span class="kt-badge kt-badge-sm ' + (d.tipe === 'Pendapatan' ? 'kt-badge-success' : 'kt-badge-destructive') + '">' + d.tipe + '</span></td>' +
+                    '<td class="text-center">' + sumberBadge + '</td>' +
+                    '<td class="text-sm">' + d.jenis + '</td>' +
+                    '<td class="text-center text-sm">' + d.tanggal + '</td>' +
+                    '<td class="text-sm">' + d.aktivitas + '</td>' +
+                    '<td class="text-sm">' + d.kategori + '</td>' +
+                    '<td class="text-right text-sm text-mono font-semibold">Rp ' + Number(d.nominal).toLocaleString('id-ID') + '</td>' +
+                    '<td class="text-center"><span class="kt-badge kt-badge-sm kt-badge-outline">' + d.status + '</span></td>' +
+                    '<td class="text-sm">' + d.bank + '</td>' +
+                '</tr>';
+            }).join('');
+        })
+        .catch(function() {
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-danger">Gagal memuat data</td></tr>';
+        });
+}
+function closeTransactionModal() {
+    var modal = document.getElementById('transactionModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+function exportModalToExcel() {
+    var table = document.getElementById('modalTable');
+    var rows = table.querySelectorAll('tr');
+    var csv = [];
+    rows.forEach(function(row) {
+        var cols = row.querySelectorAll('td, th');
+        var rowData = [];
+        cols.forEach(function(col) {
+            rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
+        });
+        csv.push(rowData.join(','));
+    });
+    var csvString = csv.join('\n');
+    var blob = new Blob(['\ufeff' + csvString], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'transaksi_' + (document.getElementById('modalTitle').textContent || 'data') + '.csv';
+    link.click();
 }
 document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {

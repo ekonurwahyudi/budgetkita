@@ -33,6 +33,7 @@ class GajiKaryawanController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'created_at' => 'required|date',
             'user_id' => 'required|uuid|exists:users,id',
             'gaji_pokok' => 'required|numeric|min:0',
             'upah_lembur' => 'nullable|numeric|min:0',
@@ -46,6 +47,7 @@ class GajiKaryawanController extends Controller
         ]);
 
         $input = $request->only(['user_id','jenis_pembayaran','account_bank_id']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['gaji_pokok'] = (int) $request->input('gaji_pokok', 0);
         $input['upah_lembur'] = (int) $request->input('upah_lembur', 0);
         $input['bonus']      = (int) $request->input('bonus', 0);
@@ -83,6 +85,7 @@ class GajiKaryawanController extends Controller
     public function update(Request $request, GajiKaryawan $gaji)
     {
         $request->validate([
+            'created_at' => 'required|date',
             'user_id' => 'required|uuid|exists:users,id',
             'gaji_pokok' => 'required|numeric|min:0',
             'upah_lembur' => 'nullable|numeric|min:0',
@@ -95,6 +98,7 @@ class GajiKaryawanController extends Controller
         ]);
 
         $input = $request->only(['user_id','jenis_pembayaran','account_bank_id']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['gaji_pokok'] = (int) $request->input('gaji_pokok', 0);
         $input['upah_lembur'] = (int) $request->input('upah_lembur', 0);
         $input['bonus']      = (int) $request->input('bonus', 0);

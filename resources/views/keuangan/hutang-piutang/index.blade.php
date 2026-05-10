@@ -146,7 +146,7 @@
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-sm font-medium text-foreground">Catatan</label>
-                    <textarea name="catatan_bayar" class="kt-input" rows="2"></textarea>
+                    <textarea name="catatan_bayar" class="kt-input" rows="2" style="height: 94px;"></textarea>
                 </div>
             </div>
             <div class="kt-modal-footer justify-end">

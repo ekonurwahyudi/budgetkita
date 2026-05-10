@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/', fn () => redirect('/dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/transactions', [DashboardController::class, 'transactions'])->name('dashboard.transactions');
     Route::get('/api/lokasi/search', [LokasiController::class, 'search'])->name('api.lokasi.search');
     Route::post('/switch-tambak/{tambak}', function (\App\Models\Tambak $tambak) {
         session(['active_tambak_id' => $tambak->id]);

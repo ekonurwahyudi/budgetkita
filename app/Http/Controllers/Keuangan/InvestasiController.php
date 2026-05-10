@@ -33,6 +33,7 @@ class InvestasiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'created_at' => 'required|date',
             'deskripsi' => 'required|string',
             'nominal' => 'required|numeric|min:0',
             'kategori_investasi_id' => 'required|uuid|exists:kategori_investasis,id',
@@ -43,6 +44,7 @@ class InvestasiController extends Controller
         ]);
 
         $input = $request->only(['deskripsi','nominal','kategori_investasi_id','jenis_pembayaran','account_bank_id','catatan']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVI');
         if ($request->hasFile('eviden')) {
             $paths = [];
@@ -72,6 +74,7 @@ class InvestasiController extends Controller
     public function update(Request $request, Investasi $investasi)
     {
         $request->validate([
+            'created_at' => 'required|date',
             'deskripsi' => 'required|string',
             'nominal' => 'required|numeric|min:0',
             'kategori_investasi_id' => 'required|uuid|exists:kategori_investasis,id',
@@ -82,6 +85,7 @@ class InvestasiController extends Controller
         ]);
 
         $input = $request->only(['deskripsi','nominal','kategori_investasi_id','jenis_pembayaran','account_bank_id','catatan']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         if ($request->hasFile('eviden')) {
             $existing = $investasi->eviden ?? [];
             foreach ($request->file('eviden') as $file) {

@@ -31,17 +31,30 @@
                 <input type="hidden" name="thp" id="thp_val" value="{{ old('thp', (int)($gaji?->thp ?? 0)) }}">
 
                 <div class="flex flex-col gap-5 max-w-2xl">
-                    {{-- Karyawan --}}
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-sm font-medium text-foreground">Karyawan <span class="text-danger">*</span></label>
-                        <select name="user_id" id="user_id" class="kt-select" required>
-                            <option value="">-- Pilih Karyawan --</option>
-                            @foreach($karyawans as $karyawan)
-                            <option value="{{ $karyawan->id }}" {{ old('user_id', $gaji?->user_id) === $karyawan->id ? 'selected' : '' }}>
-                                {{ $karyawan->nama }}{{ $karyawan->jabatan ? ' - '.$karyawan->jabatan : '' }}
-                            </option>
-                            @endforeach
-                        </select>
+                    {{-- Tanggal & Karyawan --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Tanggal <span class="text-danger">*</span></label>
+                            <div class="kt-input">
+                                <i class="ki-outline ki-calendar"></i>
+                                <input class="grow" name="created_at" id="created_at"
+                                       data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
+                                       placeholder="Pilih tanggal" readonly type="text" required
+                                       value="{{ old('created_at', ($gaji?->created_at ?? now())->format('Y-m-d')) }}"/>
+                            </div>
+                            @error('created_at')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Karyawan <span class="text-danger">*</span></label>
+                            <select name="user_id" id="user_id" class="kt-select" required>
+                                <option value="">-- Pilih Karyawan --</option>
+                                @foreach($karyawans as $karyawan)
+                                <option value="{{ $karyawan->id }}" {{ old('user_id', $gaji?->user_id) === $karyawan->id ? 'selected' : '' }}>
+                                    {{ $karyawan->nama }}{{ $karyawan->jabatan ? ' - '.$karyawan->jabatan : '' }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     {{-- Gaji Pokok & Upah Lembur --}}

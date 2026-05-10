@@ -23,6 +23,32 @@
                 <input type="hidden" name="account_bank_id" id="account_bank_id" value="{{ old('account_bank_id', $hutangPiutang?->account_bank_id) }}">
 
                 <div class="flex flex-col gap-5 max-w-2xl">
+                    {{-- Tanggal & Jatuh Tempo --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Tanggal <span class="text-danger">*</span></label>
+                            <div class="kt-input">
+                                <i class="ki-outline ki-calendar"></i>
+                                <input class="grow" name="created_at" id="created_at"
+                                       data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
+                                       placeholder="Pilih tanggal" readonly type="text" required
+                                       value="{{ old('created_at', ($hutangPiutang?->created_at ?? now())->format('Y-m-d')) }}"/>
+                            </div>
+                            @error('created_at')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Jatuh Tempo <span class="text-danger">*</span></label>
+                            <div class="kt-input">
+                                <i class="ki-outline ki-calendar"></i>
+                                <input class="grow" name="jatuh_tempo" id="jatuh_tempo"
+                                       data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
+                                       placeholder="Pilih tanggal" readonly type="text" required
+                                       value="{{ old('jatuh_tempo', $hutangPiutang?->jatuh_tempo?->format('Y-m-d')) }}"/>
+                            </div>
+                            @error('jatuh_tempo')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
                     {{-- Jenis & Kategori --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-1.5">
@@ -52,11 +78,11 @@
                     {{-- Aktivitas --}}
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium text-foreground">Aktivitas/Kegiatan <span class="text-danger">*</span></label>
-                        <textarea name="aktivitas" id="aktivitas" class="kt-input" rows="3" required>{{ old('aktivitas', $hutangPiutang?->aktivitas) }}</textarea>
+                        <textarea name="aktivitas" id="aktivitas" class="kt-input" rows="6" style="height: 94px;" required>{{ old('aktivitas', $hutangPiutang?->aktivitas) }}</textarea>
                         @error('aktivitas')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
 
-                    {{-- Nominal & Jatuh Tempo --}}
+                    {{-- Nominal & Total Bayar --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-1.5">
                             <label class="text-sm font-medium text-foreground">Nominal (Pinjaman) <span class="text-danger">*</span></label>
@@ -67,31 +93,18 @@
                             </div>
                             @error('nominal')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                         </div>
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-medium text-foreground">Jatuh Tempo <span class="text-danger">*</span></label>
-                            <div class="kt-input">
-                                <i class="ki-outline ki-calendar"></i>
-                                <input class="grow" name="jatuh_tempo" id="jatuh_tempo"
-                                       data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
-                                       placeholder="Pilih tanggal" readonly type="text" required
-                                       value="{{ old('jatuh_tempo', $hutangPiutang?->jatuh_tempo?->format('Y-m-d')) }}"/>
+                        <div id="row_total_bayar" class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">
+                                Total Bayar
+                                <span class="text-xs text-muted-foreground font-normal">(termasuk bunga/biaya lain)</span>
+                            </label>
+                            <div id="total_bayar_input_group" class="kt-input-group">
+                                <span class="kt-input-addon">Rp.</span>
+                                <input class="kt-input" type="text" id="total_bayar_display" placeholder="Kosongkan jika sama dengan nominal"/>
+                                <input type="hidden" name="total_bayar" id="total_bayar_val" value="{{ old('total_bayar', (int)($hutangPiutang?->total_bayar ?? 0)) }}"/>
                             </div>
-                            @error('jatuh_tempo')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
+                            <p id="total_bayar_hint" class="text-xs text-muted-foreground">Contoh: pinjam Rp 2.000.000 tapi total harus bayar Rp 2.500.000 karena bunga</p>
                         </div>
-                    </div>
-
-                    {{-- Total Bayar (hanya hutang) --}}
-                    <div id="row_total_bayar" class="flex flex-col gap-1.5">
-                        <label class="text-sm font-medium text-foreground">
-                            Total Bayar
-                            <span class="text-xs text-muted-foreground font-normal">(termasuk bunga/biaya lain)</span>
-                        </label>
-                        <div class="kt-input-group">
-                            <span class="kt-input-addon">Rp.</span>
-                            <input class="kt-input" type="text" id="total_bayar_display" placeholder="Kosongkan jika sama dengan nominal"/>
-                            <input type="hidden" name="total_bayar" id="total_bayar_val" value="{{ old('total_bayar', (int)($hutangPiutang?->total_bayar ?? 0)) }}"/>
-                        </div>
-                        <p class="text-xs text-muted-foreground">Contoh: pinjam Rp 2.000.000 tapi total harus bayar Rp 2.500.000 karena bunga</p>
                     </div>
 
                     {{-- Sudah Dibayar & Sisa --}}
@@ -133,7 +146,7 @@
                     {{-- Catatan --}}
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium text-foreground">Catatan</label>
-                        <textarea name="catatan" id="catatan" class="kt-input" rows="3">{{ old('catatan', $hutangPiutang?->catatan) }}</textarea>
+                        <textarea name="catatan" id="catatan" class="kt-input" rows="6" style="height: 94px;">{{ old('catatan', $hutangPiutang?->catatan) }}</textarea>
                     </div>
 
                     {{-- Eviden --}}
@@ -206,7 +219,8 @@ function filterKategori() {
     }
     // Show/hide Total Bayar & Sudah Dibayar rows
     var isHutang = jenis === 'hutang';
-    document.getElementById('row_total_bayar').style.display = isHutang ? '' : 'none';
+    document.getElementById('total_bayar_input_group').style.display = isHutang ? '' : 'none';
+    document.getElementById('total_bayar_hint').style.display = isHutang ? '' : 'none';
     document.getElementById('row_nominal_bayar').style.display = isHutang ? '' : 'none';
     if (!isHutang) {
         document.getElementById('total_bayar_val').value = 0;

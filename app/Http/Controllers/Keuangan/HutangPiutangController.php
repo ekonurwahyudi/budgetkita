@@ -40,6 +40,7 @@ class HutangPiutangController extends Controller
             'nominal' => 'required|numeric|min:0',
             'total_bayar' => 'nullable|numeric|min:0',
             'jatuh_tempo' => 'required|date',
+            'created_at' => 'required|date',
             'nominal_bayar' => 'nullable|numeric|min:0',
             'jenis_pembayaran' => 'required|in:cash,bank',
             'account_bank_id' => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
@@ -48,6 +49,7 @@ class HutangPiutangController extends Controller
         ]);
 
         $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate($request->jenis === 'hutang' ? 'INVH' : 'INVP');
         // Sisa: untuk hutang = total_bayar - nominal_bayar, untuk piutang = nominal - nominal_bayar
         $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
@@ -88,6 +90,7 @@ class HutangPiutangController extends Controller
             'nominal' => 'required|numeric|min:0',
             'total_bayar' => 'nullable|numeric|min:0',
             'jatuh_tempo' => 'required|date',
+            'created_at' => 'required|date',
             'nominal_bayar' => 'nullable|numeric|min:0',
             'jenis_pembayaran' => 'required|in:cash,bank',
             'account_bank_id' => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
@@ -95,6 +98,7 @@ class HutangPiutangController extends Controller
         ]);
 
         $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
         $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);
 

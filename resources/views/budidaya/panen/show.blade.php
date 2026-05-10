@@ -36,6 +36,10 @@
                                 <td class="text-sm pb-3">{{ $panen->siklus?->blok?->tambak?->nama_tambak ?? '-' }} &rsaquo; {{ $panen->siklus?->blok?->nama_blok ?? '-' }}</td>
                             </tr>
                             <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Kolam</td>
+                                <td class="text-sm pb-3">{{ $panen->kolam?->nama_kolam ?? '-' }}</td>
+                            </tr>
+                            <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Tanggal Panen</td>
                                 <td class="text-sm text-mono pb-3">{{ $panen->tgl_panen?->format('d/m/Y') ?? '-' }}</td>
                             </tr>

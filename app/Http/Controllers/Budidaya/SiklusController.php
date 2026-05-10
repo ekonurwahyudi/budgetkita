@@ -74,11 +74,27 @@ class SiklusController extends Controller
 
     public function show(Siklus $siklus)
     {
-        $siklus->load(['blok.tambak', 'panens.accountBank']);
+        $siklus->load(['blok.tambak', 'panens.kolam', 'panens.accountBank']);
         $transaksis = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'sumberDana'])
-            ->where('siklus_id', $siklus->id)
+            ->where(function ($q) use ($siklus) {
+                $q->where('siklus_id', $siklus->id)
+                  ->orWhere('blok_id', $siklus->blok_id);
+            })
             ->latest('tgl_kwitansi')
             ->get();
+
+        $uangMasukTransaksi = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal');
+        $uangKeluarTransaksi = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
+
+        $totalPanen = $siklus->panens->sum('total_penjualan');
+        $uangMasuk = $uangMasukTransaksi + $totalPanen;
+
+        $biayaPakanKimia = \App\Models\RiwayatPersediaan::where('siklus_id', $siklus->id)
+            ->where('jenis', 'pengeluaran')
+            ->sum('harga_total');
+        $uangKeluar = $uangKeluarTransaksi + $biayaPakanKimia;
+
+        $keuntunganKerugian = $uangMasuk - $uangKeluar;
 
         $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan')
             ->where('siklus_id', $siklus->id)
@@ -88,12 +104,20 @@ class SiklusController extends Controller
         $pemberianPakans = $semuaPemberian->filter(fn($p) =>
             !$p->itemPersediaan?->kategoriPersediaan ||
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') !== false
-        )->values();
+        )->map(function($p) {
+            $persediaan = \App\Models\Persediaan::where('item_persediaan_id', $p->item_persediaan_id)->first();
+            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan->harga_per_unit ?? 0);
+            return $p;
+        })->values();
 
         $pemberianKimia = $semuaPemberian->filter(fn($p) =>
             $p->itemPersediaan?->kategoriPersediaan &&
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
-        )->values();
+        )->map(function($p) {
+            $persediaan = \App\Models\Persediaan::where('item_persediaan_id', $p->item_persediaan_id)->first();
+            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan->harga_per_unit ?? 0);
+            return $p;
+        })->values();
 
         $kolams = \App\Models\Kolam::with(['users'])
             ->where('siklus_id', $siklus->id)
@@ -102,7 +126,6 @@ class SiklusController extends Controller
             })
             ->latest()->get();
 
-        // Load latest parameter per kolam manually (avoid UUID + MAX issue)
         $kolamIds = $kolams->pluck('id');
         $latestParams = \App\Models\KolamParameter::whereIn('kolam_id', $kolamIds)
             ->selectRaw('DISTINCT ON (kolam_id) *')
@@ -115,7 +138,11 @@ class SiklusController extends Controller
 
         $users = \App\Models\User::where('status', 'aktif')->orderBy('nama')->get();
         $accountBanks = \App\Models\AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
-        return view('budidaya.siklus.show', compact('siklus', 'transaksis', 'pemberianPakans', 'pemberianKimia', 'accountBanks', 'kolams', 'users'));
+        return view('budidaya.siklus.show', compact(
+            'siklus', 'transaksis', 'pemberianPakans', 'pemberianKimia',
+            'accountBanks', 'kolams', 'users',
+            'uangMasuk', 'uangKeluar', 'keuntunganKerugian'
+        ));
     }
 
     public function edit(Siklus $siklus)
@@ -173,6 +200,6 @@ class SiklusController extends Controller
 
     public function byBlok(Blok $blok)
     {
-        return response()->json($blok->sikluses()->where('status', 'aktif')->orderBy('nama_siklus')->get());
+        return response()->json($blok->sikluses()->where('status', '!=', 'selesai')->orderBy('nama_siklus')->get());
     }
 }

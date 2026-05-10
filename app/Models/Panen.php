@@ -5,7 +5,7 @@ namespace App\Models;
 class Panen extends BaseModel
 {
     protected $fillable = [
-        'siklus_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
+        'siklus_id', 'kolam_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
         'harga_jual', 'sisa_bayar', 'total_penjualan', 'pembeli',
         'tipe_panen', 'jenis_pembayaran', 'account_bank_id',
         'pembayaran', 'status',
@@ -17,5 +17,6 @@ class Panen extends BaseModel
     }
 
     public function siklus() { return $this->belongsTo(Siklus::class); }
+    public function kolam() { return $this->belongsTo(Kolam::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
 }

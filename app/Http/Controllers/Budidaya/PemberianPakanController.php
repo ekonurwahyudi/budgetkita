@@ -96,10 +96,10 @@ class PemberianPakanController extends Controller
         if ($autoTambak) {
             $bloks = \App\Models\Blok::where('tambak_id', $autoTambak->id)->orderBy('nama_blok')->get(['id', 'nama_blok', 'tambak_id']);
             if ($bloks->count() === 1) {
-                $sikluses = \App\Models\Siklus::where('blok_id', $bloks->first()->id)->where('status', 'aktif')->orderBy('nama_siklus')->get(['id', 'nama_siklus', 'blok_id']);
+                $sikluses = \App\Models\Siklus::where('blok_id', $bloks->first()->id)->where('status', '!=', 'selesai')->orderBy('nama_siklus')->get(['id', 'nama_siklus', 'blok_id']);
                 if ($sikluses->count() === 1) {
                     $kolamQuery = \App\Models\Kolam::where('siklus_id', $sikluses->first()->id)
-                        ->where('status', 'aktif');
+                        ->where('status', '!=', 'selesai');
                     if ($hasTambak) {
                         $kolamQuery->whereHas('users', fn($q) => $q->where('users.id', $user->id));
                     }

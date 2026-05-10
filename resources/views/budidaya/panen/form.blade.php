@@ -22,18 +22,34 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {{-- Kolom Kiri --}}
                     <div class="flex flex-col gap-5">
-                        {{-- Siklus --}}
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-medium text-foreground">Siklus <span class="text-danger">*</span></label>
-                            <select name="siklus_id" id="siklus_id" class="kt-select" required>
-                                <option value="">-- Pilih Siklus --</option>
-                                @foreach($sikluses as $s)
-                                <option value="{{ $s->id }}" {{ old('siklus_id', $panen?->siklus_id) === $s->id ? 'selected' : '' }}>
-                                    {{ $s->blok?->tambak?->nama_tambak ?? '-' }} &rsaquo; {{ $s->blok?->nama_blok ?? '-' }} &rsaquo; {{ $s->nama_siklus }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('siklus_id')<span class="text-xs text-danger">{{ $message }}</span>@enderror
+                        {{-- Siklus & Kolam --}}
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-sm font-medium text-foreground">Siklus <span class="text-danger">*</span></label>
+                                <select name="siklus_id" id="siklus_id" class="kt-select" required onchange="filterKolam()">
+                                    <option value="">-- Pilih Siklus --</option>
+                                    @foreach($sikluses as $s)
+                                    <option value="{{ $s->id }}" {{ old('siklus_id', $panen?->siklus_id) === $s->id ? 'selected' : '' }}>
+                                        {{ $s->blok?->tambak?->nama_tambak ?? '-' }} &rsaquo; {{ $s->blok?->nama_blok ?? '-' }} &rsaquo; {{ $s->nama_siklus }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                                @error('siklus_id')<span class="text-xs text-danger">{{ $message }}</span>@enderror
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-sm font-medium text-foreground">Kolam</label>
+                                <select name="kolam_id" id="kolam_id" class="kt-select">
+                                    <option value="">-- Pilih Kolam --</option>
+                                    @foreach($sikluses as $s)
+                                        @foreach($s->kolams as $k)
+                                        <option value="{{ $k->id }}" data-siklus="{{ $s->id }}"
+                                            {{ old('kolam_id', $panen?->kolam_id) === $k->id ? 'selected' : '' }}>
+                                            {{ $k->nama_kolam }}
+                                        </option>
+                                        @endforeach
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         {{-- Tgl Panen & Tipe --}}
@@ -188,6 +204,18 @@
 
 @push('scripts')
 <script>
+function filterKolam() {
+    var siklusId = document.getElementById('siklus_id').value;
+    var sel = document.getElementById('kolam_id');
+    Array.from(sel.options).forEach(function(opt) {
+        if (!opt.value) return;
+        opt.hidden = opt.getAttribute('data-siklus') !== siklusId;
+    });
+    if (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].hidden) {
+        sel.value = '';
+    }
+}
+
 function formatMoney(el, hiddenId) {
     var raw = el.value.replace(/[^0-9]/g, '');
     document.getElementById(hiddenId).value = raw;
@@ -230,6 +258,7 @@ function toggleSisaBayar() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    filterKolam();
     toggleBankField();
     toggleSisaBayar();
     showSaldo();

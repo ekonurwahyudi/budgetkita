@@ -30,6 +30,7 @@ class TransaksiKeuanganController extends Controller
             'tambaks'            => Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get(),
             'sumberDanas'        => SumberDana::orderBy('deskripsi')->get(),
             'accountBanks'       => AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get(),
+            'sikluses'           => Siklus::where('status', '!=', 'selesai')->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))->orderBy('nama_siklus')->get(),
         ];
     }
 
@@ -145,8 +146,9 @@ class TransaksiKeuanganController extends Controller
     }
 
     public function edit(TransaksiKeuangan $transaksi)
-    {        $bloks = $transaksi->tambak_id ? Blok::where('tambak_id', $transaksi->tambak_id)->orderBy('nama_blok')->get() : collect();
-        $sikluses = $transaksi->blok_id ? Siklus::where('blok_id', $transaksi->blok_id)->orderBy('nama_siklus')->get() : collect();
+    {
+        $bloks = $transaksi->tambak_id ? Blok::where('tambak_id', $transaksi->tambak_id)->orderBy('nama_blok')->get() : collect();
+        $sikluses = $transaksi->blok_id ? Siklus::where('blok_id', $transaksi->blok_id)->where('status', '!=', 'selesai')->orderBy('nama_siklus')->get() : collect();
         return view('keuangan.transaksi.form', array_merge($this->formData(), [
             'transaksi' => $transaksi,
             'bloks'     => $bloks,

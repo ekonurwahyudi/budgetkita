@@ -16,7 +16,7 @@ class PanenController extends Controller
     {
         $user = auth()->user();
         $hasTambak = $user->tambaks()->exists();
-        $query = Panen::with(['siklus.blok.tambak', 'accountBank']);
+        $query = Panen::with(['siklus.blok.tambak', 'kolam', 'accountBank']);
         if ($hasTambak) {
             $tambakIds = $user->tambaks()->pluck('tambaks.id');
             $query->whereHas('siklus.blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
@@ -32,7 +32,7 @@ class PanenController extends Controller
     {
         $user = auth()->user();
         $hasTambak = $user->tambaks()->exists();
-        $siklusQuery = Siklus::where('status', 'aktif')->with('blok.tambak');
+        $siklusQuery = Siklus::where('status', '!=', 'selesai')->with(['blok.tambak', 'kolams' => fn($q) => $q->where('status', '!=', 'selesai')]);
         if ($hasTambak) {
             $tambakIds = $user->tambaks()->pluck('tambaks.id');
             $siklusQuery->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
@@ -50,6 +50,7 @@ class PanenController extends Controller
     {
         $request->validate([
             'siklus_id' => 'required|uuid|exists:sikluses,id',
+            'kolam_id' => 'nullable|uuid|exists:kolams,id',
             'tgl_panen' => 'required|date',
             'umur' => 'required|integer|min:0',
             'ukuran' => 'required|numeric|min:0',
@@ -65,7 +66,7 @@ class PanenController extends Controller
         ]);
 
         $input = $request->only([
-            'siklus_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
+            'siklus_id', 'kolam_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
             'harga_jual', 'total_penjualan', 'pembeli', 'tipe_panen',
             'jenis_pembayaran', 'account_bank_id', 'pembayaran', 'sisa_bayar',
         ]);
@@ -81,7 +82,7 @@ class PanenController extends Controller
 
     public function show(Panen $panen)
     {
-        $panen->load(['siklus.blok.tambak', 'accountBank']);
+        $panen->load(['siklus.blok.tambak', 'kolam', 'accountBank']);
         return view('budidaya.panen.show', compact('panen'));
     }
 
@@ -89,7 +90,7 @@ class PanenController extends Controller
     {
         $user = auth()->user();
         $hasTambak = $user->tambaks()->exists();
-        $siklusQuery = Siklus::where('status', 'aktif')->with('blok.tambak');
+        $siklusQuery = Siklus::where('status', '!=', 'selesai')->with(['blok.tambak', 'kolams' => fn($q) => $q->where('status', '!=', 'selesai')]);
         if ($hasTambak) {
             $tambakIds = $user->tambaks()->pluck('tambaks.id');
             $siklusQuery->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds));
@@ -107,6 +108,7 @@ class PanenController extends Controller
     {
         $request->validate([
             'siklus_id' => 'required|uuid|exists:sikluses,id',
+            'kolam_id' => 'nullable|uuid|exists:kolams,id',
             'tgl_panen' => 'required|date',
             'umur' => 'required|integer|min:0',
             'ukuran' => 'required|numeric|min:0',
@@ -122,7 +124,7 @@ class PanenController extends Controller
         ]);
 
         $input = $request->only([
-            'siklus_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
+            'siklus_id', 'kolam_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
             'harga_jual', 'total_penjualan', 'pembeli', 'tipe_panen',
             'jenis_pembayaran', 'account_bank_id', 'pembayaran', 'sisa_bayar',
         ]);
@@ -157,12 +159,27 @@ class PanenController extends Controller
 
     public function destroy(Panen $panen)
     {
+        $panen->load(['kolam.siklus']);
+
         DB::transaction(function () use ($panen) {
             // Reverse saldo jika sudah selesai via bank (panen selalu masuk)
             if ($panen->status === 'selesai' && $panen->jenis_pembayaran === 'bank' && $panen->account_bank_id) {
                 $bank = AccountBank::find($panen->account_bank_id);
                 if ($bank) {
                     $bank->decrement('saldo', $panen->total_penjualan);
+                }
+            }
+
+            if ($panen->tipe_panen === 'full' && $panen->kolam_id) {
+                $panen->kolam->update(['status' => 'aktif']);
+
+                $siklus = $panen->kolam->siklus;
+                $allKolamSelesai = $siklus->kolams()
+                    ->where('status', '!=', 'selesai')
+                    ->doesntExist();
+
+                if (!$allKolamSelesai && $siklus->status === 'selesai') {
+                    $siklus->update(['status' => 'aktif']);
                 }
             }
 
@@ -174,7 +191,21 @@ class PanenController extends Controller
 
     public function approve(Panen $panen)
     {
+        $panen->load(['kolam.siklus']);
         app(ApprovalService::class)->approve($panen);
+
+        if ($panen->tipe_panen === 'full' && $panen->kolam_id) {
+            $panen->kolam->update(['status' => 'selesai']);
+
+            $allKolamSelesai = $panen->kolam->siklus->kolams()
+                ->where('status', '!=', 'selesai')
+                ->doesntExist();
+
+            if ($allKolamSelesai) {
+                $panen->kolam->siklus->update(['status' => 'selesai']);
+            }
+        }
+
         return redirect()->back()->with('success', 'Panen berhasil di-approve.');
     }
 

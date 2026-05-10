@@ -73,6 +73,6 @@ class BlokController extends Controller
 
     public function byTambak(Tambak $tambak)
     {
-        return response()->json($tambak->bloks()->where('status_blok', 'aktif')->orderBy('nama_blok')->get());
+        return response()->json($tambak->bloks()->where('status_blok', '!=', 'selesai')->orderBy('nama_blok')->get());
     }
 }

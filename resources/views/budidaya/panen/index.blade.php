@@ -32,6 +32,7 @@
                         <tr>
                             <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="siklus"><span class="kt-table-col"><span class="kt-table-col-label">Siklus</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="kolam"><span class="kt-table-col"><span class="kt-table-col-label">Kolam</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tgl Panen</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="tipe"><span class="kt-table-col"><span class="kt-table-col-label">Tipe</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="berat"><span class="kt-table-col"><span class="kt-table-col-label">Total Berat</span><span class="kt-table-col-sort"></span></span></th>
@@ -52,6 +53,7 @@
                                     <span class="text-xs text-secondary-foreground">{{ $item->siklus?->blok?->tambak?->nama_tambak ?? '' }} &rsaquo; {{ $item->siklus?->blok?->nama_blok ?? '' }}</span>
                                 </div>
                             </td>
+                            <td>{{ $item->kolam?->nama_kolam ?? '-' }}</td>
                             <td>{{ $item->tgl_panen?->format('d/m/Y') ?? '-' }}</td>
                             <td>
                                 @if($item->tipe_panen === 'parsial')

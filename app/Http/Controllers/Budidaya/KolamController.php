@@ -272,7 +272,7 @@ class KolamController extends Controller
         $hasTambak = $user->tambaks()->exists();
 
         $query = \App\Models\Kolam::where('siklus_id', $siklusId)
-            ->where('status', 'aktif');
+            ->where('status', '!=', 'selesai');
         if ($hasTambak) {
             $query->whereHas('users', fn($q) => $q->where('users.id', $user->id));
         }

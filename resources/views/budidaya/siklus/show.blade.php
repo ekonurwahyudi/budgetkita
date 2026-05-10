@@ -95,6 +95,7 @@
                                 <tr>
                                     <th class="w-12">No</th>
                                     <th>Tgl Panen</th>
+                                    <th>Kolam</th>
                                     <th>Tipe</th>
                                     <th>Umur</th>
                                     <th>Ukuran</th>
@@ -110,6 +111,7 @@
                                 <tr>
                                     <td>{{ $i + 1 }}</td>
                                     <td>{{ $panen->tgl_panen?->format('d/m/Y') ?? '-' }}</td>
+                                    <td>{{ $panen->kolam?->nama_kolam ?? '-' }}</td>
                                     <td>
                                         @if($panen->tipe_panen === 'parsial')
                                             <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Parsial</span>
@@ -338,69 +340,7 @@
                 </div>
             </div>
 
-{{-- Parameter Air & Performa --}}
-            <!-- <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Parameter Air & Performa</h3>
-                </div>
-                <div class="kt-card-content pt-3.5 pb-3.5">
-                    <table class="kt-table-auto">
-                        <tbody>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Kecerahan:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->kecerahan ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Suhu:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->suhu ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">DO Level:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->do_level ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Salinitas:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->salinitas ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">pH Pagi:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->ph_pagi ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">pH Sore:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->ph_sore ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Selisih pH:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->selisih_ph ?? '-' }}</td>
-                            </tr>
-                            <tr><td colspan="2" class="pb-2"></td></tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">FCR:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->fcr ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">ADG:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->adg ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">SR:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->sr ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">MBW:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->mbw ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Size:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->size ?? '-' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div> -->
-
-            {{-- Info Kolam --}}
+            {{-- Info Kolam/Blok --}}
             <div class="kt-card">
                 <div class="kt-card-header">
                     <h3 class="kt-card-title">Info Kolam/Blok</h3>

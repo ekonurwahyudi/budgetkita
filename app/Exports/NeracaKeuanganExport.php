@@ -9,52 +9,54 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Carbon\Carbon;
 
 class NeracaKeuanganExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize, WithTitle
 {
     protected array $data;
     protected int $tahun;
+    protected Carbon $tanggalCutoff;
 
-    public function __construct(array $data, int $tahun)
+    public function __construct(array $data, int $tahun, Carbon $tanggalCutoff)
     {
         $this->data = $data;
         $this->tahun = $tahun;
+        $this->tanggalCutoff = $tanggalCutoff;
     }
 
     public function title(): string
     {
-        return 'Neraca ' . $this->tahun;
+        return 'Neraca Per ' . $this->tanggalCutoff->format('d-m-Y');
     }
 
     public function collection()
     {
         return collect([
             ['ASET', ''],
-            ['Kas & Bank', $this->data['kasBank']],
-            ['Piutang', $this->data['piutang']],
-            ['Persediaan', $this->data['persediaan']],
-            ['Investasi', $this->data['investasi']],
-            ['Aset Tetap (Bruto)', $this->data['asetTetapBruto']],
-            ['Akumulasi Depresiasi', -$this->data['akumulasiDepresiasi']],
-            ['Aset Tetap (Netto)', $this->data['asetTetapNetto']],
+            ['   Aset Lancar', ''],
+            ['      Kas & Bank', $this->data['kasBank']],
+            ['      Piutang', $this->data['piutang']],
+            ['      Persediaan', $this->data['persediaan']],
+            ['      Investasi', $this->data['investasi']],
+            ['   Subtotal Aset Lancar', $this->data['asetLancar']],
+            ['', ''],
+            ['   Aset Tetap', ''],
+            ['      Aset Tetap (Bruto)', $this->data['asetTetapBruto']],
+            ['      Akumulasi Penyusutan', -$this->data['akumulasiDepresiasi']],
+            ['   Subtotal Aset Tetap (Netto)', $this->data['asetTetapNetto']],
+            ['', ''],
             ['TOTAL ASET', $this->data['totalAset']],
             ['', ''],
             ['KEWAJIBAN', ''],
-            ['Hutang', $this->data['hutang']],
+            ['   Hutang Usaha', $this->data['hutang']],
             ['TOTAL KEWAJIBAN', $this->data['totalKewajiban']],
             ['', ''],
             ['EKUITAS', ''],
-            ['Pendapatan - Transaksi Keuangan', $this->data['pendapatanTransaksi']],
-            ['Pendapatan - Panen', $this->data['pendapatanPanen']],
-            ['Pendapatan - Investasi', $this->data['pendapatanInvestasi']],
-            ['Total Pendapatan', $this->data['totalPendapatan']],
-            ['Pengeluaran - Transaksi Keuangan', -$this->data['pengeluaranTransaksi']],
-            ['Pengeluaran - Gaji Karyawan', -$this->data['pengeluaranGaji']],
-            ['Pengeluaran - Pembelian Pakan', -$this->data['pengeluaranPersediaan']],
-            ['Pengeluaran - Pembelian Aset', -$this->data['pengeluaranAset']],
-            ['Total Pengeluaran', -$this->data['totalPengeluaran']],
-            ['Laba / Rugi ' . $this->tahun, $this->data['labaRugi']],
-            ['TOTAL KEWAJIBAN + EKUITAS', $this->data['totalKewajiban'] + $this->data['ekuitas']],
+            ['   Modal Pemilik', $this->data['modalPemilik']],
+            ['   Laba Tahun Berjalan', $this->data['labaBerjalan']],
+            ['TOTAL EKUITAS', $this->data['totalEkuitas']],
+            ['', ''],
+            ['TOTAL KEWAJIBAN + EKUITAS', $this->data['totalKewajiban'] + $this->data['totalEkuitas']],
         ]);
     }
 
@@ -73,7 +75,7 @@ class NeracaKeuanganExport implements FromCollection, WithHeadings, WithMapping,
 
     public function styles(Worksheet $sheet): array
     {
-        $boldRows = [1, 2, 10, 12, 14, 23, 24, 25];
+        $boldRows = [1, 14, 17, 20, 23, 25];
         return [
             1 => ['font' => ['bold' => true]],
             ...collect($boldRows)->mapWithKeys(fn($r) => [$r => ['font' => ['bold' => true]]])->toArray(),

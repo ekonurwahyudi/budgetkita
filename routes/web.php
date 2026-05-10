@@ -124,6 +124,8 @@ Route::middleware('auth')->group(function () {
         Route::get('laporan-export', [\App\Http\Controllers\Keuangan\LaporanKeuanganController::class, 'export'])->name('laporan-keuangan.export')->middleware('can:laporan-keuangan.view');
         Route::get('neraca', [\App\Http\Controllers\Keuangan\NeracaKeuanganController::class, 'index'])->name('neraca-keuangan.index')->middleware('can:laporan-keuangan.view');
         Route::get('neraca-export', [\App\Http\Controllers\Keuangan\NeracaKeuanganController::class, 'export'])->name('neraca-keuangan.export')->middleware('can:laporan-keuangan.view');
+        Route::post('neraca/cutoff', [\App\Http\Controllers\Keuangan\NeracaKeuanganController::class, 'storeCutoff'])->name('neraca-keuangan.cutoff.store')->middleware('can:laporan-keuangan.view');
+        Route::delete('neraca/cutoff/{id}', [\App\Http\Controllers\Keuangan\NeracaKeuanganController::class, 'destroyCutoff'])->name('neraca-keuangan.cutoff.destroy')->middleware('can:laporan-keuangan.view');
 
         Route::get('transaksi/create', [\App\Http\Controllers\Keuangan\TransaksiKeuanganController::class, 'create'])->name('transaksi.create')->middleware('can:transaksi-keuangan.create');
         Route::resource('transaksi', TransaksiKeuanganController::class)->except(['create'])->parameters(['transaksi' => 'transaksi'])->middleware('can:transaksi-keuangan.view');

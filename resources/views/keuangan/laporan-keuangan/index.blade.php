@@ -155,7 +155,7 @@
                 </button>
 
                 <a href="{{ route('neraca-keuangan.index') }}"
-                   class="kt-btn flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0">
+                   class="kt-btn flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white border-0">
                     <i class="ki-filled ki-calculator"></i> Neraca
                 </a>
 

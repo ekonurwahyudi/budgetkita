@@ -25,6 +25,7 @@ use App\Http\Controllers\Keuangan\TransaksiKeuanganController;
 use App\Http\Controllers\Keuangan\GajiKaryawanController;
 use App\Http\Controllers\Keuangan\InvestasiController;
 use App\Http\Controllers\Keuangan\HutangPiutangController;
+use App\Http\Controllers\Keuangan\SharingRevenueController;
 use App\Http\Controllers\Api\LokasiController;
 use App\Http\Controllers\Operasional\PersediaanController;
 use App\Http\Controllers\Operasional\PembelianPersediaanController;
@@ -149,6 +150,11 @@ Route::middleware('auth')->group(function () {
         Route::post('hutang-piutang/{hutangPiutang}/approve', [HutangPiutangController::class, 'approve'])->name('hutang-piutang.approve');
         Route::post('hutang-piutang/{hutangPiutang}/reject', [HutangPiutangController::class, 'reject'])->name('hutang-piutang.reject');
         Route::patch('hutang-piutang/{hutangPiutang}/bayar', [HutangPiutangController::class, 'bayar'])->name('hutang-piutang.bayar');
+
+        Route::get('sharing-revenue/create', [SharingRevenueController::class, 'create'])->name('sharing-revenue.create')->middleware('can:sharing-revenue.create');
+        Route::resource('sharing-revenue', SharingRevenueController::class)->except(['create'])->parameters(['sharing-revenue' => 'sharingRevenue'])->middleware('can:sharing-revenue.view');
+        Route::post('sharing-revenue/{sharingRevenue}/approve', [SharingRevenueController::class, 'approve'])->name('sharing-revenue.approve');
+        Route::post('sharing-revenue/{sharingRevenue}/reject', [SharingRevenueController::class, 'reject'])->name('sharing-revenue.reject');
     });
 
     // Operasional

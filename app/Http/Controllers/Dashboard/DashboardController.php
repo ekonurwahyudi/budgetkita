@@ -15,6 +15,7 @@ use App\Models\PembelianPersediaan;
 use App\Models\PemberianPakan;
 use App\Models\Persediaan;
 use App\Models\Siklus;
+use App\Models\SharingRevenue;
 use App\Models\Tambak;
 use App\Models\TambakAnggota;
 use App\Models\TransaksiKeuangan;
@@ -285,9 +286,13 @@ class DashboardController extends Controller
                 $uangMasuk = $uangMasukTransaksi + $totalPanen;
                 $uangKeluar = $uangKeluarTransaksi + $totalBiayaPakan + $totalBiayaKimia;
                 $keuntunganKerugian = $uangMasuk - $uangKeluar;
+                $sharingTerpakai = (float) SharingRevenue::where('siklus_id', $siklus->id)
+                    ->where('status', '!=', 'cancel')
+                    ->sum('persentase');
 
                 return [
                     'id' => $siklus->id,
+                    'blok_id' => $siklus->blok_id,
                     'nama_siklus' => $siklus->nama_siklus,
                     'blok_nama' => $siklus->blok?->nama_blok ?? '-',
                     'total_kolam' => $siklus->kolams->count(),
@@ -296,6 +301,8 @@ class DashboardController extends Controller
                     'uang_masuk' => $uangMasuk,
                     'uang_keluar' => $uangKeluar,
                     'keuntungan_kerugian' => $keuntunganKerugian,
+                    'sharing_terpakai' => min(100, $sharingTerpakai),
+                    'sharing_sisa' => max(0, 100 - $sharingTerpakai),
                 ];
             });
 

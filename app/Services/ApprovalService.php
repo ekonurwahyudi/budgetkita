@@ -77,6 +77,7 @@ class ApprovalService
 
         // Uang keluar dari saldo
         if ($class === 'GajiKaryawan') return 'kurang';
+        if ($class === 'SharingRevenue') return 'kurang';
         if ($class === 'PembelianPersediaan') return 'kurang';
         if ($class === 'PembelianAset') return 'kurang';
         if ($class === 'TransaksiKeuangan' && $model->jenis_transaksi === 'uang_keluar') return 'kurang';

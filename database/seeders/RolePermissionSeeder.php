@@ -28,6 +28,7 @@ class RolePermissionSeeder extends Seeder
             'gaji-karyawan' => ['view', 'create', 'edit', 'delete', 'approve'],
             'investasi' => ['view', 'create', 'edit', 'delete', 'approve'],
             'hutang-piutang' => ['view', 'create', 'edit', 'delete', 'approve'],
+            'sharing-revenue' => ['view', 'create', 'edit', 'delete', 'approve'],
             'laporan-keuangan' => ['view'],
             'persediaan' => ['view', 'create', 'edit', 'delete'],
             'pembelian-persediaan' => ['view', 'create', 'edit', 'delete', 'approve'],
@@ -88,6 +89,7 @@ class RolePermissionSeeder extends Seeder
                   ->orWhere('name', 'like', 'gaji-karyawan.%')
                   ->orWhere('name', 'like', 'investasi.%')
                   ->orWhere('name', 'like', 'hutang-piutang.%')
+                  ->orWhere('name', 'like', 'sharing-revenue.%')
                   ->orWhere('name', 'like', 'keuangan.view')
                   ->orWhere('name', 'like', 'laporan-keuangan.view')
                   ->orWhere('name', 'like', 'operasional.view');

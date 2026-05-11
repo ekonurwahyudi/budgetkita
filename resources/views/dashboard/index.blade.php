@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard')
-@section('page-title', 'Dashboard')
+@section('page-title', 'Selamat Datang, ' . (auth()->user()->nama ?? 'User') . ' 👋')
 @section('page-description', 'Ringkasan data keuangan, operasional & budidaya')
 
 @push('styles')
@@ -51,7 +51,7 @@
         <i class="ki-filled ki-geolocation text-4xl text-primary"></i>
     </div>
     <div class="flex flex-col items-center gap-2 text-center">
-        <h2 class="text-xl font-semibold text-mono">Selamat Datang, {{ auth()->user()->nama ?? 'User' }} 👋</h2>
+        <h2 class="text-xl font-semibold text-mono"></h2>
         <p class="text-sm text-secondary-foreground max-w-md">Anda belum memiliki tambak. Mulai dengan membuat tambak pertama Anda.</p>
     </div>
     <button type="button" class="kt-btn kt-btn-primary" onclick="KTModal.getInstance(document.querySelector('#tambakModal')).show()">
@@ -210,7 +210,7 @@
                         default => 'Gagal',
                     };
                 @endphp
-                <a href="{{ route('siklus.show', $siklusItem['id']) }}" class="relative overflow-hidden rounded-lg border border-border bg-card p-4 hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer group">
+                <div class="relative overflow-hidden rounded-lg border border-border bg-card p-4 hover:ring-2 hover:ring-primary/20 transition-all group">
                     <div class="absolute inset-x-0 top-0 h-1 {{ $siklusItem['status'] === 'aktif' ? 'bg-warning' : ($siklusItem['status'] === 'selesai' ? 'bg-success' : 'bg-muted') }}"></div>
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <div class="flex items-center gap-3 min-w-0">
@@ -247,13 +247,33 @@
                                 {{ $isProfit ? '+' : '-' }}Rp {{ number_format(abs($siklusItem['keuntungan_kerugian']), 0, ',', '.') }}
                             </span>
                         </div>
+                        <div class="rounded-lg bg-accent/40 border border-border p-2.5">
+                            <div class="flex items-center justify-between text-xs mb-2">
+                                <span class="text-secondary-foreground font-medium">Sisa Sharing</span>
+                                <span class="text-mono font-bold text-primary">{{ number_format($siklusItem['sharing_sisa'], 2, ',', '.') }}%</span>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div class="h-full rounded-full bg-primary" style="width: {{ min(100, $siklusItem['sharing_terpakai']) }}%;"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] text-muted-foreground mt-1.5">
+                                <span>Terpakai {{ number_format($siklusItem['sharing_terpakai'], 2, ',', '.') }}%</span>
+                                <span>Total 100%</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mt-3 flex items-center justify-end">
-                        <span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                            Lihat Detail <i class="ki-filled ki-arrow-right text-[10px]"></i>
-                        </span>
+                    <div class="mt-3 flex items-center justify-between gap-2">
+                        <a href="{{ route('siklus.show', $siklusItem['id']) }}" class="kt-btn kt-btn-sm kt-btn-outline">
+                            <i class="ki-filled ki-eye"></i> Detail
+                        </a>
+                        @can('sharing-revenue.create')
+                        @if($siklusItem['status'] === 'selesai' && $siklusItem['sharing_sisa'] > 0)
+                        <a href="{{ route('sharing-revenue.create', ['blok_id' => $siklusItem['blok_id'], 'siklus_id' => $siklusItem['id']]) }}" class="kt-btn kt-btn-sm kt-btn-primary">
+                            <i class="ki-filled ki-percentage"></i> Sharing Revenue
+                        </a>
+                        @endif
+                        @endcan
                     </div>
-                </a>
+                </div>
                 @endforeach
             </div>
         </div>

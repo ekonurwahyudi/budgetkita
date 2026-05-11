@@ -38,8 +38,9 @@
 
     {{-- Summary & Rekonsiliasi --}}
     @php
-        $totalMasuk  = $histories->where('jenis', 'masuk')->sum('nominal');
-        $totalKeluar = $histories->where('jenis', 'keluar')->sum('nominal');
+        $summaryHistories = $allHistories ?? $histories;
+        $totalMasuk  = $summaryHistories->where('jenis', 'masuk')->sum('nominal');
+        $totalKeluar = $summaryHistories->where('jenis', 'keluar')->sum('nominal');
         $mutasiBersih = $totalMasuk - $totalKeluar;
         $saldoAwalHitung = $account_bank->saldo - $mutasiBersih;
     @endphp
@@ -143,6 +144,72 @@
         <div>
             <p class="font-medium text-emerald-800">Saldo Sinkron</p>
             <p class="text-sm text-emerald-700">Saldo tersimpan sesuai dengan perhitungan dari history transaksi.</p>
+        </div>
+    </div>
+    @endif
+
+    {{-- Tabel Sharing Revenue --}}
+    @if(($sharingRevenueHistories ?? collect())->count() > 0)
+    <div class="kt-card">
+        <div class="kt-card-header min-h-14">
+            <h3 class="kt-card-title">Sharing Revenue</h3>
+            <span class="text-sm text-muted-foreground">{{ $sharingRevenueHistories->count() }} transaksi</span>
+        </div>
+        <div class="kt-card-table">
+            <div class="kt-table-wrapper kt-scrollable">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th class="w-12">No</th>
+                            <th>Tanggal</th>
+                            <th>No. Referensi</th>
+                            <th>Keterangan</th>
+                            <th>Nominal</th>
+                            <th>Status</th>
+                            <th>Saldo</th>
+                            <th class="w-16">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($sharingRevenueHistories as $i => $h)
+                        <tr>
+                            <td>{{ $i + 1 }}</td>
+                            <td>{{ $h['tanggal'] instanceof \Carbon\Carbon ? $h['tanggal']->format('d/m/Y') : (\Carbon\Carbon::parse($h['tanggal'])->format('d/m/Y')) }}</td>
+                            <td class="text-mono text-xs">{{ Str::limit($h['nomor'], 20) }}</td>
+                            <td>{{ Str::limit($h['keterangan'], 50) }}</td>
+                            <td class="text-mono font-medium text-danger">
+                                - Rp {{ number_format($h['nominal'], 0, ',', '.') }}
+                            </td>
+                            <td>
+                                @if($h['status'] === 'selesai')
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
+                                @elseif($h['status'] === 'cancel')
+                                    <span class="kt-badge kt-badge-sm kt-badge-destructive">Cancel</span>
+                                @elseif($h['status'] === 'proses')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary">Proses</span>
+                                @elseif($h['status'] === 'pending')
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning">Pending</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-outline">Awaiting</span>
+                                @endif
+                            </td>
+                            <td class="text-mono font-medium">
+                                Rp {{ number_format($h['running_balance'], 0, ',', '.') }}
+                            </td>
+                            <td class="text-end">
+                                @if(!empty($h['view_url']))
+                                <a href="{{ $h['view_url'] }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Lihat Detail">
+                                    <i class="ki-filled ki-eye"></i>
+                                </a>
+                                @else
+                                <span class="text-xs text-muted-foreground">-</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     @endif

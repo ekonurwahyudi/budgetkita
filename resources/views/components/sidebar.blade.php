@@ -41,10 +41,11 @@ $keuanganMainMenus = [
                     ['url' => '/keuangan/gaji', 'icon' => 'ki-people', 'label' => 'Gaji Karyawan', 'perm' => 'gaji-karyawan.view'],
                     ['url' => '/keuangan/investasi', 'icon' => 'ki-chart-line-up-2', 'label' => 'Investasi', 'perm' => 'investasi.view'],
                     ['url' => '/keuangan/hutang-piutang', 'icon' => 'ki-bill', 'label' => 'Hutang/Piutang', 'perm' => 'hutang-piutang.view'],
+                    ['url' => '/keuangan/sharing-revenue', 'icon' => 'ki-percentage', 'label' => 'Sharing Revenue', 'perm' => 'sharing-revenue.view'],
                 ];
                 $showKeuangan = collect(array_merge($keuanganMainMenus, $transaksiLainnyaMenus))->contains(fn($m) => auth()->user()?->can($m['perm']));
                 $showTransaksiLainnya = collect($transaksiLainnyaMenus)->contains(fn($m) => auth()->user()?->can($m['perm']));
-                $transaksiLainnyaActive = request()->is('keuangan/gaji*') || request()->is('keuangan/investasi*') || request()->is('keuangan/hutang-piutang*');
+                $transaksiLainnyaActive = request()->is('keuangan/gaji*') || request()->is('keuangan/investasi*') || request()->is('keuangan/hutang-piutang*') || request()->is('keuangan/sharing-revenue*');
                 @endphp
                 @if($showKeuangan)
                 <div class="kt-menu-item pt-2.25 pb-px">

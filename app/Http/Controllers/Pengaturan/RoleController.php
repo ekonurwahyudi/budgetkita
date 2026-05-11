@@ -21,7 +21,7 @@ class RoleController extends Controller
             ],
             'Keuangan' => [
                 'transaksi-keuangan', 'gaji-karyawan',
-                'investasi', 'hutang-piutang',
+                'investasi', 'hutang-piutang', 'sharing-revenue',
                 'laporan-keuangan',
             ],
             'Operasional' => [
@@ -52,6 +52,7 @@ class RoleController extends Controller
             'gaji-karyawan' => 'Gaji Karyawan',
             'investasi' => 'Investasi',
             'hutang-piutang' => 'Hutang/Piutang',
+            'sharing-revenue' => 'Sharing Revenue',
             'laporan-keuangan' => 'Laporan Keuangan',
             'persediaan' => 'Persediaan',
             'pembelian-persediaan' => 'Pembelian Persediaan',

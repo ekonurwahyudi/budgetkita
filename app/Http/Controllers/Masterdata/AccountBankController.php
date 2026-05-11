@@ -13,6 +13,7 @@ use App\Models\PembelianAset;
 use App\Models\PembelianPersediaan;
 use App\Models\TransaksiKeuangan;
 use App\Models\SaldoAdjustment;
+use App\Models\SharingRevenue;
 use App\Models\TransferSaldo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -167,7 +168,23 @@ class AccountBankController extends Controller
                 'jenis'     => 'masuk',
                 'nominal'   => $t->total_penjualan,
                 'status'    => $t->status,
-                'view_url'  => null,
+                'view_url'  => route('panen.show', $t->id),
+            ]));
+
+        SharingRevenue::with(['blok', 'siklus'])
+            ->where('account_bank_id', $id)
+            ->where('jenis_pembayaran', 'bank')
+            ->where('status', 'selesai')
+            ->get()
+            ->each(fn($t) => $histories->push([
+                'tanggal'   => $t->created_at,
+                'modul'     => 'Sharing Revenue',
+                'nomor'     => $t->nomor_transaksi,
+                'keterangan'=> 'Sharing revenue ' . $t->nama_penerima . ' - ' . ($t->blok?->nama_blok ?? '-') . ' / ' . ($t->siklus?->nama_siklus ?? '-'),
+                'jenis'     => 'keluar',
+                'nominal'   => $t->nominal,
+                'status'    => $t->status,
+                'view_url'  => route('sharing-revenue.show', $t->id),
             ]));
 
         TransferSaldo::with('keBank')->where('dari_account_bank_id', $id)->get()
@@ -242,7 +259,13 @@ class AccountBankController extends Controller
         }
 
         // Sort by tanggal desc untuk tampilan
-        $histories = $historiesWithBalance->sortByDesc('tanggal')->values();
+        $allHistories = $historiesWithBalance->sortByDesc('tanggal')->values();
+        $sharingRevenueHistories = $allHistories
+            ->where('modul', 'Sharing Revenue')
+            ->values();
+        $histories = $allHistories
+            ->reject(fn($h) => $h['modul'] === 'Sharing Revenue')
+            ->values();
 
         // Data rekonsiliasi (hanya dari transaksi bisnis)
         $saldoAwalAsli = $account_bank->saldo_awal;
@@ -250,7 +273,15 @@ class AccountBankController extends Controller
         $selisih = $saldoSeharusnya !== null ? (float) $account_bank->saldo - $saldoSeharusnya : null;
 
         return view('masterdata.account-bank.show', compact(
-            'account_bank', 'histories', 'adjustments', 'totalNetChange', 'saldoAwalTerhitung', 'saldoSeharusnya', 'selisih'
+            'account_bank',
+            'histories',
+            'allHistories',
+            'sharingRevenueHistories',
+            'adjustments',
+            'totalNetChange',
+            'saldoAwalTerhitung',
+            'saldoSeharusnya',
+            'selisih'
         ));
     }
 

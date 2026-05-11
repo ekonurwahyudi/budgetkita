@@ -28,8 +28,8 @@
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-sm font-medium text-foreground">Jenis Transaksi <span class="text-danger">*</span></label>
                                 <select name="jenis_transaksi" id="jenis_transaksi" class="kt-select" required>
-                                    <option value="uang_masuk" {{ old('jenis_transaksi', $transaksi?->jenis_transaksi) === 'uang_masuk' ? 'selected' : '' }}>Uang Masuk</option>
-                                    <option value="uang_keluar" {{ old('jenis_transaksi', $transaksi?->jenis_transaksi) === 'uang_keluar' ? 'selected' : '' }}>Uang Keluar</option>
+                                    <option value="uang_masuk" {{ old('jenis_transaksi', $transaksi?->jenis_transaksi ?? 'uang_keluar') === 'uang_masuk' ? 'selected' : '' }}>Uang Masuk</option>
+                                    <option value="uang_keluar" {{ old('jenis_transaksi', $transaksi?->jenis_transaksi ?? 'uang_keluar') === 'uang_keluar' ? 'selected' : '' }}>Uang Keluar</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-1.5">

@@ -80,34 +80,85 @@ class DashboardController extends Controller
 
         $labaRugi = $totalPendapatan - $totalPengeluaran;
 
-        // === Charts (12 months, unfiltered for trend) ===
-        $penjualanBulanan = Panen::where('status', 'selesai')
-            ->where('tgl_panen', '>=', now()->subMonths(12))
+        $pengeluaranKategori = (clone $transaksiScope)
+            ->with('kategoriTransaksi')
+            ->where('jenis_transaksi', 'uang_keluar')
+            ->get()
+            ->groupBy(fn($transaksi) => $transaksi->kategoriTransaksi?->deskripsi ?? 'Tanpa Kategori')
+            ->map(fn($items, $kategori) => [
+                'kategori' => $kategori,
+                'total' => (float) $items->sum('nominal'),
+            ])
+            ->sortByDesc('total')
+            ->values();
+
+        // === Charts (calendar year, same sources as stat cards) ===
+        $chartStart = now()->startOfYear();
+
+        $pendapatanTransaksiBulanan = TransaksiKeuangan::query()
+            ->where('jenis_transaksi', 'uang_masuk')
+            ->where('status', 'selesai')
+            ->when($filterSiklus, fn($q) => $q->where('siklus_id', $filterSiklus))
+            ->when(!$filterSiklus && $filterBlok, fn($q) => $q->whereHas('siklus', fn($sq) => $sq->where('blok_id', $filterBlok)))
+            ->where('tgl_kwitansi', '>=', $chartStart)
+            ->selectRaw("TO_CHAR(tgl_kwitansi, 'YYYY-MM') as bulan, SUM(nominal) as total")
+            ->groupBy('bulan')->orderBy('bulan')
+            ->pluck('total', 'bulan');
+
+        $pendapatanPanenBulanan = Panen::query()
+            ->where('status', 'selesai')
+            ->when($filterSiklus, fn($q) => $q->where('siklus_id', $filterSiklus))
+            ->when(!$filterSiklus && $filterBlok, fn($q) => $q->whereHas('siklus.blok', fn($sq) => $sq->where('id', $filterBlok)))
+            ->where('tgl_panen', '>=', $chartStart)
             ->selectRaw("TO_CHAR(tgl_panen, 'YYYY-MM') as bulan, SUM(total_penjualan) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
-        $pendapatanBulanan = TransaksiKeuangan::where('jenis_transaksi', 'uang_masuk')
+        $pengeluaranTransaksiBulanan = TransaksiKeuangan::query()
+            ->where('jenis_transaksi', 'uang_keluar')
             ->where('status', 'selesai')
-            ->where('tgl_kwitansi', '>=', now()->subMonths(12))
+            ->when($filterSiklus, fn($q) => $q->where('siklus_id', $filterSiklus))
+            ->when(!$filterSiklus && $filterBlok, fn($q) => $q->whereHas('siklus', fn($sq) => $sq->where('blok_id', $filterBlok)))
+            ->where('tgl_kwitansi', '>=', $chartStart)
             ->selectRaw("TO_CHAR(tgl_kwitansi, 'YYYY-MM') as bulan, SUM(nominal) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
-        $pengeluaranBulanan = TransaksiKeuangan::where('jenis_transaksi', 'uang_keluar')
+        $pengeluaranGajiBulanan = GajiKaryawan::query()
             ->where('status', 'selesai')
-            ->where('tgl_kwitansi', '>=', now()->subMonths(12))
-            ->selectRaw("TO_CHAR(tgl_kwitansi, 'YYYY-MM') as bulan, SUM(nominal) as total")
+            ->where('created_at', '>=', $chartStart)
+            ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as bulan, SUM(thp) as total")
+            ->groupBy('bulan')->orderBy('bulan')
+            ->pluck('total', 'bulan');
+
+        $pengeluaranPersediaanBulanan = PembelianPersediaan::query()
+            ->join('pembelian_persediaan_items', 'pembelian_persediaans.id', '=', 'pembelian_persediaan_items.pembelian_persediaan_id')
+            ->where('pembelian_persediaans.status', 'selesai')
+            ->where('pembelian_persediaans.tgl_pembelian', '>=', $chartStart)
+            ->selectRaw("TO_CHAR(pembelian_persediaans.tgl_pembelian, 'YYYY-MM') as bulan, SUM(pembelian_persediaan_items.harga_total) as total")
+            ->groupBy('bulan')->orderBy('bulan')
+            ->pluck('total', 'bulan');
+
+        $pengeluaranAsetBulanan = PembelianAset::query()
+            ->where('status', 'selesai')
+            ->where('tgl_pembelian', '>=', $chartStart)
+            ->selectRaw("TO_CHAR(tgl_pembelian, 'YYYY-MM') as bulan, SUM(nominal_pembelian) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
         $allMonths = collect();
-        for ($i = 11; $i >= 0; $i--) {
-            $allMonths->push(now()->subMonths($i)->format('Y-m'));
+        for ($month = 1; $month <= 12; $month++) {
+            $allMonths->push(now()->startOfYear()->month($month)->format('Y-m'));
         }
-        $pendapatanChart = $allMonths->mapWithKeys(fn($m) => [$m => (float)($pendapatanBulanan[$m] ?? 0)]);
-        $pengeluaranChart = $allMonths->mapWithKeys(fn($m) => [$m => (float)($pengeluaranBulanan[$m] ?? 0)]);
-        $penjualanChart = $allMonths->mapWithKeys(fn($m) => [$m => (float)($penjualanBulanan[$m] ?? 0)]);
+        $pendapatanChart = $allMonths->mapWithKeys(fn($m) => [
+            $m => (float)($pendapatanTransaksiBulanan[$m] ?? 0) + (float)($pendapatanPanenBulanan[$m] ?? 0),
+        ]);
+        $pengeluaranChart = $allMonths->mapWithKeys(fn($m) => [
+            $m => (float)($pengeluaranTransaksiBulanan[$m] ?? 0)
+                + (float)($pengeluaranGajiBulanan[$m] ?? 0)
+                + (float)($pengeluaranPersediaanBulanan[$m] ?? 0)
+                + (float)($pengeluaranAsetBulanan[$m] ?? 0),
+        ]);
 
         // === Stok Persediaan ===
         $stokPersediaan = Persediaan::with('itemPersediaan.kategoriPersediaan')
@@ -116,9 +167,28 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
         $stokPersediaanCount = Persediaan::where('qty', '>', 0)->count();
+        $stokMinimumCount = Persediaan::whereNotNull('minimum_stok')
+            ->where('minimum_stok', '>', 0)
+            ->whereColumn('qty', '<=', 'minimum_stok')
+            ->count();
 
         // === Account Banks ===
         $accountBanks = AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
+        $totalSaldoBank = $accountBanks->sum('saldo');
+
+        // === Hutang & Piutang ===
+        $hutangPiutangs = HutangPiutang::where('status', '!=', 'cancel')->get();
+        $totalHutang = $hutangPiutangs->where('jenis', 'hutang')->sum(fn($item) => $item->total_bayar ?? $item->nominal ?? 0);
+        $sisaHutang = $hutangPiutangs->where('jenis', 'hutang')->sum(fn($item) => $item->sisa_pembayaran ?? ($item->total_bayar ?? $item->nominal ?? 0));
+        $totalPiutang = $hutangPiutangs->where('jenis', 'piutang')->sum('nominal');
+        $sisaPiutang = $hutangPiutangs->where('jenis', 'piutang')->sum(fn($item) => $item->sisa_pembayaran ?? $item->nominal ?? 0);
+        $hutangPiutangBelumLunas = $hutangPiutangs->filter(fn($item) => (float) ($item->sisa_pembayaran ?? $item->nominal ?? 0) > 0);
+        $hutangPiutangTelat = $hutangPiutangBelumLunas->filter(fn($item) => $item->jatuh_tempo && $item->jatuh_tempo->isPast());
+        $hutangPiutangDeadline = $hutangPiutangBelumLunas->filter(fn($item) => $item->jatuh_tempo && !$item->jatuh_tempo->isPast() && $item->jatuh_tempo->lte(now()->addDays(7)));
+        $hutangPiutangTelatCount = $hutangPiutangTelat->count();
+        $hutangPiutangDeadlineCount = $hutangPiutangDeadline->count();
+        $hutangPiutangTelatNominal = $hutangPiutangTelat->sum(fn($item) => $item->sisa_pembayaran ?? $item->nominal ?? 0);
+        $hutangPiutangDeadlineNominal = $hutangPiutangDeadline->sum(fn($item) => $item->sisa_pembayaran ?? $item->nominal ?? 0);
 
         // === Operasional ===
         $totalTambak = Tambak::count();
@@ -132,9 +202,13 @@ class DashboardController extends Controller
             'bloks', 'sikluses',
             'filterBlok', 'filterSiklus', 'filterDateFrom', 'filterDateTo',
             'totalInvestasi', 'totalPendapatan', 'totalPengeluaran', 'labaRugi',
-            'penjualanChart', 'pendapatanChart', 'pengeluaranChart', 'allMonths',
-            'stokPersediaan', 'stokPersediaanCount',
-            'accountBanks',
+            'pengeluaranKategori',
+            'pendapatanChart', 'pengeluaranChart', 'allMonths',
+            'stokPersediaan', 'stokPersediaanCount', 'stokMinimumCount',
+            'accountBanks', 'totalSaldoBank',
+            'totalHutang', 'sisaHutang', 'totalPiutang', 'sisaPiutang',
+            'hutangPiutangTelatCount', 'hutangPiutangDeadlineCount',
+            'hutangPiutangTelatNominal', 'hutangPiutangDeadlineNominal',
             'totalTambak', 'totalBlok', 'kolamAktif', 'siklusAktif', 'nilaiAset'
         ));
     }

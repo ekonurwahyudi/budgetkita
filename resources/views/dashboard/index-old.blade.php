@@ -4,34 +4,6 @@
 @section('page-title', 'Dashboard')
 @section('page-description', 'Ringkasan data keuangan, operasional & budidaya')
 
-@push('styles')
-<style>
-    .dashboard-finance-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-    }
-
-    .dashboard-finance-counting,
-    .dashboard-finance-chart {
-        min-width: 0;
-    }
-
-    @media (min-width: 1024px) {
-        .dashboard-finance-grid {
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-        }
-
-        .dashboard-finance-counting {
-            grid-column: span 4 / span 4;
-        }
-
-        .dashboard-finance-chart {
-            grid-column: span 8 / span 8;
-        }
-    }
-</style>
-@endpush
-
 @section('page-actions')
 <div class="relative" id="filterWrapper">
     <button type="button" onclick="toggleFilter()" class="kt-btn kt-btn-outline kt-btn-sm">
@@ -122,19 +94,20 @@
 @else
 <div class="flex flex-col gap-5 lg:gap-7.5">
 
-    {{-- Row 1: 4 counting + 8 chart --}}
-    <div class="dashboard-finance-grid gap-5 lg:gap-7.5">
-        <div class="dashboard-finance-counting grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+    {{-- Row 1: 3 stat cards + chart --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
+        {{-- 3 stat cards --}}
+        <div class="flex flex-col gap-4">
             {{-- Total Investasi --}}
-            <a href="{{ route('investasi.index') }}" class="kt-card group block hover:ring-2 hover:ring-primary/30 transition-all">
-                <div class="kt-card-content p-4">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
+            <a href="{{ route('investasi.index') }}" class="kt-card hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer group">
+                <div class="kt-card-content p-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
                             <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(114,57,234,0.12);">
                                 <i class="ki-filled ki-graph-up text-lg" style="color:#7239ea;"></i>
                             </div>
-                            <div class="min-w-0">
-                                <p class="text-lg font-bold text-mono leading-tight truncate">Rp {{ number_format($totalInvestasi, 0, ',', '.') }}</p>
+                            <div>
+                                <p class="text-xl font-bold text-mono leading-tight">Rp {{ number_format($totalInvestasi, 0, ',', '.') }}</p>
                                 <p class="text-xs text-secondary-foreground">Total Investasi</p>
                             </div>
                         </div>
@@ -144,14 +117,14 @@
             </a>
             {{-- Total Pendapatan --}}
             <div class="kt-card hover:ring-2 hover:ring-green-500/30 transition-all cursor-pointer">
-                <div class="kt-card-content p-4">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
+                <div class="kt-card-content p-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
                             <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(23,198,83,0.12);">
                                 <i class="ki-filled ki-dollar text-lg" style="color:#17c653;"></i>
                             </div>
-                            <div class="min-w-0">
-                                <p class="text-lg font-bold text-mono text-green-600 leading-tight truncate">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
+                            <div>
+                                <p class="text-xl font-bold text-mono text-green-600 leading-tight">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
                                 <p class="text-xs text-secondary-foreground">Total Pendapatan</p>
                             </div>
                         </div>
@@ -161,14 +134,14 @@
             </div>
             {{-- Total Pengeluaran --}}
             <div class="kt-card hover:ring-2 hover:ring-red-500/30 transition-all cursor-pointer">
-                <div class="kt-card-content p-4">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
+                <div class="kt-card-content p-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
                             <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(241,65,108,0.12);">
                                 <i class="ki-filled ki-minus-circle text-lg" style="color:#f1416c;"></i>
                             </div>
-                            <div class="min-w-0">
-                                <p class="text-lg font-bold text-mono text-red-600 leading-tight truncate">Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
+                            <div>
+                                <p class="text-xl font-bold text-mono text-red-600 leading-tight">Rp {{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
                                 <p class="text-xs text-secondary-foreground">Total Pengeluaran</p>
                             </div>
                         </div>
@@ -176,53 +149,20 @@
                     </div>
                 </div>
             </div>
-            {{-- Total Revenue --}}
-            <div class="kt-card">
-                <div class="kt-card-content p-4">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="flex items-center justify-center size-10 rounded-xl shrink-0" style="background:rgba(0,158,247,0.12);">
-                                <i class="ki-filled ki-chart-line-up text-lg" style="color:#009ef7;"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-lg font-bold text-mono {{ $labaRugi >= 0 ? 'text-green-600' : 'text-red-600' }} leading-tight truncate">
-                                    {{ $labaRugi >= 0 ? '+' : '' }}Rp {{ number_format($labaRugi, 0, ',', '.') }}
-                                </p>
-                                <p class="text-xs text-secondary-foreground">Total Revenue</p>
-                            </div>
-                        </div>
-                        <span class="text-xs px-2 py-0.5 rounded-full shrink-0 {{ $labaRugi >= 0 ? 'text-[#17c653] bg-[#17c653]/10' : 'text-[#f1416c] bg-[#f1416c]/10' }}">
-                            {{ $labaRugi >= 0 ? 'Laba' : 'Rugi' }}
-                        </span>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        {{-- Pendapatan vs Pengeluaran chart --}}
-        <div class="dashboard-finance-chart kt-card">
-            <div class="kt-card-header border-b border-border flex items-center justify-between gap-4">
-                <div>
-                    <h3 class="kt-card-title">Selama 1 Tahun</h3>
-                    <p class="text-xs text-secondary-foreground mt-1">Pemasukan vs Pengeluaran</p>
-                </div>
-                <div class="flex items-center gap-4 text-sm text-[#536477]">
-                    <span class="flex items-center gap-2 whitespace-nowrap">
-                        <span class="size-3.5 rounded-full inline-block" style="background:#2563eb;"></span>
-                        Pemasukan
-                    </span>
-                    <span class="flex items-center gap-2 whitespace-nowrap">
-                        <span class="size-3.5 rounded-full inline-block" style="background:#f45b11;"></span>
-                        Pengeluaran
-                    </span>
-                </div>
+        {{-- Chart Penjualan --}}
+        <div class="kt-card lg:col-span-2">
+            <div class="kt-card-header border-b border-border">
+                <h3 class="kt-card-title">Hasil Panen</h3>
             </div>
             <div class="kt-card-content p-4">
-                <div id="chart_pendapatan_pengeluaran"></div>
+                <div id="chart_penjualan"></div>
             </div>
         </div>
     </div>
-    {{-- Row 2: Financial summaries --}}
+
+    {{-- Row 2: Highlights + Pendapatan vs Pengeluaran --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
         {{-- Highlights panel --}}
         <div class="kt-card">
@@ -289,104 +229,19 @@
             </div>
         </div>
 
-        {{-- Hutang & Piutang --}}
-        <div class="kt-card">
-            <div class="kt-card-header">
-                <h3 class="kt-card-title">Hutang & Piutang</h3>
+        {{-- Pendapatan vs Pengeluaran chart --}}
+        <div class="kt-card lg:col-span-2">
+            <div class="kt-card-header border-b border-border">
+                <h3 class="kt-card-title">Pendapatan vs Pengeluaran</h3>
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="flex items-center gap-1.5"><span class="size-2 rounded-full" style="background:#17c653;"></span> Pendapatan</span>
+                    <span class="flex items-center gap-1.5"><span class="size-2 rounded-full" style="background:#f1416c;"></span> Pengeluaran</span>
+                </div>
             </div>
-            <div class="kt-card-content p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                <div class="rounded-lg border border-border p-4">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <span class="text-xs text-secondary-foreground">Total Hutang</span>
-                        <span class="flex items-center justify-center size-8 rounded-lg" style="background:rgba(241,65,108,0.12);">
-                            <i class="ki-filled ki-arrow-down text-sm" style="color:#f1416c;"></i>
-                        </span>
-                    </div>
-                    <p class="text-sm 2xl:text-base font-bold text-mono text-red-600 leading-tight whitespace-nowrap">Rp {{ number_format($totalHutang, 0, ',', '.') }}</p>
-                </div>
-                <div class="rounded-lg border border-border p-4">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <span class="text-xs text-secondary-foreground">Sisa Hutang</span>
-                        <span class="flex items-center justify-center size-8 rounded-lg" style="background:rgba(245,91,17,0.12);">
-                            <i class="ki-filled ki-time text-sm" style="color:#f45b11;"></i>
-                        </span>
-                    </div>
-                    <p class="text-sm 2xl:text-base font-bold text-mono leading-tight whitespace-nowrap">Rp {{ number_format($sisaHutang, 0, ',', '.') }}</p>
-                </div>
-                <div class="rounded-lg border border-border p-4">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <span class="text-xs text-secondary-foreground">Total Piutang</span>
-                        <span class="flex items-center justify-center size-8 rounded-lg" style="background:rgba(23,198,83,0.12);">
-                            <i class="ki-filled ki-arrow-up text-sm" style="color:#17c653;"></i>
-                        </span>
-                    </div>
-                    <p class="text-sm 2xl:text-base font-bold text-mono text-green-600 leading-tight whitespace-nowrap">Rp {{ number_format($totalPiutang, 0, ',', '.') }}</p>
-                </div>
-                <div class="rounded-lg border border-border p-4">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <span class="text-xs text-secondary-foreground">Sisa Piutang</span>
-                        <span class="flex items-center justify-center size-8 rounded-lg" style="background:rgba(37,99,235,0.12);">
-                            <i class="ki-filled ki-calendar-tick text-sm" style="color:#2563eb;"></i>
-                        </span>
-                    </div>
-                    <p class="text-sm 2xl:text-base font-bold text-mono leading-tight whitespace-nowrap">Rp {{ number_format($sisaPiutang, 0, ',', '.') }}</p>
-                </div>
-                <div class="rounded-lg border border-border p-4">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <span class="text-xs text-secondary-foreground">Telat Bayar</span>
-                        <span class="flex items-center justify-center size-8 rounded-lg" style="background:rgba(241,65,108,0.12);">
-                            <i class="ki-filled ki-time text-sm" style="color:#f1416c;"></i>
-                        </span>
-                    </div>
-                    <p class="text-sm 2xl:text-base font-bold text-mono text-red-600 leading-tight whitespace-nowrap">Rp {{ number_format($hutangPiutangTelatNominal, 0, ',', '.') }}</p>
-                </div>
-                <div class="rounded-lg border border-border p-4">
-                    <div class="flex items-center justify-between gap-3 mb-3">
-                        <span class="text-xs text-secondary-foreground">Deadline</span>
-                        <span class="flex items-center justify-center size-8 rounded-lg" style="background:rgba(255,199,0,0.16);">
-                            <i class="ki-filled ki-calendar-tick text-sm" style="color:#f6b100;"></i>
-                        </span>
-                    </div>
-                    <p class="text-sm 2xl:text-base font-bold text-mono text-warning leading-tight whitespace-nowrap">Rp {{ number_format($hutangPiutangDeadlineNominal, 0, ',', '.') }}</p>
-                </div>
+            <div class="kt-card-content p-4">
+                <div id="chart_pendapatan_pengeluaran"></div>
             </div>
         </div>
-
-        {{-- Transaction categories --}}
-        <div class="kt-card">
-            <div class="kt-card-header">
-                <div>
-                    <h3 class="kt-card-title">Kategori Transaksi</h3>
-                    <p class="text-xs text-secondary-foreground mt-0.5">Pengeluaran berdasarkan kategori</p>
-                </div>
-            </div>
-            <div class="kt-card-content p-5">
-                @if($pengeluaranKategori->count())
-                @php
-                    $maxKategoriTotal = max((float) $pengeluaranKategori->max('total'), 1);
-                @endphp
-                <div class="flex flex-col gap-4">
-                    @foreach($pengeluaranKategori->take(6) as $kategori)
-                    @php
-                        $kategoriPct = round(((float) $kategori['total'] / $maxKategoriTotal) * 100);
-                    @endphp
-                    <div class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-sm font-medium truncate">{{ $kategori['kategori'] }}</span>
-                            <span class="text-sm font-semibold text-mono whitespace-nowrap">Rp {{ number_format($kategori['total'], 0, ',', '.') }}</span>
-                        </div>
-                        <div class="h-2 rounded-full bg-muted overflow-hidden">
-                            <div class="h-full rounded-full" style="width:{{ $kategoriPct }}%; background:#2563eb;"></div>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-                @else
-                <div class="py-8 text-center text-muted-foreground text-sm">Belum ada data kategori transaksi</div>
-                @endif
-            </div>
-        </div>
-
     </div>
 
     {{-- Row 3: Stok Persediaan Table --}}
@@ -644,57 +499,40 @@ document.addEventListener('DOMContentLoaded', function() {
     var shortMonths = months.map(function(m) {
         var p = m.split('-');
         var n = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-        return n[parseInt(p[1])-1];
+        return n[parseInt(p[1])-1] + " '" + p[0].slice(2);
     });
 
-    var baseGrid = { borderColor: '#e6edf5', strokeDashArray: 0, padding: { left: 8, right: 12 } };
+    var baseGrid = { borderColor: 'rgba(0,0,0,0.06)', strokeDashArray: 4, padding: { left: 0, right: 0 } };
     var baseFont = { fontFamily: 'Onest, sans-serif' };
 
+    new ApexCharts(document.querySelector('#chart_penjualan'), {
+        chart: Object.assign({ type: 'area', height: 200, toolbar: { show: false }, sparkline: { enabled: false } }, baseFont),
+        series: [{ name: 'Penjualan', data: @json(array_values($penjualanChart->toArray())) }],
+        xaxis: { categories: shortMonths, labels: { style: { fontSize: '10px', colors: '#99a1b7' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { labels: { formatter: function(v) { return v >= 1000000 ? (v/1000000).toFixed(0)+'jt' : (v/1000).toFixed(0)+'rb'; }, style: { fontSize: '10px', colors: '#99a1b7' } } },
+        tooltip: { y: { formatter: function(v) { return 'Rp ' + Number(v).toLocaleString('id-ID'); } } },
+        colors: ['#17c653'],
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02, stops: [0, 100] } },
+        stroke: { curve: 'smooth', width: 2 },
+        dataLabels: { enabled: false },
+        grid: baseGrid,
+        markers: { size: 0 },
+    }).render();
+
     new ApexCharts(document.querySelector('#chart_pendapatan_pengeluaran'), {
-        chart: Object.assign({ type: 'area', height: 320, toolbar: { show: false }, zoom: { enabled: false } }, baseFont),
+        chart: Object.assign({ type: 'bar', height: 260, toolbar: { show: false } }, baseFont),
         series: [
-            { name: 'Pemasukan', data: @json(array_values($pendapatanChart->toArray())) },
+            { name: 'Pendapatan', data: @json(array_values($pendapatanChart->toArray())) },
             { name: 'Pengeluaran', data: @json(array_values($pengeluaranChart->toArray())) }
         ],
-        xaxis: {
-            categories: shortMonths,
-            labels: { style: { fontSize: '12px', colors: '#536477', fontWeight: 500 } },
-            axisBorder: { show: false },
-            axisTicks: { show: false }
-        },
-        yaxis: {
-            min: 0,
-            labels: {
-                formatter: function(v) {
-                    return 'Rp ' + (v / 1000000).toFixed(0) + 'jt';
-                },
-                style: { fontSize: '12px', colors: '#536477', fontWeight: 500 }
-            }
-        },
-        tooltip: {
-            shared: true,
-            intersect: false,
-            y: { formatter: function(v) { return 'Rp ' + Number(v).toLocaleString('id-ID'); } }
-        },
-        colors: ['#2563eb', '#f45b11'],
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shadeIntensity: 0.4,
-                opacityFrom: 0.16,
-                opacityTo: 0.04,
-                stops: [0, 100]
-            }
-        },
-        stroke: { curve: 'smooth', width: 3 },
+        xaxis: { categories: shortMonths, labels: { style: { fontSize: '10px', colors: '#99a1b7' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { labels: { formatter: function(v) { return v >= 1000000 ? (v/1000000).toFixed(0)+'jt' : (v/1000).toFixed(0)+'rb'; }, style: { fontSize: '10px', colors: '#99a1b7' } } },
+        tooltip: { y: { formatter: function(v) { return 'Rp ' + Number(v).toLocaleString('id-ID'); } } },
+        colors: ['#17c653', '#f1416c'],
+        plotOptions: { bar: { columnWidth: '50%', borderRadius: 3, borderRadiusApplication: 'end' } },
         dataLabels: { enabled: false },
         legend: { show: false },
         grid: baseGrid,
-        markers: {
-            size: 5,
-            strokeWidth: 0,
-            hover: { size: 7 }
-        },
     }).render();
 });
 </script>

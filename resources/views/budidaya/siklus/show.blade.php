@@ -5,56 +5,68 @@
 @section('page-description', $siklus->nama_siklus)
 
 @section('content')
+@php
+    $totalPanen = $siklus->panens->sum('total_penjualan') ?? 0;
+    $totalTransaksiMasuk = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal') ?? 0;
+    $totalTransaksiKeluar = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal') ?? 0;
+    $isProfit = ($keuntunganKerugian ?? 0) >= 0;
+    $formatJumlah = fn($value) => rtrim(rtrim(number_format((float) ($value ?? 0), 2, ',', '.'), '0'), ',');
+@endphp
+
 {{-- Stat Cards --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-7.5 mb-5 lg:mb-7.5">
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-5 lg:mb-7.5">
     {{-- Uang Masuk --}}
-    <div class="kt-card hover:ring-2 hover:ring-green-500/30 transition-all cursor-pointer group" onclick="openDetailModal('uangMasuk')">
+    <div class="kt-card overflow-hidden border-success/20 hover:ring-2 hover:ring-success/20 transition-all cursor-pointer group" onclick="openDetailModal('uangMasuk')">
         <div class="kt-card-content p-5">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center size-10 rounded-lg shrink-0" style="background:rgba(23,198,83,0.12);">
-                        <i class="ki-filled ki-basket text-lg" style="color:#17c653;"></i>
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex flex-col gap-2 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-success"></span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Uang Masuk</span>
                     </div>
-                    <div>
-                        <p class="text-xs text-secondary-foreground">Uang Masuk</p>
-                        <p class="text-lg font-bold text-mono text-green-600 leading-tight">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</p>
-                    </div>
+                    <span class="text-2xl font-semibold text-mono text-success leading-none truncate">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-xs text-muted-foreground">{{ $detailPanen->count() }} panen, {{ $detailTransaksiMasuk->count() }} transaksi masuk</span>
                 </div>
+                <span class="size-11 rounded-lg bg-success/10 text-success flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-basket text-xl"></i>
+                </span>
             </div>
-            <div class="pt-3 border-t border-border/50 flex flex-col gap-1.5">
+            <div class="pt-3 border-t border-border/60 flex flex-col gap-2">
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Hasil Panen</span>
-                    <span class="text-mono font-medium">Rp {{ number_format($siklus->panens->sum('total_penjualan') ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalPanen, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Transaksi Masuk</span>
-                    <span class="text-mono font-medium">Rp {{ number_format($transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal') ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalTransaksiMasuk, 0, ',', '.') }}</span>
                 </div>
             </div>
             <div class="mt-3 flex items-center justify-end">
-                <span class="text-xs font-medium text-green-600 group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                <span class="text-xs font-medium text-success group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
             </div>
         </div>
     </div>
 
     {{-- Uang Keluar --}}
-    <div class="kt-card hover:ring-2 hover:ring-red-500/30 transition-all cursor-pointer group" onclick="openDetailModal('uangKeluar')">
+    <div class="kt-card overflow-hidden border-destructive/20 hover:ring-2 hover:ring-destructive/20 transition-all cursor-pointer group" onclick="openDetailModal('uangKeluar')">
         <div class="kt-card-content p-5">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center size-10 rounded-lg shrink-0" style="background:rgba(241,65,108,0.12);">
-                        <i class="ki-filled ki-cheque text-lg" style="color:#f1416c;"></i>
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex flex-col gap-2 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-destructive"></span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Uang Keluar</span>
                     </div>
-                    <div>
-                        <p class="text-xs text-secondary-foreground">Uang Keluar</p>
-                        <p class="text-lg font-bold text-mono text-red-600 leading-tight">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</p>
-                    </div>
+                    <span class="text-2xl font-semibold text-mono text-destructive leading-none truncate">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-xs text-muted-foreground">{{ $detailTransaksiKeluar->count() }} transaksi, {{ $pemberianPakans->count() + $pemberianKimia->count() }} pemakaian stok</span>
                 </div>
+                <span class="size-11 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-cheque text-xl"></i>
+                </span>
             </div>
-            <div class="pt-3 border-t border-border/50 flex flex-col gap-1.5">
+            <div class="pt-3 border-t border-border/60 flex flex-col gap-2">
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Transaksi Keluar</span>
-                    <span class="text-mono font-medium">Rp {{ number_format($transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal') ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalTransaksiKeluar, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Pakan</span>
@@ -66,40 +78,39 @@
                 </div>
             </div>
             <div class="mt-3 flex items-center justify-end">
-                <span class="text-xs font-medium text-red-600 group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                <span class="text-xs font-medium text-destructive group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
             </div>
         </div>
     </div>
 
     {{-- Keuntungan/Kerugian --}}
-    @php
-        $isProfit = ($keuntunganKerugian ?? 0) >= 0;
-    @endphp
-    <div class="kt-card hover:ring-2 hover:ring-{{ $isProfit ? 'green' : 'red' }}-500/30 transition-all cursor-pointer group" onclick="openDetailModal('keuntungan')">
+    <div class="kt-card overflow-hidden {{ $isProfit ? 'border-success/20 hover:ring-success/20' : 'border-destructive/20 hover:ring-destructive/20' }} hover:ring-2 transition-all cursor-pointer group" onclick="openDetailModal('keuntungan')">
         <div class="kt-card-content p-5">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center size-10 rounded-lg shrink-0" style="background:rgba({{ $isProfit ? '23,198,83' : '241,65,108' }},0.12);">
-                        <i class="ki-filled ki-wallet text-lg" style="color:{{ $isProfit ? '#17c653' : '#f1416c' }};"></i>
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex flex-col gap-2 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full {{ $isProfit ? 'bg-success' : 'bg-destructive' }}"></span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ $isProfit ? 'Keuntungan' : 'Kerugian' }}</span>
                     </div>
-                    <div>
-                        <p class="text-xs text-secondary-foreground">{{ $isProfit ? 'Keuntungan' : 'Kerugian' }}</p>
-                        <p class="text-lg font-bold text-mono {{ $isProfit ? 'text-green-600' : 'text-red-600' }} leading-tight">{{ $isProfit ? '' : '-' }}Rp {{ number_format(abs($keuntunganKerugian ?? 0), 0, ',', '.') }}</p>
-                    </div>
+                    <span class="text-2xl font-semibold text-mono {{ $isProfit ? 'text-success' : 'text-destructive' }} leading-none truncate">{{ $isProfit ? '' : '-' }}Rp {{ number_format(abs($keuntunganKerugian ?? 0), 0, ',', '.') }}</span>
+                    <span class="text-xs text-muted-foreground">Uang masuk dikurangi seluruh biaya siklus</span>
                 </div>
+                <span class="size-11 rounded-lg {{ $isProfit ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive' }} flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-wallet text-xl"></i>
+                </span>
             </div>
-            <div class="pt-3 border-t border-border/50 flex flex-col gap-1.5">
+            <div class="pt-3 border-t border-border/60 flex flex-col gap-2">
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Uang Masuk</span>
-                    <span class="text-mono font-medium text-green-600">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-mono font-medium text-success">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Uang Keluar</span>
-                    <span class="text-mono font-medium text-red-600">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-mono font-medium text-destructive">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
                 </div>
             </div>
             <div class="mt-3 flex items-center justify-end">
-                <span class="text-xs font-medium text-{{ $isProfit ? 'green' : 'red' }}-600 group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                <span class="text-xs font-medium {{ $isProfit ? 'text-success' : 'text-destructive' }} group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
             </div>
         </div>
     </div>
@@ -110,8 +121,11 @@
         <div class="flex flex-col gap-5 lg:gap-7.5">
             {{-- Daftar Kolam --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Daftar Kolam</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Daftar Kolam</h3>
+                        <span class="text-xs text-muted-foreground">{{ $kolams->count() }} kolam dalam siklus ini</span>
+                    </div>
                     @can('kolam.create')
                     <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openKolamModal()">
                         <i class="ki-filled ki-plus-squared"></i> Tambah Kolam
@@ -141,7 +155,7 @@
                                         @if($kolam->status === 'aktif')
                                             <span class="kt-badge kt-badge-sm kt-badge-success">Aktif</span>
                                         @elseif($kolam->status === 'selesai')
-                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Selesai</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
                                         @else
                                             <span class="kt-badge kt-badge-sm kt-badge-destructive">Batal</span>
                                         @endif
@@ -179,10 +193,13 @@
 
             {{-- Tabel History Panen --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">History Panen</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">History Panen</h3>
+                        <span class="text-xs text-muted-foreground">{{ $siklus->panens->count() }} catatan panen, total Rp {{ number_format($totalPanen, 0, ',', '.') }}</span>
+                    </div>
                     @can('panen.create')
-                    <button type="button" class="kt-btn kt-btn kt-btn-primary" onclick="openPanenModal()">
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openPanenModal()">
                         <i class="ki-filled ki-plus-squared"></i> Tambah Panen
                     </button>
                     @endcan
@@ -249,8 +266,12 @@
 
             {{-- Tabel Transaksi Keuangan --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Transaksi Keuangan</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Transaksi Keuangan</h3>
+                        <span class="text-xs text-muted-foreground">{{ $transaksis->count() }} transaksi terkait siklus/blok</span>
+                    </div>
+                    <span class="kt-badge kt-badge-sm kt-badge-outline">Rp {{ number_format($transaksis->sum('nominal') ?? 0, 0, ',', '.') }}</span>
                 </div>
                 <div class="kt-card-table">
                     <div class="kt-table-wrapper kt-scrollable">
@@ -312,8 +333,12 @@
 
             {{-- Tabel Pemberian Pakan --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Pemberian Pakan</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Pemberian Pakan</h3>
+                        <span class="text-xs text-muted-foreground">{{ $pemberianPakans->count() }} catatan pemakaian pakan</span>
+                    </div>
+                    <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Rp {{ number_format($totalBiayaPakan ?? 0, 0, ',', '.') }}</span>
                 </div>
                 <div class="kt-card-table">
                     <div class="kt-table-wrapper kt-scrollable">
@@ -334,7 +359,7 @@
                                     <td>{{ $i + 1 }}</td>
                                     <td>{{ $pakan->tgl_pakan?->format('d/m/Y H:i') ?? '-' }}</td>
                                     <td>{{ $pakan->itemPersediaan?->deskripsi ?? $pakan->itemPersediaan?->kode_item_persediaan ?? '-' }}</td>
-                                    <td class="text-mono">{{ number_format($pakan->jumlah_pakan ?? 0, 2) }} {{ $pakan->unit ?? 'kg' }}</td>
+                                    <td class="text-mono">{{ $formatJumlah($pakan->jumlah_pakan) }} {{ $pakan->unit ?? 'kg' }}</td>
                                     <td class="text-mono">Rp {{ number_format($pakan->harga_unit ?? 0, 0, ',', '.') }}</td>
                                     <td class="text-mono">Rp {{ number_format($pakan->biaya ?? 0, 0, ',', '.') }}</td>
                                 </tr>
@@ -349,8 +374,12 @@
 
             {{-- Tabel Penggunaan Bahan Kimia & Antibiotik --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Penggunaan Bahan Kimia & Antibiotik</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Bahan Kimia & Antibiotik</h3>
+                        <span class="text-xs text-muted-foreground">{{ $pemberianKimia->count() }} catatan pemakaian bahan</span>
+                    </div>
+                    <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}</span>
                 </div>
                 <div class="kt-card-table">
                     <div class="kt-table-wrapper kt-scrollable">
@@ -375,7 +404,7 @@
                                         <span class="kt-badge kt-badge-sm kt-badge-outline">{{ $kimia->itemPersediaan?->kategoriPersediaan?->deskripsi ?? '-' }}</span>
                                     </td>
                                     <td>{{ $kimia->itemPersediaan?->deskripsi ?? $kimia->itemPersediaan?->kode_item_persediaan ?? '-' }}</td>
-                                    <td class="text-mono">{{ number_format($kimia->jumlah_pakan ?? 0, 2) }} {{ $kimia->unit ?? 'kg' }}</td>
+                                    <td class="text-mono">{{ $formatJumlah($kimia->jumlah_pakan) }} {{ $kimia->unit ?? 'kg' }}</td>
                                     <td class="text-mono">Rp {{ number_format($kimia->harga_unit ?? 0, 0, ',', '.') }}</td>
                                     <td class="text-mono">Rp {{ number_format($kimia->biaya ?? 0, 0, ',', '.') }}</td>
                                 </tr>
@@ -394,14 +423,22 @@
     <div class="col-span-1">
         <div class="grid gap-5 lg:gap-7.5">
             {{-- Info Siklus --}}
-            <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Info Siklus</h3>
-                    <div>
+            <div class="kt-card border-primary/20">
+                <div class="kt-card-header min-h-16">
+                    <div class="flex items-center gap-3">
+                        <span class="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                            <i class="ki-filled ki-chart-line-up"></i>
+                        </span>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="kt-card-title">Info Siklus</h3>
+                            <span class="text-xs text-muted-foreground">{{ $siklus->nama_siklus }}</span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
                         @if($siklus->status === 'aktif')
                             <span class="kt-badge kt-badge-success">Aktif</span>
                         @elseif($siklus->status === 'selesai')
-                            <span class="kt-badge kt-badge-primary">Selesai</span>
+                            <span class="kt-badge kt-badge-success">Selesai</span>
                         @else
                             <span class="kt-badge kt-badge-destructive">Gagal</span>
                         @endif
@@ -449,8 +486,16 @@
 
             {{-- Info Kolam/Blok --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Info Kolam/Blok</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex items-center gap-3">
+                        <span class="size-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
+                            <i class="ki-filled ki-element-11"></i>
+                        </span>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="kt-card-title">Info Kolam/Blok</h3>
+                            <span class="text-xs text-muted-foreground">{{ $siklus->blok?->nama_blok ?? '-' }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="kt-card-content pt-3.5 pb-3.5">
                     <table class="kt-table-auto">
@@ -469,7 +514,7 @@
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Luas:</td>
-                                <td class="text-sm text-mono pb-3">{{ number_format(($siklus->blok?->panjang ?? 0) * ($siklus->blok?->lebar ?? 0), 2) }} mÂ²</td>
+                                <td class="text-sm text-mono pb-3">{{ number_format(($siklus->blok?->panjang ?? 0) * ($siklus->blok?->lebar ?? 0), 2) }} m<sup>2</sup></td>
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Jumlah Anco:</td>
@@ -494,8 +539,16 @@
 
             {{-- Info Tambak --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Info Tambak</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex items-center gap-3">
+                        <span class="size-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+                            <i class="ki-filled ki-geolocation"></i>
+                        </span>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="kt-card-title">Info Tambak</h3>
+                            <span class="text-xs text-muted-foreground">{{ $siklus->blok?->tambak?->nama_tambak ?? '-' }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="kt-card-content pt-3.5 pb-3.5">
                     <table class="kt-table-auto">
@@ -514,7 +567,7 @@
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Total Lahan:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->blok?->tambak?->total_lahan ? number_format($siklus->blok->tambak->total_lahan, 2) . ' mÂ²' : '-' }}</td>
+                                <td class="text-sm text-mono pb-3">{!! $siklus->blok?->tambak?->total_lahan ? number_format($siklus->blok->tambak->total_lahan, 2) . ' m<sup>2</sup>' : '-' !!}</td>
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Didirikan:</td>
@@ -859,7 +912,7 @@
                         <tr>
                             <td>{{ $pakan->tgl_pakan?->format('d/m/Y') ?? '-' }}</td>
                             <td>{{ $pakan->itemPersediaan?->deskripsi ?? '-' }}</td>
-                            <td class="text-mono">{{ number_format($pakan->jumlah_pakan ?? 0, 2) }} {{ $pakan->unit ?? 'kg' }}</td>
+                            <td class="text-mono">{{ $formatJumlah($pakan->jumlah_pakan) }} {{ $pakan->unit ?? 'kg' }}</td>
                             <td class="text-mono text-end text-red-600">Rp {{ number_format($pakan->biaya ?? 0, 0, ',', '.') }}</td>
                         </tr>
                         @empty
@@ -893,7 +946,7 @@
                         <tr>
                             <td>{{ $kimia->tgl_pakan?->format('d/m/Y') ?? '-' }}</td>
                             <td>{{ $kimia->itemPersediaan?->deskripsi ?? '-' }}</td>
-                            <td class="text-mono">{{ number_format($kimia->jumlah_pakan ?? 0, 2) }} {{ $kimia->unit ?? 'kg' }}</td>
+                            <td class="text-mono">{{ $formatJumlah($kimia->jumlah_pakan) }} {{ $kimia->unit ?? 'kg' }}</td>
                             <td class="text-mono text-end text-red-600">Rp {{ number_format($kimia->biaya ?? 0, 0, ',', '.') }}</td>
                         </tr>
                         @empty

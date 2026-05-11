@@ -26,6 +26,19 @@ class PersediaanController extends Controller
         return view('operasional.persediaan.show', compact('persediaan', 'penyesuaians'));
     }
 
+    public function updateMinimumStok(Request $request, Persediaan $persediaan)
+    {
+        $request->validate([
+            'minimum_stok' => 'nullable|numeric|min:0',
+        ]);
+
+        $persediaan->update([
+            'minimum_stok' => $request->filled('minimum_stok') ? $request->minimum_stok : null,
+        ]);
+
+        return redirect()->back()->with('success', 'Minimum stok berhasil diperbarui.');
+    }
+
     public function adjust(Request $request, Persediaan $persediaan)
     {
         $request->validate([

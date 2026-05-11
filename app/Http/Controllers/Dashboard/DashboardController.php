@@ -111,8 +111,8 @@ class DashboardController extends Controller
 
         // === Stok Persediaan ===
         $stokPersediaan = Persediaan::with('itemPersediaan.kategoriPersediaan')
-            ->where('qty', '>', 0)
-            ->orderByDesc('qty')
+            ->orderByRaw('CASE WHEN minimum_stok IS NOT NULL AND minimum_stok > 0 AND qty <= minimum_stok THEN 0 ELSE 1 END')
+            ->orderBy('qty')
             ->limit(10)
             ->get();
         $stokPersediaanCount = Persediaan::where('qty', '>', 0)->count();

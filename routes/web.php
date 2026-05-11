@@ -155,6 +155,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('operasional')->group(function () {
         Route::get('persediaan', [PersediaanController::class, 'index'])->name('persediaan.index')->middleware('can:persediaan.view');
         Route::get('persediaan/{persediaan}', [PersediaanController::class, 'show'])->name('persediaan.show')->middleware('can:persediaan.view');
+        Route::patch('persediaan/{persediaan}/minimum-stok', [PersediaanController::class, 'updateMinimumStok'])->name('persediaan.minimum-stok')->middleware('can:persediaan.edit');
         Route::post('persediaan/{persediaan}/adjust', [PersediaanController::class, 'adjust'])->name('persediaan.adjust')->middleware('can:persediaan.edit');
 
         Route::get('pembelian-persediaan/create', [PembelianPersediaanController::class, 'create'])->name('pembelian-persediaan.create')->middleware('can:pembelian-persediaan.create');

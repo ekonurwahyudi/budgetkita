@@ -245,11 +245,14 @@
     </div>
 
     {{-- Row 3: Stok Persediaan Table --}}
+    @php
+        $formatStok = fn($value) => rtrim(rtrim(number_format((float) ($value ?? 0), 2, ',', '.'), '0'), ',');
+    @endphp
     <div class="kt-card">
         <div class="kt-card-header">
             <div>
                 <h3 class="kt-card-title">Stok Persediaan</h3>
-                <p class="text-xs text-secondary-foreground mt-0.5">Item dengan stok terbanyak</p>
+                <p class="text-xs text-secondary-foreground mt-0.5">Prioritas item yang mendekati minimum stok</p>
             </div>
             <a href="{{ route('persediaan.index') }}" class="kt-btn kt-btn-sm kt-btn-outline">
                 Lihat Semua <i class="ki-filled ki-arrow-right text-xs"></i>
@@ -265,6 +268,7 @@
                             <th class="text-left text-xs font-semibold">Kategori</th>
                             <th class="text-left text-xs font-semibold">Item</th>
                             <th class="text-right text-xs font-semibold">Stok</th>
+                            <th class="text-right text-xs font-semibold">Minimum</th>
                             <th class="text-center text-xs font-semibold">Satuan</th>
                             <th class="text-center text-xs font-semibold">Status</th>
                         </tr>
@@ -272,20 +276,24 @@
                     <tbody>
                         @foreach($stokPersediaan as $item)
                         @php
-                            $qtyKg = $item->unit === 'ton' ? $item->qty * 1000 : $item->qty;
-                            $isLow = $qtyKg < 1000;
+                            $minimumStok = $item->minimum_stok;
+                            $hasMinimumStok = $minimumStok !== null && (float) $minimumStok > 0;
+                            $isLow = $hasMinimumStok && (float) $item->qty <= (float) $minimumStok;
                         @endphp
                         <tr>
                             <td class="text-center text-sm">{{ $loop->iteration }}</td>
                             <td class="text-sm">{{ $item->itemPersediaan?->kategoriPersediaan?->deskripsi ?? '-' }}</td>
                             <td class="text-sm font-medium">{{ $item->itemPersediaan?->deskripsi ?? '-' }}</td>
-                            <td class="text-right text-sm text-mono font-semibold">{{ number_format($item->qty, 2) }}</td>
+                            <td class="text-right text-sm text-mono font-semibold">{{ $formatStok($item->qty) }}</td>
+                            <td class="text-right text-sm text-mono">{{ $item->minimum_stok !== null ? $formatStok($item->minimum_stok) : '-' }}</td>
                             <td class="text-center text-sm">{{ $item->unit ?? '-' }}</td>
                             <td class="text-center">
                                 @if($isLow)
                                     <span class="kt-badge kt-badge-sm kt-badge-destructive">Kurang</span>
-                                @else
+                                @elseif($hasMinimumStok)
                                     <span class="kt-badge kt-badge-sm kt-badge-success">Aman</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-outline">Belum Diatur</span>
                                 @endif
                             </td>
                         </tr>

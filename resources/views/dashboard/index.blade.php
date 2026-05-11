@@ -459,7 +459,10 @@
     {{-- Row 4: Account Bank Cards --}}
     <div class="kt-card">
         <div class="kt-card-header">
-            <h3 class="kt-card-title">Saldo Rekening</h3>
+            <div>
+                <h3 class="kt-card-title">Saldo Rekening</h3>
+                <p class="text-xs text-secondary-foreground mt-0.5">Total saldo aktif Rp {{ number_format($totalSaldoBank, 0, ',', '.') }}</p>
+            </div>
             <a href="{{ route('account-bank.index') }}" class="kt-btn kt-btn-sm kt-btn-outline">
                 Kelola Rekening <i class="ki-filled ki-arrow-right text-xs"></i>
             </a>
@@ -468,22 +471,72 @@
             @if($accountBanks->count())
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 @foreach($accountBanks as $bank)
-                <a href="{{ route('account-bank.show', $bank) }}" class="rounded-xl border border-border bg-muted/30 p-4 hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer group">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="flex items-center justify-center size-9 rounded-lg bg-primary/10">
-                            <i class="ki-filled ki-bank text-base text-primary"></i>
+                @php
+                    $bankName = strtoupper($bank->nama_bank ?? 'BANK');
+                    $palette = str_contains($bankName, 'BCA') ? ['#1d4ed8', '#dbeafe', '#ffffff'] :
+                        (str_contains($bankName, 'BRI') ? ['#00529c', '#dbeafe', '#ffffff'] :
+                        (str_contains($bankName, 'MANDIRI') ? ['#f6b100', '#fff7d6', '#111827'] :
+                        (str_contains($bankName, 'BNI') ? ['#f97316', '#ffedd5', '#ffffff'] :
+                        (str_contains($bankName, 'BSI') ? ['#00a884', '#dcfce7', '#ffffff'] :
+                        (str_contains($bankName, 'CASH') ? ['#6b7280', '#f3f4f6', '#ffffff'] : ['#2563eb', '#eff6ff', '#ffffff'])))));
+                    $bankWords = collect(explode(' ', preg_replace('/[^A-Za-z0-9 ]/', '', $bank->nama_bank ?? 'Bank')))->filter();
+                    $bankLogo = $bankWords->count() > 1
+                        ? $bankWords->map(fn($word) => substr($word, 0, 1))->take(3)->implode('')
+                        : strtoupper(substr($bank->nama_bank ?? 'B', 0, 3));
+                    $bankLogoFile = str_contains($bankName, 'BCA DIGITAL') ? 'BCA Digital logo.svg' :
+                        (str_contains($bankName, 'BCA SYARIAH') ? 'BCA Syariah.svg' :
+                        (str_contains($bankName, 'BCA') ? 'Bank Central Asia.svg' :
+                        (str_contains($bankName, 'BRI') ? 'BRI 2020.svg' :
+                        (str_contains($bankName, 'BNI') ? 'Bank Negara Indonesia logo (2004).svg' :
+                        (str_contains($bankName, 'MANDIRI') ? 'Bank Mandiri logo 2016.svg' :
+                        (str_contains($bankName, 'BSI') || str_contains($bankName, 'SYARIAH INDONESIA') ? 'Bank Syariah Indonesia.svg' :
+                        (str_contains($bankName, 'BTN') ? 'Bank BTN logo.svg' :
+                        (str_contains($bankName, 'CIMB') ? 'CIMB Niaga logo.svg' :
+                        (str_contains($bankName, 'DANAMON') ? 'Danamon.svg' :
+                        (str_contains($bankName, 'MEGA') ? 'Bank Mega 2013.svg' :
+                        (str_contains($bankName, 'PERMATA') ? 'Permata Bank (2024).svg' :
+                        (str_contains($bankName, 'PANIN') ? 'Logo Panin Bank.svg' :
+                        (str_contains($bankName, 'JAGO') ? 'Logo-jago.svg' :
+                        (str_contains($bankName, 'SEABANK') || str_contains($bankName, 'SEA BANK') ? 'SeaBank.svg' :
+                        (str_contains($bankName, 'UOB') ? 'UOB Logo (2022).svg' :
+                        (str_contains($bankName, 'DKI') ? 'Bank DKI.svg' : null))))))))))))))));
+                    $bankLogoUrl = $bankLogoFile
+                        ? 'https://commons.wikimedia.org/wiki/Special:FilePath/' . rawurlencode($bankLogoFile) . '?width=160'
+                        : (str_contains($bankName, 'CASH') ? asset('assets/media/brand-logos/favicon.png') : null);
+                    $nomorRekening = preg_replace('/\s+/', '', (string) ($bank->nomor_rekening ?? ''));
+                    $maskedRekening = $nomorRekening ? '**** ' . substr($nomorRekening, -4) : 'Nomor belum diisi';
+                @endphp
+                <a href="{{ route('account-bank.show', $bank) }}" class="relative overflow-hidden rounded-lg border border-border bg-card p-4 hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer group">
+                    <div class="absolute inset-x-0 top-0 h-1" style="background:{{ $palette[0] }};"></div>
+                    <div class="flex items-start justify-between gap-3 mb-5">
+                        <div class="flex items-center gap-3 min-w-0">
+                            @if($bankLogoUrl)
+                            <div class="flex items-center justify-center size-12 rounded-lg shrink-0 border border-border bg-white p-2">
+                                <img src="{{ $bankLogoUrl }}" alt="{{ $bank->nama_bank }} logo" class="max-h-7 max-w-full object-contain" loading="lazy">
+                            </div>
+                            @else
+                            <div class="flex items-center justify-center size-12 rounded-lg shrink-0 text-sm font-bold" style="background:{{ $palette[0] }}; color:{{ $palette[2] }};">
+                                {{ $bankLogo }}
+                            </div>
+                            @endif
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold truncate">{{ $bank->nama_bank }}</p>
+                                <p class="text-xs text-muted-foreground truncate">{{ $bank->nama_pemilik ?? '-' }}</p>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold truncate">{{ $bank->nama_bank }}</p>
-                            <p class="text-xs text-muted-foreground truncate">{{ $bank->nama_pemilik ?? '-' }}</p>
-                        </div>
+                        <span class="flex items-center justify-center size-8 rounded-lg shrink-0" style="background:{{ $palette[1] }}; color:{{ $palette[0] }};">
+                            <i class="ki-filled ki-bank text-sm"></i>
+                        </span>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-[10px] text-muted-foreground">Saldo</p>
-                            <p class="text-lg font-bold text-mono text-primary">Rp {{ number_format($bank->saldo, 0, ',', '.') }}</p>
+                    <div class="flex items-end justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-[10px] uppercase text-muted-foreground mb-1">Saldo tersedia</p>
+                            <p class="text-lg font-bold text-mono leading-tight truncate" style="color:{{ $palette[0] }};">Rp {{ number_format($bank->saldo, 0, ',', '.') }}</p>
+                            <p class="text-xs text-muted-foreground mt-2">{{ $maskedRekening }}</p>
                         </div>
-                        <span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">Lihat Mutasi <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+                        <span class="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap" style="color:{{ $palette[0] }};">
+                            Mutasi <i class="ki-filled ki-arrow-right text-[10px]"></i>
+                        </span>
                     </div>
                 </a>
                 @endforeach

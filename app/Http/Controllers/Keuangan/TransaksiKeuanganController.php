@@ -7,11 +7,17 @@ use App\Http\Controllers\Controller;
 use App\Models\AccountBank;
 use App\Models\Blok;
 use App\Models\ItemTransaksi;
+use App\Models\ItemPersediaan;
+use App\Models\KategoriAset;
+use App\Models\KategoriHutangPiutang;
+use App\Models\KategoriInvestasi;
+use App\Models\KategoriPersediaan;
 use App\Models\KategoriTransaksi;
 use App\Models\Siklus;
 use App\Models\SumberDana;
 use App\Models\Tambak;
 use App\Models\TransaksiKeuangan;
+use App\Models\User;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
@@ -27,8 +33,14 @@ class TransaksiKeuanganController extends Controller
         $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
         return [
             'kategoriTransaksis' => KategoriTransaksi::orderBy('deskripsi')->get(),
+            'kategoriAsets'      => KategoriAset::orderBy('deskripsi')->get(),
+            'kategoriInvestasis' => KategoriInvestasi::orderBy('deskripsi')->get(),
+            'kategoriHutangPiutangs' => KategoriHutangPiutang::orderBy('deskripsi')->get(),
+            'kategoriPersediaans' => KategoriPersediaan::orderBy('deskripsi')->get(),
+            'itemPersediaans'    => ItemPersediaan::with('kategoriPersediaan')->orderBy('deskripsi')->get(),
             'itemTransaksis'     => ItemTransaksi::orderBy('kode_item')->get(),
             'tambaks'            => Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get(),
+            'karyawans'          => User::orderBy('nama')->get(),
             'sumberDanas'        => SumberDana::orderBy('deskripsi')->get(),
             'accountBanks'       => AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get(),
             'sikluses'           => Siklus::where('status', '!=', 'selesai')->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))->orderBy('nama_siklus')->get(),

@@ -222,7 +222,85 @@
             </div>
         </div>
     </div>
-    {{-- Row 2: Financial summaries --}}
+    {{-- Row 2: Siklus Aktif Cards --}}
+    @if($siklusAktifData->count())
+    <div class="kt-card">
+        <div class="kt-card-header">
+            <div>
+                <h3 class="kt-card-title">Siklus</h3>
+                <p class="text-xs text-secondary-foreground mt-0.5">{{ $siklusAktifData->count() }} siklus tercatat</p>
+            </div>
+            <a href="{{ route('siklus.index') }}" class="kt-btn kt-btn-sm kt-btn-primary">
+                <i class="ki-filled ki-plus-squared"></i> Tambah Siklus
+            </a>
+        </div>
+        <div class="kt-card-content p-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                @foreach($siklusAktifData as $siklusItem)
+                @php
+                    $isProfit = $siklusItem['keuntungan_kerugian'] >= 0;
+                    $statusBadge = match($siklusItem['status']) {
+                        'aktif' => 'kt-badge-warning',
+                        'selesai' => 'kt-badge-success',
+                        default => 'kt-badge-destructive',
+                    };
+                    $statusLabel = match($siklusItem['status']) {
+                        'aktif' => 'Aktif',
+                        'selesai' => 'Selesai',
+                        default => 'Gagal',
+                    };
+                @endphp
+                <a href="{{ route('siklus.show', $siklusItem['id']) }}" class="relative overflow-hidden rounded-lg border border-border bg-card p-4 hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer group">
+                    <div class="absolute inset-x-0 top-0 h-1 {{ $siklusItem['status'] === 'aktif' ? 'bg-warning' : ($siklusItem['status'] === 'selesai' ? 'bg-success' : 'bg-muted') }}"></div>
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="flex items-center justify-center size-10 rounded-lg shrink-0 bg-primary/10 text-primary">
+                                <i class="ki-filled ki-arrows-circle text-lg"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold truncate">{{ $siklusItem['nama_siklus'] }}</p>
+                                <p class="text-xs text-muted-foreground truncate">{{ $siklusItem['blok_nama'] }} &bull; {{ $siklusItem['total_kolam'] }} kolam</p>
+                            </div>
+                        </div>
+                        <span class="kt-badge kt-badge-sm {{ $statusBadge }} shrink-0">{{ $statusLabel }}</span>
+                    </div>
+                    <div class="flex flex-col gap-2.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-secondary-foreground">Tanggal Siklus</span>
+                            <span class="text-mono font-medium">{{ $siklusItem['tgl_siklus']?->format('d/m/Y') ?? '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-secondary-foreground flex items-center gap-1.5">
+                                <span class="size-2 rounded-full" style="background:#17c653;"></span> Uang Masuk
+                            </span>
+                            <span class="text-mono font-medium text-success">Rp {{ number_format($siklusItem['uang_masuk'], 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-secondary-foreground flex items-center gap-1.5">
+                                <span class="size-2 rounded-full" style="background:#f1416c;"></span> Uang Keluar
+                            </span>
+                            <span class="text-mono font-medium text-destructive">Rp {{ number_format($siklusItem['uang_keluar'], 0, ',', '.') }}</span>
+                        </div>
+                        <div class="border-t border-border pt-2.5 flex items-center justify-between text-xs">
+                            <span class="text-secondary-foreground font-medium">Estimasi {{ $isProfit ? 'Keuntungan' : 'Kerugian' }}</span>
+                            <span class="text-mono font-bold {{ $isProfit ? 'text-success' : 'text-destructive' }}">
+                                {{ $isProfit ? '+' : '-' }}Rp {{ number_format(abs($siklusItem['keuntungan_kerugian']), 0, ',', '.') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-end">
+                        <span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            Lihat Detail <i class="ki-filled ki-arrow-right text-[10px]"></i>
+                        </span>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Row 3: Financial summaries --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
         {{-- Highlights panel --}}
         <div class="kt-card">

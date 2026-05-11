@@ -9,7 +9,8 @@ class PembelianAset extends BaseModel
     protected $fillable = [
         'nomor_transaksi', 'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
         'umur_manfaat', 'nilai_residu', 'metode_depresiasi', 'persen_depresiasi',
-        'jenis_pembayaran', 'account_bank_id', 'status', 'catatan', 'eviden', 'foto_aset',
+        'jenis_pembayaran', 'account_bank_id', 'status', 'created_by', 'reject_reason',
+        'catatan', 'eviden', 'foto_aset',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class PembelianAset extends BaseModel
 
     public function kategoriAset() { return $this->belongsTo(KategoriAset::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
+    public function pembuat() { return $this->belongsTo(User::class, 'created_by'); }
 
     public function getDepresiasiPerTahunAttribute(): float
     {

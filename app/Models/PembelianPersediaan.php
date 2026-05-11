@@ -6,7 +6,7 @@ class PembelianPersediaan extends BaseModel
 {
     protected $fillable = [
         'nomor_transaksi', 'tgl_pembelian', 'jenis_pembayaran',
-        'account_bank_id', 'eviden', 'catatan', 'status',
+        'account_bank_id', 'eviden', 'catatan', 'status', 'created_by', 'reject_reason',
     ];
 
     protected function casts(): array
@@ -16,4 +16,5 @@ class PembelianPersediaan extends BaseModel
 
     public function items() { return $this->hasMany(PembelianPersediaanItem::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
+    public function pembuat() { return $this->belongsTo(User::class, 'created_by'); }
 }

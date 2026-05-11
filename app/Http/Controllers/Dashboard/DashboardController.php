@@ -12,6 +12,7 @@ use App\Models\Kolam;
 use App\Models\Panen;
 use App\Models\PembelianAset;
 use App\Models\PembelianPersediaan;
+use App\Models\PemberianPakan;
 use App\Models\Persediaan;
 use App\Models\Siklus;
 use App\Models\Tambak;
@@ -247,6 +248,70 @@ class DashboardController extends Controller
         $siklusAktif = Siklus::where('status', 'aktif')->count();
         $nilaiAset = PembelianAset::where('status', 'selesai')->get()->sum(fn($a) => $a->nilai_buku_aset);
 
+        // === Siklus Cards (same logic as SiklusController@show) ===
+        $siklusAktifData = Siklus::with(['blok.tambak', 'panens', 'kolams'])
+            ->orderByRaw("CASE WHEN status = 'aktif' THEN 0 ELSE 1 END")
+            ->orderByDesc('tgl_siklus')
+            ->get()
+            ->map(function ($siklus) {
+                $transaksis = TransaksiKeuangan::where(function ($q) use ($siklus) {
+                    $q->where('siklus_id', $siklus->id)
+                      ->orWhere('blok_id', $siklus->blok_id);
+                })->get();
+
+                $uangMasukTransaksi = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal');
+                $uangKeluarTransaksi = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
+                $totalPanen = $siklus->panens->sum('total_penjualan');
+
+                $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan', 'itemPersediaan.persediaan')
+                    ->where('siklus_id', $siklus->id)
+                    ->get();
+
+                $toBaseUnit = fn(float $qty, ?string $unit): float => match (strtolower(trim($unit ?? 'kg'))) {
+                    'gram', 'ml' => $qty / 1000,
+                    default => $qty,
+                };
+
+                $pemberianPakans = $semuaPemberian->filter(fn($p) =>
+                    !$p->itemPersediaan?->kategoriPersediaan ||
+                    stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') !== false
+                )->map(function($p) use ($toBaseUnit) {
+                    $persediaan = $p->itemPersediaan?->persediaan;
+                    $jumlahBase = $toBaseUnit((float) ($p->jumlah_pakan ?? 0), $p->unit ?? 'kg');
+                    $p->biaya = $jumlahBase * ($persediaan?->harga_per_unit ?? 0);
+                    return $p;
+                });
+
+                $pemberianKimia = $semuaPemberian->filter(fn($p) =>
+                    $p->itemPersediaan?->kategoriPersediaan &&
+                    stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
+                )->map(function($p) use ($toBaseUnit) {
+                    $persediaan = $p->itemPersediaan?->persediaan;
+                    $jumlahBase = $toBaseUnit((float) ($p->jumlah_pakan ?? 0), $p->unit ?? 'kg');
+                    $p->biaya = $jumlahBase * ($persediaan?->harga_per_unit ?? 0);
+                    return $p;
+                });
+
+                $totalBiayaPakan = $pemberianPakans->sum('biaya');
+                $totalBiayaKimia = $pemberianKimia->sum('biaya');
+
+                $uangMasuk = $uangMasukTransaksi + $totalPanen;
+                $uangKeluar = $uangKeluarTransaksi + $totalBiayaPakan + $totalBiayaKimia;
+                $keuntunganKerugian = $uangMasuk - $uangKeluar;
+
+                return [
+                    'id' => $siklus->id,
+                    'nama_siklus' => $siklus->nama_siklus,
+                    'blok_nama' => $siklus->blok?->nama_blok ?? '-',
+                    'total_kolam' => $siklus->kolams->count(),
+                    'tgl_siklus' => $siklus->tgl_siklus,
+                    'status' => $siklus->status,
+                    'uang_masuk' => $uangMasuk,
+                    'uang_keluar' => $uangKeluar,
+                    'keuntungan_kerugian' => $keuntunganKerugian,
+                ];
+            });
+
         return view('dashboard.index', compact(
             'hasTambak',
             'bloks', 'sikluses',
@@ -259,7 +324,8 @@ class DashboardController extends Controller
             'totalHutang', 'sisaHutang', 'totalPiutang', 'sisaPiutang',
             'hutangPiutangTelatCount', 'hutangPiutangDeadlineCount',
             'hutangPiutangTelatNominal', 'hutangPiutangDeadlineNominal',
-            'totalTambak', 'totalBlok', 'kolamAktif', 'siklusAktif', 'nilaiAset'
+            'totalTambak', 'totalBlok', 'kolamAktif', 'siklusAktif', 'nilaiAset',
+            'siklusAktifData'
         ));
     }
 

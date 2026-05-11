@@ -25,7 +25,7 @@
             <div class="flex items-center gap-2">
                 @if($pembelianAset->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
                 <form method="POST" action="{{ route('pembelian-aset.approve', $pembelianAset) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
-                <form method="POST" action="{{ route('pembelian-aset.reject', $pembelianAset) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                <button type="button" class="kt-btn kt-btn-destructive kt-btn-sm" onclick="openRejectModal('{{ route('pembelian-aset.reject', $pembelianAset) }}', '{{ e($pembelianAset->nomor_transaksi) }}')"><i class="ki-filled ki-cross"></i> Reject</button>
                 @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($pembelianAset->status, ['awaiting_approval','pending']))
                 @can('pembelian-aset.edit')
@@ -109,6 +109,16 @@
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Catatan</td>
                                 <td class="text-sm pb-3">{{ $pembelianAset->catatan ?? '-' }}</td>
                             </tr>
+                            @if($pembelianAset->status === 'cancel' && $pembelianAset->reject_reason)
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Alasan Reject</td>
+                                <td class="text-sm pb-3">
+                                    <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium" style="background:rgba(241,65,108,0.12); color:#f1416c;">
+                                        {{ $pembelianAset->reject_reason }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
@@ -241,6 +251,33 @@
     @endif
 </div>
 
+<div id="rejectModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;">
+    <div class="kt-card w-full max-w-[460px] shadow-2xl">
+        <div class="kt-card-header min-h-14">
+            <div>
+                <h3 class="kt-card-title">Reject Pembelian Aset</h3>
+                <p class="text-xs text-muted-foreground mt-1" id="rejectNomor">-</p>
+            </div>
+            <button type="button" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" onclick="closeRejectModal()">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" id="rejectForm">
+            @csrf
+            <div class="kt-card-content py-4">
+                <label class="text-sm font-medium text-foreground" for="alasan_reject">Alasan Reject <span class="text-danger">*</span></label>
+                <textarea id="alasan_reject" name="alasan_reject" class="kt-input mt-2" rows="4" style="height:120px;" placeholder="Tuliskan alasan pembelian aset ditolak..." required minlength="5"></textarea>
+            </div>
+            <div class="kt-card-footer justify-end gap-2">
+                <button type="button" class="kt-btn kt-btn-outline" onclick="closeRejectModal()">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-destructive">
+                    <i class="ki-filled ki-cross"></i> Reject
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- Lightbox Modal --}}
 <div id="lb-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;">
     <button id="lb-close" style="position:absolute;top:1rem;right:1rem;color:#fff;font-size:1.5rem;background:none;border:none;cursor:pointer;">
@@ -252,6 +289,23 @@
 
 @push('scripts')
 <script>
+function openRejectModal(action, nomor) {
+    var modal = document.getElementById('rejectModal');
+    var form = document.getElementById('rejectForm');
+    var label = document.getElementById('rejectNomor');
+    var textarea = document.getElementById('alasan_reject');
+
+    form.action = action;
+    label.textContent = nomor;
+    textarea.value = '';
+    modal.style.display = 'flex';
+    textarea.focus();
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     var modal = document.getElementById('lb-modal');
     var img = document.getElementById('lb-img');

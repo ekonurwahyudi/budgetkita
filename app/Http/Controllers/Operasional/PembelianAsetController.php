@@ -59,6 +59,7 @@ class PembelianAsetController extends Controller
         $input['umur_manfaat'] = $request->input('umur_manfaat') ?: 0;
         $input['nilai_residu'] = $request->input('nilai_residu') ?: 0;
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVA');
+        $input['created_by'] = auth()->id();
 
         if ($input['metode_depresiasi'] === 'persen') {
             $input['persen_depresiasi'] = $request->input('persen_depresiasi') ?: 0;
@@ -214,6 +215,7 @@ class PembelianAsetController extends Controller
 
     public function approve(PembelianAset $pembelianAset)
     {
+        $pembelianAset->update(['reject_reason' => null]);
         app(ApprovalService::class)->approve($pembelianAset);
         app(NotifikasiService::class)->kirimKeRole('Owner',
             'Pembelian Aset Disetujui',
@@ -224,15 +226,28 @@ class PembelianAsetController extends Controller
         return redirect()->back()->with('success', 'Pembelian aset berhasil di-approve.');
     }
 
-    public function reject(PembelianAset $pembelianAset)
+    public function reject(Request $request, PembelianAset $pembelianAset)
     {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $pembelianAset->update(['reject_reason' => $validated['alasan_reject']]);
         app(ApprovalService::class)->reject($pembelianAset);
-        app(NotifikasiService::class)->kirimKeRole('Owner',
-            'Pembelian Aset Ditolak',
-            'Pembelian aset "' . $pembelianAset->nama_aset . '" telah ditolak.',
-            'warning',
-            route('pembelian-aset.show', $pembelianAset->id)
-        );
+
+        if ($pembelianAset->created_by) {
+            app(NotifikasiService::class)->kirim(
+                $pembelianAset->created_by,
+                'Pembelian Aset Ditolak',
+                'Pembelian aset "' . $pembelianAset->nama_aset . '" ditolak. Alasan: ' . $validated['alasan_reject'],
+                'warning',
+                route('pembelian-aset.show', $pembelianAset->id)
+            );
+        }
+
         return redirect()->back()->with('success', 'Pembelian aset berhasil di-reject.');
     }
 }

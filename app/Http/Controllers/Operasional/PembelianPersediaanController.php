@@ -50,6 +50,7 @@ class PembelianPersediaanController extends Controller
 
         $input = $request->only(['tgl_pembelian', 'jenis_pembayaran', 'account_bank_id', 'catatan']);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVB');
+        $input['created_by'] = auth()->id();
 
         if ($request->hasFile('eviden')) {
             $paths = [];
@@ -192,6 +193,7 @@ class PembelianPersediaanController extends Controller
     public function approve(PembelianPersediaan $pembelianPersediaan)
     {
         $pembelianPersediaan->load('items');
+        $pembelianPersediaan->update(['reject_reason' => null]);
         app(ApprovalService::class)->approve($pembelianPersediaan);
         app(NotifikasiService::class)->kirimKeRole('Owner',
             'Pembelian Persediaan Disetujui',
@@ -202,15 +204,28 @@ class PembelianPersediaanController extends Controller
         return redirect()->back()->with('success', 'Pembelian persediaan berhasil di-approve.');
     }
 
-    public function reject(PembelianPersediaan $pembelianPersediaan)
+    public function reject(Request $request, PembelianPersediaan $pembelianPersediaan)
     {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $pembelianPersediaan->update(['reject_reason' => $validated['alasan_reject']]);
         app(ApprovalService::class)->reject($pembelianPersediaan);
-        app(NotifikasiService::class)->kirimKeRole('Owner',
-            'Pembelian Persediaan Ditolak',
-            'Pembelian persediaan No. ' . $pembelianPersediaan->nomor_transaksi . ' telah ditolak.',
-            'warning',
-            route('pembelian-persediaan.show', $pembelianPersediaan->id)
-        );
+
+        if ($pembelianPersediaan->created_by) {
+            app(NotifikasiService::class)->kirim(
+                $pembelianPersediaan->created_by,
+                'Pembelian Persediaan Ditolak',
+                'Pembelian persediaan No. ' . $pembelianPersediaan->nomor_transaksi . ' ditolak. Alasan: ' . $validated['alasan_reject'],
+                'warning',
+                route('pembelian-persediaan.show', $pembelianPersediaan->id)
+            );
+        }
+
         return redirect()->back()->with('success', 'Pembelian persediaan berhasil di-reject.');
     }
 }

@@ -33,54 +33,14 @@
 @endpush
 
 @section('page-actions')
-<div class="relative" id="filterWrapper">
-    <button type="button" onclick="toggleFilter()" class="kt-btn kt-btn-outline kt-btn-sm">
-        <i class="ki-filled ki-filter-search"></i> Filter
-    </button>
-    <div id="filterPanel" class="hidden absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-xl shadow-lg p-4" style="z-index:9999;">
-        <form method="GET" action="{{ route('dashboard') }}" class="flex flex-col gap-3">
-            <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-muted-foreground">Blok</label>
-                <select name="blok_id" id="filterBlok" class="kt-select kt-select-sm" onchange="loadSiklusForBlok()">
-                    <option value="">Semua Blok</option>
-                    @foreach($bloks as $b)
-                    <option value="{{ $b->id }}" {{ $filterBlok == $b->id ? 'selected' : '' }}>{{ $b->nama_blok }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-muted-foreground">Siklus</label>
-                <select name="siklus_id" id="filterSiklus" class="kt-select kt-select-sm">
-                    <option value="">Semua Siklus</option>
-                    @foreach($sikluses as $s)
-                    <option value="{{ $s->id }}" {{ $filterSiklus == $s->id ? 'selected' : '' }}>{{ $s->nama_siklus }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-muted-foreground">Dari Tanggal</label>
-                <div class="kt-input kt-input-sm">
-                    <i class="ki-outline ki-calendar"></i>
-                    <input class="grow" name="date_from" data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
-                           placeholder="Pilih tanggal" readonly type="text" value="{{ $filterDateFrom ?? '' }}"/>
-                </div>
-            </div>
-            <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-muted-foreground">Sampai Tanggal</label>
-                <div class="kt-input kt-input-sm">
-                    <i class="ki-outline ki-calendar"></i>
-                    <input class="grow" name="date_to" data-kt-date-picker="true" data-kt-date-picker-input-mode="true"
-                           placeholder="Pilih tanggal" readonly type="text" value="{{ $filterDateTo ?? '' }}"/>
-                </div>
-            </div>
-            <div class="flex items-center gap-2 pt-2 border-t border-border">
-                <button type="submit" class="kt-btn kt-btn-primary kt-btn-sm flex-1">Terapkan</button>
-                @if($filterBlok || $filterSiklus || $filterDateFrom || $filterDateTo)
-                <a href="{{ route('dashboard') }}" class="kt-btn kt-btn-outline kt-btn-sm">Reset</a>
-                @endif
-            </div>
-        </form>
-    </div>
+<div class="flex items-center gap-2">
+    <form method="GET" action="{{ route('dashboard') }}" class="flex items-center gap-2">
+        <select name="year" class="kt-select kt-select-sm" onchange="this.form.submit()">
+            @for($y = now()->year; $y >= now()->year - 5; $y--)
+            <option value="{{ $y }}" {{ $filterYear == $y ? 'selected' : '' }}>{{ $y }}</option>
+            @endfor
+        </select>
+    </form>
 </div>
 @endsection
 
@@ -668,27 +628,7 @@
 
 @push('scripts')
 <script>
-function toggleFilter() {
-    document.getElementById('filterPanel').classList.toggle('hidden');
-}
-function loadSiklusForBlok() {
-    var blokId = document.getElementById('filterBlok').value;
-    var sel = document.getElementById('filterSiklus');
-    sel.innerHTML = '<option value="">Semua Siklus</option>';
-    if (!blokId) return;
-    fetch('/budidaya/siklus/by-blok/' + blokId)
-        .then(r => r.json())
-        .then(sikluses => {
-            sikluses.filter(s => s.status === 'aktif').forEach(function(s) {
-                var opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = s.nama_siklus;
-                sel.appendChild(opt);
-            });
-        });
-}
 function openTransactionModal(jenis) {
-    console.log('Opening modal for:', jenis);
     var modal = document.getElementById('transactionModal');
     var title = document.getElementById('modalTitle');
     var tbody = document.getElementById('modalTableBody');
@@ -700,10 +640,7 @@ function openTransactionModal(jenis) {
 
     var params = new URLSearchParams({
         jenis: jenis,
-        blok_id: document.getElementById('filterBlok').value,
-        siklus_id: document.getElementById('filterSiklus').value,
-        date_from: document.querySelector('input[name="date_from"]').value,
-        date_to: document.querySelector('input[name="date_to"]').value
+        year: '{{ $filterYear }}'
     });
 
     fetch('{{ route("dashboard.transactions") }}?' + params.toString())
@@ -767,14 +704,6 @@ function exportModalToExcel() {
     link.click();
 }
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
-        var panel = document.getElementById('filterPanel');
-        var wrapper = document.getElementById('filterWrapper');
-        if (panel && wrapper && !wrapper.contains(e.target)) {
-            panel.classList.add('hidden');
-        }
-    });
-
     var months = @json(array_values($allMonths->toArray()));
     var shortMonths = months.map(function(m) {
         var p = m.split('-');

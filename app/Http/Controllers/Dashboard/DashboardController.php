@@ -30,40 +30,23 @@ class DashboardController extends Controller
         }
 
         // Filters
-        $filterBlok = request('blok_id');
-        $filterSiklus = request('siklus_id');
-        $filterDateFrom = request('date_from');
-        $filterDateTo = request('date_to');
+        $filterYear = request('year', now()->year);
 
         // Dropdowns
         $bloks = Blok::orderBy('nama_blok')->get();
-        $sikluses = Siklus::where('status', 'aktif')
-            ->when($filterBlok, fn($q) => $q->where('blok_id', $filterBlok))
-            ->orderBy('nama_siklus')->get();
+        $sikluses = Siklus::where('status', 'aktif')->orderBy('nama_siklus')->get();
+
+        // Year boundaries
+        $yearStart = $filterYear . '-01-01';
+        $yearEnd = $filterYear . '-12-31';
 
         // Filtered query scopes
-        $transaksiScope = TransaksiKeuangan::query()->where('status', 'selesai');
-        $panenScope = Panen::query()->where('status', 'selesai');
-        $investasiScope = Investasi::query()->where('status', 'selesai');
-
-        if ($filterSiklus) {
-            $transaksiScope->where('siklus_id', $filterSiklus);
-            $panenScope->whereHas('siklus', fn($q) => $q->where('id', $filterSiklus));
-        } elseif ($filterBlok) {
-            $transaksiScope->whereHas('siklus', fn($q) => $q->where('blok_id', $filterBlok));
-            $panenScope->whereHas('siklus.blok', fn($q) => $q->where('id', $filterBlok));
-        }
-
-        if ($filterDateFrom) {
-            $transaksiScope->where('tgl_kwitansi', '>=', $filterDateFrom);
-            $panenScope->where('tgl_panen', '>=', $filterDateFrom);
-            $investasiScope->where('created_at', '>=', $filterDateFrom);
-        }
-        if ($filterDateTo) {
-            $transaksiScope->where('tgl_kwitansi', '<=', $filterDateTo);
-            $panenScope->where('tgl_panen', '<=', $filterDateTo);
-            $investasiScope->where('created_at', '<=', $filterDateTo);
-        }
+        $transaksiScope = TransaksiKeuangan::query()->where('status', 'selesai')
+            ->whereBetween('tgl_kwitansi', [$yearStart, $yearEnd]);
+        $panenScope = Panen::query()->where('status', 'selesai')
+            ->whereBetween('tgl_panen', [$yearStart, $yearEnd]);
+        $investasiScope = Investasi::query()->where('status', 'selesai')
+            ->whereBetween('created_at', [$yearStart, $yearEnd . ' 23:59:59']);
 
         // === Stat Cards ===
         $totalInvestasi = $investasiScope->sum('nominal');
@@ -73,10 +56,13 @@ class DashboardController extends Controller
         $totalPendapatan = $pendapatanTransaksi + $pendapatanPanen;
 
         $pengeluaranTransaksi = (clone $transaksiScope)->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
-        $pengeluaranGaji = GajiKaryawan::where('status', 'selesai')->sum('thp');
+        $pengeluaranGaji = GajiKaryawan::where('status', 'selesai')
+            ->whereBetween('created_at', [$yearStart, $yearEnd . ' 23:59:59'])->sum('thp');
         $pengeluaranPersediaan = PembelianPersediaan::where('status', 'selesai')
+            ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])
             ->with('items')->get()->sum(fn($p) => $p->items->sum('harga_total'));
-        $pengeluaranAset = PembelianAset::where('status', 'selesai')->sum('nominal_pembelian');
+        $pengeluaranAset = PembelianAset::where('status', 'selesai')
+            ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])->sum('nominal_pembelian');
         $totalPengeluaran = $pengeluaranTransaksi + $pengeluaranGaji + $pengeluaranPersediaan + $pengeluaranAset;
 
         $labaRugi = $totalPendapatan - $totalPengeluaran;
@@ -93,6 +79,7 @@ class DashboardController extends Controller
             ->values();
 
         $pengeluaranKategoriAset = PembelianAset::where('status', 'selesai')
+            ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])
             ->with('kategoriAset')
             ->get()
             ->groupBy(fn($aset) => $aset->kategoriAset?->deskripsi ?? 'Aset')
@@ -103,6 +90,7 @@ class DashboardController extends Controller
             ->values();
 
         $pengeluaranKategoriPersediaan = PembelianPersediaan::where('status', 'selesai')
+            ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])
             ->with('items.itemPersediaan.kategoriPersediaan')
             ->get()
             ->flatMap(function ($pembelian) {
@@ -127,7 +115,8 @@ class DashboardController extends Controller
         $pengeluaranKategoriGaji = collect([
             [
                 'kategori' => 'Gaji',
-                'total' => (float) GajiKaryawan::where('status', 'selesai')->sum('thp'),
+                'total' => (float) GajiKaryawan::where('status', 'selesai')
+                    ->whereBetween('created_at', [$yearStart, $yearEnd . ' 23:59:59'])->sum('thp'),
             ],
         ])->filter(fn($item) => $item['total'] > 0);
 
@@ -143,24 +132,20 @@ class DashboardController extends Controller
             ->sortByDesc('total')
             ->values();
 
-        // === Charts (calendar year, same sources as stat cards) ===
-        $chartStart = now()->startOfYear();
+        // === Charts (selected year, same sources as stat cards) ===
+        $chartStart = \Carbon\Carbon::createFromDate($filterYear, 1, 1)->startOfYear();
 
         $pendapatanTransaksiBulanan = TransaksiKeuangan::query()
             ->where('jenis_transaksi', 'uang_masuk')
             ->where('status', 'selesai')
-            ->when($filterSiklus, fn($q) => $q->where('siklus_id', $filterSiklus))
-            ->when(!$filterSiklus && $filterBlok, fn($q) => $q->whereHas('siklus', fn($sq) => $sq->where('blok_id', $filterBlok)))
-            ->where('tgl_kwitansi', '>=', $chartStart)
+            ->whereBetween('tgl_kwitansi', [$yearStart, $yearEnd])
             ->selectRaw("TO_CHAR(tgl_kwitansi, 'YYYY-MM') as bulan, SUM(nominal) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
         $pendapatanPanenBulanan = Panen::query()
             ->where('status', 'selesai')
-            ->when($filterSiklus, fn($q) => $q->where('siklus_id', $filterSiklus))
-            ->when(!$filterSiklus && $filterBlok, fn($q) => $q->whereHas('siklus.blok', fn($sq) => $sq->where('id', $filterBlok)))
-            ->where('tgl_panen', '>=', $chartStart)
+            ->whereBetween('tgl_panen', [$yearStart, $yearEnd])
             ->selectRaw("TO_CHAR(tgl_panen, 'YYYY-MM') as bulan, SUM(total_penjualan) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
@@ -168,16 +153,14 @@ class DashboardController extends Controller
         $pengeluaranTransaksiBulanan = TransaksiKeuangan::query()
             ->where('jenis_transaksi', 'uang_keluar')
             ->where('status', 'selesai')
-            ->when($filterSiklus, fn($q) => $q->where('siklus_id', $filterSiklus))
-            ->when(!$filterSiklus && $filterBlok, fn($q) => $q->whereHas('siklus', fn($sq) => $sq->where('blok_id', $filterBlok)))
-            ->where('tgl_kwitansi', '>=', $chartStart)
+            ->whereBetween('tgl_kwitansi', [$yearStart, $yearEnd])
             ->selectRaw("TO_CHAR(tgl_kwitansi, 'YYYY-MM') as bulan, SUM(nominal) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
         $pengeluaranGajiBulanan = GajiKaryawan::query()
             ->where('status', 'selesai')
-            ->where('created_at', '>=', $chartStart)
+            ->whereBetween('created_at', [$yearStart, $yearEnd . ' 23:59:59'])
             ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as bulan, SUM(thp) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
@@ -185,21 +168,21 @@ class DashboardController extends Controller
         $pengeluaranPersediaanBulanan = PembelianPersediaan::query()
             ->join('pembelian_persediaan_items', 'pembelian_persediaans.id', '=', 'pembelian_persediaan_items.pembelian_persediaan_id')
             ->where('pembelian_persediaans.status', 'selesai')
-            ->where('pembelian_persediaans.tgl_pembelian', '>=', $chartStart)
+            ->whereBetween('pembelian_persediaans.tgl_pembelian', [$yearStart, $yearEnd])
             ->selectRaw("TO_CHAR(pembelian_persediaans.tgl_pembelian, 'YYYY-MM') as bulan, SUM(pembelian_persediaan_items.harga_total) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
         $pengeluaranAsetBulanan = PembelianAset::query()
             ->where('status', 'selesai')
-            ->where('tgl_pembelian', '>=', $chartStart)
+            ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])
             ->selectRaw("TO_CHAR(tgl_pembelian, 'YYYY-MM') as bulan, SUM(nominal_pembelian) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
         $allMonths = collect();
         for ($month = 1; $month <= 12; $month++) {
-            $allMonths->push(now()->startOfYear()->month($month)->format('Y-m'));
+            $allMonths->push($chartStart->copy()->month($month)->format('Y-m'));
         }
         $pendapatanChart = $allMonths->mapWithKeys(fn($m) => [
             $m => (float)($pendapatanTransaksiBulanan[$m] ?? 0) + (float)($pendapatanPanenBulanan[$m] ?? 0),
@@ -228,7 +211,8 @@ class DashboardController extends Controller
         $totalSaldoBank = $accountBanks->sum('saldo');
 
         // === Hutang & Piutang ===
-        $hutangPiutangs = HutangPiutang::where('status', '!=', 'cancel')->get();
+        $hutangPiutangs = HutangPiutang::where('status', '!=', 'cancel')
+            ->whereBetween('created_at', [$yearStart, $yearEnd . ' 23:59:59'])->get();
         $totalHutang = $hutangPiutangs->where('jenis', 'hutang')->sum(fn($item) => $item->total_bayar ?? $item->nominal ?? 0);
         $sisaHutang = $hutangPiutangs->where('jenis', 'hutang')->sum(fn($item) => $item->sisa_pembayaran ?? ($item->total_bayar ?? $item->nominal ?? 0));
         $totalPiutang = $hutangPiutangs->where('jenis', 'piutang')->sum('nominal');
@@ -246,10 +230,13 @@ class DashboardController extends Controller
         $totalBlok = Blok::count();
         $kolamAktif = Kolam::where('status', 'aktif')->count();
         $siklusAktif = Siklus::where('status', 'aktif')->count();
-        $nilaiAset = PembelianAset::where('status', 'selesai')->get()->sum(fn($a) => $a->nilai_buku_aset);
+        $nilaiAset = PembelianAset::where('status', 'selesai')
+            ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])
+            ->get()->sum(fn($a) => $a->nilai_buku_aset);
 
         // === Siklus Cards (same logic as SiklusController@show) ===
         $siklusAktifData = Siklus::with(['blok.tambak', 'panens', 'kolams'])
+            ->whereYear('tgl_siklus', $filterYear)
             ->orderByRaw("CASE WHEN status = 'aktif' THEN 0 ELSE 1 END")
             ->orderByDesc('tgl_siklus')
             ->get()
@@ -314,8 +301,7 @@ class DashboardController extends Controller
 
         return view('dashboard.index', compact(
             'hasTambak',
-            'bloks', 'sikluses',
-            'filterBlok', 'filterSiklus', 'filterDateFrom', 'filterDateTo',
+            'bloks', 'sikluses', 'filterYear',
             'totalInvestasi', 'totalPendapatan', 'totalPengeluaran', 'labaRugi',
             'pengeluaranKategori',
             'pendapatanChart', 'pengeluaranChart', 'allMonths',
@@ -331,10 +317,9 @@ class DashboardController extends Controller
 
     public function transactions()
     {
-        $filterBlok = request('blok_id');
-        $filterSiklus = request('siklus_id');
-        $filterDateFrom = request('date_from');
-        $filterDateTo = request('date_to');
+        $filterYear = request('year', now()->year);
+        $yearStart = $filterYear . '-01-01';
+        $yearEnd = $filterYear . '-12-31';
         $jenis = request('jenis'); // pendapatan, pengeluaran, investasi
 
         $allTransactions = collect();
@@ -342,22 +327,14 @@ class DashboardController extends Controller
         if ($jenis === 'pendapatan' || $jenis === 'pengeluaran') {
             // Transaksi Keuangan
             $query = TransaksiKeuangan::with(['kategoriTransaksi', 'itemTransaksi', 'accountBank', 'siklus.blok'])
-                ->where('status', 'selesai');
+                ->where('status', 'selesai')
+                ->whereBetween('tgl_kwitansi', [$yearStart, $yearEnd]);
 
             if ($jenis === 'pendapatan') {
                 $query->where('jenis_transaksi', 'uang_masuk');
             } else {
                 $query->where('jenis_transaksi', 'uang_keluar');
             }
-
-            if ($filterSiklus) {
-                $query->where('siklus_id', $filterSiklus);
-            } elseif ($filterBlok) {
-                $query->whereHas('siklus', fn($q) => $q->where('blok_id', $filterBlok));
-            }
-
-            if ($filterDateFrom) $query->where('tgl_kwitansi', '>=', $filterDateFrom);
-            if ($filterDateTo) $query->where('tgl_kwitansi', '<=', $filterDateTo);
 
             $query->get()->each(function($t) use ($allTransactions) {
                 $allTransactions->push([
@@ -378,16 +355,8 @@ class DashboardController extends Controller
         // Panen (Pendapatan)
         if ($jenis === 'pendapatan') {
             $panenQuery = Panen::with(['siklus.blok', 'accountBank'])
-                ->where('status', 'selesai');
-
-            if ($filterSiklus) {
-                $panenQuery->where('siklus_id', $filterSiklus);
-            } elseif ($filterBlok) {
-                $panenQuery->whereHas('siklus', fn($q) => $q->where('blok_id', $filterBlok));
-            }
-
-            if ($filterDateFrom) $panenQuery->where('tgl_panen', '>=', $filterDateFrom);
-            if ($filterDateTo) $panenQuery->where('tgl_panen', '<=', $filterDateTo);
+                ->where('status', 'selesai')
+                ->whereBetween('tgl_panen', [$yearStart, $yearEnd]);
 
             $panenQuery->get()->each(function($p) use ($allTransactions) {
                 $allTransactions->push([
@@ -404,9 +373,8 @@ class DashboardController extends Controller
         if ($jenis === 'pengeluaran') {
             // Gaji
             $gajiQuery = GajiKaryawan::with(['user', 'accountBank'])
-                ->where('status', 'selesai');
-            if ($filterDateFrom) $gajiQuery->where('created_at', '>=', $filterDateFrom);
-            if ($filterDateTo) $gajiQuery->where('created_at', '<=', $filterDateTo);
+                ->where('status', 'selesai')
+                ->whereBetween('created_at', [$yearStart, $yearEnd . ' 23:59:59']);
             $gajiQuery->get()->each(function($g) use ($allTransactions) {
                 $allTransactions->push([
                     'no' => 0, 'nomor_transaksi' => $g->nomor_transaksi ?? '-',
@@ -420,9 +388,8 @@ class DashboardController extends Controller
 
             // Pembelian Aset
             $asetQuery = PembelianAset::with(['kategoriAset', 'accountBank'])
-                ->where('status', 'selesai');
-            if ($filterDateFrom) $asetQuery->where('tgl_pembelian', '>=', $filterDateFrom);
-            if ($filterDateTo) $asetQuery->where('tgl_pembelian', '<=', $filterDateTo);
+                ->where('status', 'selesai')
+                ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd]);
             $asetQuery->get()->each(function($a) use ($allTransactions) {
                 $allTransactions->push([
                     'no' => 0, 'nomor_transaksi' => $a->nomor_transaksi ?? '-',
@@ -436,9 +403,8 @@ class DashboardController extends Controller
 
             // Pembelian Persediaan (Pakan)
             $persediaanQuery = PembelianPersediaan::with(['accountBank', 'items.itemPersediaan'])
-                ->where('status', 'selesai');
-            if ($filterDateFrom) $persediaanQuery->where('tgl_pembelian', '>=', $filterDateFrom);
-            if ($filterDateTo) $persediaanQuery->where('tgl_pembelian', '<=', $filterDateTo);
+                ->where('status', 'selesai')
+                ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd]);
             $persediaanQuery->get()->each(function($p) use ($allTransactions) {
                 $total = $p->items->sum('harga_total');
                 $items = $p->items->map(fn($i) => $i->itemPersediaan?->deskripsi ?? '-')->implode(', ');
@@ -456,9 +422,8 @@ class DashboardController extends Controller
             $hutangQuery = HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])
                 ->where('jenis', 'hutang')
                 ->where('status', 'selesai')
-                ->where('nominal_bayar', '>', 0);
-            if ($filterDateFrom) $hutangQuery->where('updated_at', '>=', $filterDateFrom);
-            if ($filterDateTo) $hutangQuery->where('updated_at', '<=', $filterDateTo);
+                ->where('nominal_bayar', '>', 0)
+                ->whereBetween('updated_at', [$yearStart, $yearEnd . ' 23:59:59']);
             $hutangQuery->get()->each(function($h) use ($allTransactions) {
                 $allTransactions->push([
                     'no' => 0, 'nomor_transaksi' => $h->nomor_transaksi ?? '-',

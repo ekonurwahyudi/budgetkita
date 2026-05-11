@@ -235,13 +235,37 @@ class DashboardController extends Controller
             ->whereBetween('tgl_pembelian', [$yearStart, $yearEnd])
             ->get()->sum(fn($a) => $a->nilai_buku_aset);
 
-        // === Siklus Cards (same logic as SiklusController@show) ===
-        $siklusAktifData = Siklus::with(['blok.tambak', 'panens', 'kolams'])
-            ->whereYear('tgl_siklus', $filterYear)
-            ->orderByRaw("CASE WHEN status = 'aktif' THEN 0 ELSE 1 END")
-            ->orderByDesc('tgl_siklus')
+        // === Siklus Cards per Blok ===
+        $siklusAktifData = Blok::with([
+                'tambak',
+                'sikluses' => fn($q) => $q
+                    ->with(['panens', 'kolams'])
+                    ->orderByRaw("CASE WHEN status = 'aktif' THEN 0 ELSE 1 END")
+                    ->orderByDesc('tgl_siklus'),
+            ])
+            ->orderBy('nama_blok')
             ->get()
-            ->map(function ($siklus) {
+            ->map(function ($blok) use ($filterYear) {
+                $siklus = $blok->sikluses->first(fn($item) => optional($item->tgl_siklus)->year == $filterYear)
+                    ?? $blok->sikluses->first();
+
+                if (!$siklus) {
+                    return [
+                        'id' => null,
+                        'blok_id' => $blok->id,
+                        'nama_siklus' => 'Belum ada siklus',
+                        'blok_nama' => $blok->nama_blok,
+                        'total_kolam' => 0,
+                        'tgl_siklus' => null,
+                        'status' => $blok->status_blok,
+                        'uang_masuk' => 0,
+                        'uang_keluar' => 0,
+                        'keuntungan_kerugian' => 0,
+                        'sharing_terpakai' => 0,
+                        'sharing_sisa' => 100,
+                    ];
+                }
+
                 $transaksis = TransaksiKeuangan::where(function ($q) use ($siklus) {
                     $q->where('siklus_id', $siklus->id)
                       ->orWhere('blok_id', $siklus->blok_id);
@@ -292,12 +316,12 @@ class DashboardController extends Controller
 
                 return [
                     'id' => $siklus->id,
-                    'blok_id' => $siklus->blok_id,
+                    'blok_id' => $blok->id,
                     'nama_siklus' => $siklus->nama_siklus,
-                    'blok_nama' => $siklus->blok?->nama_blok ?? '-',
+                    'blok_nama' => $blok->nama_blok,
                     'total_kolam' => $siklus->kolams->count(),
                     'tgl_siklus' => $siklus->tgl_siklus,
-                    'status' => $siklus->status,
+                    'status' => $siklus->status ?: $blok->status_blok,
                     'uang_masuk' => $uangMasuk,
                     'uang_keluar' => $uangKeluar,
                     'keuntungan_kerugian' => $keuntunganKerugian,

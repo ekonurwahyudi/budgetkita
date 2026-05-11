@@ -202,16 +202,20 @@
                     $statusBadge = match($siklusItem['status']) {
                         'aktif' => 'kt-badge-warning',
                         'selesai' => 'kt-badge-success',
+                        'maintenance' => 'kt-badge-warning',
+                        'nonaktif' => 'kt-badge-outline',
                         default => 'kt-badge-destructive',
                     };
                     $statusLabel = match($siklusItem['status']) {
                         'aktif' => 'Aktif',
                         'selesai' => 'Selesai',
+                        'maintenance' => 'Maintenance',
+                        'nonaktif' => 'Nonaktif',
                         default => 'Gagal',
                     };
                 @endphp
                 <div class="relative overflow-hidden rounded-lg border border-border bg-card p-4 hover:ring-2 hover:ring-primary/20 transition-all group">
-                    <div class="absolute inset-x-0 top-0 h-1 {{ $siklusItem['status'] === 'aktif' ? 'bg-warning' : ($siklusItem['status'] === 'selesai' ? 'bg-success' : 'bg-muted') }}"></div>
+                    <div class="absolute inset-x-0 top-0 h-1 {{ in_array($siklusItem['status'], ['aktif', 'maintenance']) ? 'bg-warning' : ($siklusItem['status'] === 'selesai' ? 'bg-success' : 'bg-muted') }}"></div>
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <div class="flex items-center gap-3 min-w-0">
                             <div class="flex items-center justify-center size-10 rounded-lg shrink-0 bg-primary/10 text-primary">
@@ -262,11 +266,17 @@
                         </div>
                     </div>
                     <div class="mt-3 flex items-center justify-between gap-2">
+                        @if($siklusItem['id'])
                         <a href="{{ route('siklus.show', $siklusItem['id']) }}" class="kt-btn kt-btn-sm kt-btn-outline">
                             <i class="ki-filled ki-eye"></i> Detail
                         </a>
+                        @else
+                        <a href="{{ route('blok.index') }}" class="kt-btn kt-btn-sm kt-btn-outline">
+                            <i class="ki-filled ki-eye"></i> Detail
+                        </a>
+                        @endif
                         @can('sharing-revenue.create')
-                        @if($siklusItem['status'] === 'selesai' && $siklusItem['sharing_sisa'] > 0)
+                        @if($siklusItem['id'] && $siklusItem['status'] === 'selesai' && $siklusItem['sharing_sisa'] > 0)
                         <a href="{{ route('sharing-revenue.create', ['blok_id' => $siklusItem['blok_id'], 'siklus_id' => $siklusItem['id']]) }}" class="kt-btn kt-btn-sm kt-btn-primary">
                             <i class="ki-filled ki-percentage"></i> Sharing Revenue
                         </a>

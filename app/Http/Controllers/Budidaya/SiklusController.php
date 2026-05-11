@@ -12,6 +12,14 @@ use Illuminate\Http\Request;
 
 class SiklusController extends Controller
 {
+    private function toBaseUnit(float $qty, ?string $unit): float
+    {
+        return match (strtolower(trim($unit ?? 'kg'))) {
+            'gram', 'ml' => $qty / 1000,
+            default => $qty,
+        };
+    }
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -98,8 +106,9 @@ class SiklusController extends Controller
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') !== false
         )->map(function($p) {
             $persediaan = $p->itemPersediaan?->persediaan;
+            $jumlahBase = $this->toBaseUnit((float) ($p->jumlah_pakan ?? 0), $p->unit ?? 'kg');
             $p->harga_unit = $persediaan?->harga_per_unit ?? 0;
-            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan?->harga_per_unit ?? 0);
+            $p->biaya = $jumlahBase * ($persediaan?->harga_per_unit ?? 0);
             return $p;
         })->values();
 
@@ -108,8 +117,9 @@ class SiklusController extends Controller
             stripos($p->itemPersediaan->kategoriPersediaan->deskripsi, 'pakan') === false
         )->map(function($p) {
             $persediaan = $p->itemPersediaan?->persediaan;
+            $jumlahBase = $this->toBaseUnit((float) ($p->jumlah_pakan ?? 0), $p->unit ?? 'kg');
             $p->harga_unit = $persediaan?->harga_per_unit ?? 0;
-            $p->biaya = ($p->jumlah_pakan ?? 0) * ($persediaan?->harga_per_unit ?? 0);
+            $p->biaya = $jumlahBase * ($persediaan?->harga_per_unit ?? 0);
             return $p;
         })->values();
 

@@ -5,7 +5,91 @@
 @section('page-description', 'Kelola data hutang dan piutang')
 
 @section('content')
+@php
+    $activeData = $data->where('status', '!=', 'cancel');
+    $totalHutang = $activeData->where('jenis', 'hutang')->sum(fn($item) => $item->total_bayar ?? $item->nominal ?? 0);
+    $sisaHutang = $activeData->where('jenis', 'hutang')->sum(fn($item) => $item->sisa_pembayaran ?? ($item->total_bayar ?? $item->nominal ?? 0));
+    $totalPiutang = $activeData->where('jenis', 'piutang')->sum('nominal');
+    $sisaPiutang = $activeData->where('jenis', 'piutang')->sum(fn($item) => $item->sisa_pembayaran ?? $item->nominal ?? 0);
+    $jumlahHutang = $activeData->where('jenis', 'hutang')->count();
+    $jumlahPiutang = $activeData->where('jenis', 'piutang')->count();
+@endphp
+
 <div class="grid w-full space-y-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div class="kt-card overflow-hidden border-destructive/20">
+            <div class="kt-card-content p-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col gap-2 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 rounded-full bg-destructive"></span>
+                            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Jumlah Hutang</span>
+                        </div>
+                        <span class="text-2xl font-semibold text-mono text-foreground leading-none truncate">Rp {{ number_format($totalHutang, 0, ',', '.') }}</span>
+                        <span class="text-xs text-muted-foreground">{{ number_format($jumlahHutang, 0, ',', '.') }} transaksi hutang aktif</span>
+                    </div>
+                    <span class="size-11 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+                        <i class="ki-filled ki-arrow-up text-xl"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="kt-card overflow-hidden border-warning/20">
+            <div class="kt-card-content p-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col gap-2 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 rounded-full bg-warning"></span>
+                            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sisa Hutang</span>
+                        </div>
+                        <span class="text-2xl font-semibold text-mono text-warning leading-none truncate">Rp {{ number_format($sisaHutang, 0, ',', '.') }}</span>
+                        <span class="text-xs text-muted-foreground">Belum dibayarkan</span>
+                    </div>
+                    <span class="size-11 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                        <i class="ki-filled ki-time text-xl"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="kt-card overflow-hidden border-success/20">
+            <div class="kt-card-content p-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col gap-2 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 rounded-full bg-success"></span>
+                            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Jumlah Piutang</span>
+                        </div>
+                        <span class="text-2xl font-semibold text-mono text-foreground leading-none truncate">Rp {{ number_format($totalPiutang, 0, ',', '.') }}</span>
+                        <span class="text-xs text-muted-foreground">{{ number_format($jumlahPiutang, 0, ',', '.') }} transaksi piutang aktif</span>
+                    </div>
+                    <span class="size-11 rounded-lg bg-success/10 text-success flex items-center justify-center shrink-0">
+                        <i class="ki-filled ki-arrow-down text-xl"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="kt-card overflow-hidden border-primary/20">
+            <div class="kt-card-content p-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col gap-2 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 rounded-full bg-primary"></span>
+                            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sisa Piutang</span>
+                        </div>
+                        <span class="text-2xl font-semibold text-mono text-primary leading-none truncate">Rp {{ number_format($sisaPiutang, 0, ',', '.') }}</span>
+                        <span class="text-xs text-muted-foreground">Belum diterima</span>
+                    </div>
+                    <span class="size-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <i class="ki-filled ki-wallet text-xl"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="kt-card">
         <div class="kt-card-header min-h-16">
             <input type="text" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#hutang_piutang_table" />

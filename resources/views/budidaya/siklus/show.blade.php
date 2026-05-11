@@ -6,7 +6,7 @@
 
 @section('content')
 {{-- Stat Cards --}}
-<div class="grid grid-cols-3 gap-5 lg:gap-7.5 mb-5 lg:mb-7.5">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-7.5 mb-5 lg:mb-7.5">
     {{-- Uang Masuk --}}
     <div class="kt-card hover:ring-2 hover:ring-green-500/30 transition-all cursor-pointer group" onclick="openDetailModal('uangMasuk')">
         <div class="kt-card-content p-5">
@@ -106,7 +106,7 @@
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
     {{-- KIRI: Tabel History --}}
-    <div class="col-span-2">
+    <div class="col-span-1 lg:col-span-2">
         <div class="flex flex-col gap-5 lg:gap-7.5">
             {{-- Daftar Kolam --}}
             <div class="kt-card">
@@ -323,7 +323,7 @@
                                     <th class="w-12">No</th>
                                     <th>Tanggal</th>
                                     <th>Item Pakan</th>
-                                    <th>Jumlah Pakan (kg)</th>
+                                    <th>Jumlah Pakan</th>
                                     <th>Harga Unit</th>
                                     <th>Total Harga</th>
                                 </tr>
@@ -530,7 +530,7 @@
 
 <!-- Modal Tambah Panen -->
 <div class="kt-modal" data-kt-modal="true" id="panenModal">
-    <div class="kt-modal-content max-w-[600px] top-5 lg:top-[10%]">
+    <div class="kt-modal-content max-w-[600px] top-0 sm:top-5 lg:top-[10%]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title" id="panenModalTitle">Tambah Panen</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
@@ -542,7 +542,7 @@
             <input type="hidden" name="siklus_id" value="{{ $siklus->id }}">
             <input type="hidden" name="_method" id="panenFormMethod" value="POST">
             <div class="kt-modal-body flex flex-col gap-4" style="max-height:75vh;overflow-y:auto;">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Tanggal Panen <span class="text-danger">*</span></label>
                         <div class="kt-input">
@@ -559,7 +559,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Umur <span class="text-danger">*</span></label>
                         <div class="kt-input-group">
@@ -579,7 +579,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Harga Jual (/kg) <span class="text-danger">*</span></label>
                         <div class="kt-input-group">
@@ -599,7 +599,7 @@
                     <label class="text-sm font-medium text-foreground">Pembeli <span class="text-danger">*</span></label>
                     <input type="text" name="pembeli" id="p_pembeli" class="kt-input" required>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Jenis Pembayaran <span class="text-danger">*</span></label>
                         <select name="jenis_pembayaran" id="p_jenis_pembayaran" class="kt-select" required onchange="toggleBank()">
@@ -617,7 +617,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Pembayaran <span class="text-danger">*</span></label>
                         <select name="pembayaran" id="p_pembayaran" class="kt-select" required onchange="toggleSisaBayar()">
@@ -644,7 +644,7 @@
 
 {{-- Modal Tambah/Edit Kolam --}}
 <div class="kt-modal" data-kt-modal="true" id="kolamModal">
-    <div class="kt-modal-content max-w-[500px] top-5 lg:top-[15%]">
+    <div class="kt-modal-content max-w-[500px] top-0 sm:top-5 lg:top-[15%]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title" id="kolamModalTitle">Tambah Kolam</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
@@ -661,7 +661,7 @@
                     <label class="text-sm font-medium">Nama Kolam <span class="text-danger">*</span></label>
                     <input type="text" name="nama_kolam" id="k_nama_kolam" class="kt-input" required placeholder="Nama kolam">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium">Tgl Berdiri</label>
                         <div class="kt-input">
@@ -704,7 +704,7 @@
 
 {{-- Modal Detail Uang Masuk --}}
 <div class="kt-modal" data-kt-modal="true" id="detailUangMasukModal">
-    <div class="kt-modal-content max-w-2xl top-5 lg:top-[10%]">
+    <div class="kt-modal-content max-w-2xl top-0 sm:top-5 lg:top-[10%]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title">Detail Uang Masuk</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
@@ -713,7 +713,7 @@
         </div>
         <div class="kt-modal-body" style="max-height:70vh;overflow-y:auto;">
             <div class="mb-4 p-4 rounded-lg" style="background:rgba(23,198,83,0.08);">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-2">
                     <span class="text-sm font-medium">Total Uang Masuk</span>
                     <span class="text-lg font-bold text-green-600">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
                 </div>
@@ -792,7 +792,7 @@
 
 {{-- Modal Detail Uang Keluar --}}
 <div class="kt-modal" data-kt-modal="true" id="detailUangKeluarModal">
-    <div class="kt-modal-content max-w-2xl top-5 lg:top-[10%]">
+    <div class="kt-modal-content max-w-2xl top-0 sm:top-5 lg:top-[10%]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title">Detail Uang Keluar</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
@@ -801,7 +801,7 @@
         </div>
         <div class="kt-modal-body" style="max-height:70vh;overflow-y:auto;">
             <div class="mb-4 p-4 rounded-lg" style="background:rgba(241,65,108,0.08);">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-2">
                     <span class="text-sm font-medium">Total Uang Keluar</span>
                     <span class="text-lg font-bold text-red-600">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
                 </div>
@@ -914,7 +914,7 @@
 
 {{-- Modal Detail Keuntungan --}}
 <div class="kt-modal" data-kt-modal="true" id="detailKeuntunganModal">
-    <div class="kt-modal-content max-w-2xl top-5 lg:top-[10%]">
+    <div class="kt-modal-content max-w-2xl top-0 sm:top-5 lg:top-[10%]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title">Ringkasan Keuangan</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
@@ -924,7 +924,7 @@
         <div class="kt-modal-body">
             <div class="flex flex-col gap-4">
                 <div class="p-4 rounded-lg" style="background:rgba(23,198,83,0.08);">
-                    <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
                         <span class="text-sm text-secondary-foreground">Total Uang Masuk</span>
                         <span class="text-lg font-bold text-green-600">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
                     </div>
@@ -934,7 +934,7 @@
                     </div>
                 </div>
                 <div class="p-4 rounded-lg" style="background:rgba(241,65,108,0.08);">
-                    <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
                         <span class="text-sm text-secondary-foreground">Total Uang Keluar</span>
                         <span class="text-lg font-bold text-red-600">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
                     </div>

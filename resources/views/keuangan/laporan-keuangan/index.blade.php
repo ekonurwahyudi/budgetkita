@@ -7,7 +7,7 @@
 @section('content')
 <div class="grid w-full space-y-5">
     {{-- Row 1: Total Masuk, Total Keluar, Transaksi Keuangan --}}
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="kt-card">
             <div class="kt-card-content py-4 px-5 flex items-center gap-3">
                 <div class="size-11 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
@@ -44,7 +44,7 @@
     </div>
 
     {{-- Row 2: Investasi, Gaji Karyawan, Pembelian Pakan --}}
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="kt-card">
             <div class="kt-card-content py-4 px-5 flex items-center gap-3">
                 <div class="size-11 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
@@ -81,7 +81,7 @@
     </div>
 
     {{-- Row 3: Pembelian Aset, Hutang/Piutang, Panen --}}
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="kt-card">
             <div class="kt-card-content py-4 px-5 flex items-center gap-3">
                 <div class="size-11 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
@@ -121,7 +121,7 @@
         {{-- Header: Filter & Search --}}
         <div class="kt-card-header min-h-16 flex-wrap gap-3">
             {{-- Tabs kiri --}}
-            <div class="flex items-center rounded-lg p-1" style="background-color: #f1f5f9;">
+            <div class="flex items-center rounded-lg p-1 overflow-x-auto" style="background-color: #f1f5f9;">
                 @php
                     $activeJenis = $jenis;
                     $jenisTabs = [
@@ -143,8 +143,8 @@
             </div>
 
             {{-- Kanan: Search, Filter, Export --}}
-            <div class="flex items-center gap-2 flex-wrap">
-                <input type="text" placeholder="Cari kegiatan..." class="kt-input" style="width:200px"
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <input type="text" placeholder="Cari kegiatan..." class="kt-input w-full sm:w-48"
                        data-kt-datatable-search="#laporan_table" value="{{ $search }}" />
 
                 <button type="button" id="filter-btn" class="kt-btn kt-btn-outline flex items-center gap-2">
@@ -260,7 +260,7 @@
 </div>
 
 {{-- Filter Panel --}}
-<div id="filter-panel" class="hidden bg-white border border-gray-200 rounded-xl shadow-2xl p-5 w-80"
+<div id="filter-panel" class="hidden bg-white border border-gray-200 rounded-xl shadow-2xl p-5 w-[calc(100vw-2rem)] sm:w-80"
      style="position:fixed; z-index:100;">
     <form method="GET" id="filter-form">
         <input type="hidden" name="jenis" value="{{ $jenis }}">
@@ -335,8 +335,16 @@
 
     function positionPanel() {
         var rect = filterBtn.getBoundingClientRect();
-        panel.style.top = (rect.bottom + 8) + 'px';
-        panel.style.left = Math.max(0, rect.right - 320) + 'px';
+        var isMobile = window.innerWidth < 640;
+        if (isMobile) {
+            panel.style.top = (rect.bottom + 8) + 'px';
+            panel.style.left = '1rem';
+            panel.style.right = '1rem';
+        } else {
+            panel.style.top = (rect.bottom + 8) + 'px';
+            panel.style.left = Math.max(0, rect.right - 320) + 'px';
+            panel.style.right = '';
+        }
     }
 
     function openFilter() { positionPanel(); panel.classList.remove('hidden'); isOpen = true; }

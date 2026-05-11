@@ -80,7 +80,7 @@ class DashboardController extends Controller
 
         $labaRugi = $totalPendapatan - $totalPengeluaran;
 
-        $pengeluaranKategori = (clone $transaksiScope)
+        $pengeluaranKategoriTransaksi = (clone $transaksiScope)
             ->with('kategoriTransaksi')
             ->where('jenis_transaksi', 'uang_keluar')
             ->get()
@@ -88,6 +88,56 @@ class DashboardController extends Controller
             ->map(fn($items, $kategori) => [
                 'kategori' => $kategori,
                 'total' => (float) $items->sum('nominal'),
+            ])
+            ->values();
+
+        $pengeluaranKategoriAset = PembelianAset::where('status', 'selesai')
+            ->with('kategoriAset')
+            ->get()
+            ->groupBy(fn($aset) => $aset->kategoriAset?->deskripsi ?? 'Aset')
+            ->map(fn($items, $kategori) => [
+                'kategori' => $kategori,
+                'total' => (float) $items->sum('nominal_pembelian'),
+            ])
+            ->values();
+
+        $pengeluaranKategoriPersediaan = PembelianPersediaan::where('status', 'selesai')
+            ->with('items.itemPersediaan.kategoriPersediaan')
+            ->get()
+            ->flatMap(function ($pembelian) {
+                return $pembelian->items->map(function ($item) {
+                    $namaKategori = $item->itemPersediaan?->kategoriPersediaan?->deskripsi ?? '';
+                    $namaItem = $item->itemPersediaan?->deskripsi ?? '';
+                    $teks = strtolower($namaKategori . ' ' . $namaItem);
+
+                    return [
+                        'kategori' => str_contains($teks, 'pakan') ? 'Pakan' : 'Bahan Kimia',
+                        'total' => (float) $item->harga_total,
+                    ];
+                });
+            })
+            ->groupBy('kategori')
+            ->map(fn($items, $kategori) => [
+                'kategori' => $kategori,
+                'total' => (float) $items->sum('total'),
+            ])
+            ->values();
+
+        $pengeluaranKategoriGaji = collect([
+            [
+                'kategori' => 'Gaji',
+                'total' => (float) GajiKaryawan::where('status', 'selesai')->sum('thp'),
+            ],
+        ])->filter(fn($item) => $item['total'] > 0);
+
+        $pengeluaranKategori = $pengeluaranKategoriTransaksi
+            ->concat($pengeluaranKategoriAset)
+            ->concat($pengeluaranKategoriPersediaan)
+            ->concat($pengeluaranKategoriGaji)
+            ->groupBy('kategori')
+            ->map(fn($items, $kategori) => [
+                'kategori' => $kategori,
+                'total' => (float) $items->sum('total'),
             ])
             ->sortByDesc('total')
             ->values();

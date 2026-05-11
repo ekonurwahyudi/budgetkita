@@ -356,28 +356,32 @@
         <div class="kt-card">
             <div class="kt-card-header">
                 <div>
-                    <h3 class="kt-card-title">Kategori Transaksi</h3>
+                    <h3 class="kt-card-title">Pengeluaran per Kategori</h3>
                     <p class="text-xs text-secondary-foreground mt-0.5">Pengeluaran berdasarkan kategori</p>
                 </div>
+                <a href="{{ route('laporan-keuangan.index') }}" class="kt-btn kt-btn-sm kt-btn-outline">Lihat Semua</a>
             </div>
             <div class="kt-card-content p-5">
                 @if($pengeluaranKategori->count())
                 @php
                     $maxKategoriTotal = max((float) $pengeluaranKategori->max('total'), 1);
+                    $kategoriColors = ['#2563eb', '#3b82f6', '#4f67c7', '#7db7f0', '#9ecdf5', '#6b7a8a'];
                 @endphp
                 <div class="flex flex-col gap-4">
                     @foreach($pengeluaranKategori->take(6) as $kategori)
                     @php
                         $kategoriPct = round(((float) $kategori['total'] / $maxKategoriTotal) * 100);
+                        $kategoriColor = $kategoriColors[$loop->index % count($kategoriColors)];
                     @endphp
-                    <div class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-sm font-medium truncate">{{ $kategori['kategori'] }}</span>
-                            <span class="text-sm font-semibold text-mono whitespace-nowrap">Rp {{ number_format($kategori['total'], 0, ',', '.') }}</span>
+                    <div class="grid items-center gap-3" style="grid-template-columns:minmax(90px,1fr) minmax(90px,1.6fr) auto;">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="size-2 rounded-sm shrink-0" style="background:{{ $kategoriColor }};"></span>
+                            <span class="text-xs text-secondary-foreground truncate">{{ $kategori['kategori'] }}</span>
                         </div>
-                        <div class="h-2 rounded-full bg-muted overflow-hidden">
-                            <div class="h-full rounded-full" style="width:{{ $kategoriPct }}%; background:#2563eb;"></div>
+                        <div class="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div class="h-full rounded-full" style="width:{{ $kategoriPct }}%; background:{{ $kategoriColor }};"></div>
                         </div>
+                        <span class="text-xs font-semibold text-mono whitespace-nowrap">Rp {{ number_format($kategori['total'], 0, ',', '.') }}</span>
                     </div>
                     @endforeach
                 </div>

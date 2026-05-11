@@ -4,15 +4,28 @@
 
 @section('content')
 <style>
-    .page-bg { background-image: url('{{ asset("assets/media/images/2600x1200/bg-10.png") }}'); }
-    .dark .page-bg { background-image: url('{{ asset("assets/media/images/2600x1200/bg-10-dark.png") }}'); }
+    .login-bg {
+        background-image: url('{{ asset("assets/media/app/login-background.png") }}');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-attachment: fixed;
+    }
+    @media (max-width: 768px) {
+        .login-bg {
+            background-attachment: scroll;
+            background-size: cover;
+            background-position: center;
+            min-height: auto;
+        }
+    }
 </style>
-<div class="flex items-center justify-center grow bg-center bg-no-repeat page-bg">
+<div class="flex items-center justify-center grow w-full min-h-screen login-bg">
     <div class="kt-card max-w-[370px] w-full">
         <form action="{{ url('/login') }}" method="POST" class="kt-card-content flex flex-col gap-5 p-10" id="sign_in_form">
             @csrf
             <div class="text-center mb-2.5">
-                <h3 class="text-lg font-medium text-mono leading-none mb-2.5">Masuk ke BudgetKita</h3>
+                <img src="{{ asset('assets/media/brand-logos/logos.png') }}" alt="BudgetKita Logo" class="mx-auto h-16 mb-4"/>
                 <span class="text-sm text-secondary-foreground">Aplikasi Pencatatan Keuangan Tambak Udang</span>
             </div>
 
@@ -38,7 +51,7 @@
 
             <label class="kt-label">
                 <input class="kt-checkbox kt-checkbox-sm" name="remember" type="checkbox" value="1"/>
-                <span class="kt-checkbox-label">Ingat saya</span>
+                <span class="kt-checkbox-label">Remember me</span>
             </label>
 
             @if(config('services.recaptcha.site_key'))

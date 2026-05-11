@@ -57,6 +57,7 @@ class GajiKaryawanController extends Controller
         $input['potongan']   = (int) $request->input('potongan', 0);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVG');
         $input['thp'] = $input['gaji_pokok'] + $input['upah_lembur'] + $input['bonus'] - $input['pajak'] - $input['bpjs'] - $input['potongan'];
+        $input['created_by'] = auth()->id();
 
         if ($request->hasFile('eviden')) {
             $paths = [];
@@ -171,6 +172,7 @@ class GajiKaryawanController extends Controller
 
     public function approve(GajiKaryawan $gaji)
     {
+        $gaji->update(['reject_reason' => null]);
         app(ApprovalService::class)->approve($gaji);
         app(NotifikasiService::class)->kirim(
             $gaji->user_id,
@@ -182,13 +184,21 @@ class GajiKaryawanController extends Controller
         return redirect()->back()->with('success', 'Gaji berhasil di-approve.');
     }
 
-    public function reject(GajiKaryawan $gaji)
+    public function reject(Request $request, GajiKaryawan $gaji)
     {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $gaji->update(['reject_reason' => $validated['alasan_reject']]);
         app(ApprovalService::class)->reject($gaji);
         app(NotifikasiService::class)->kirim(
-            $gaji->user_id,
+            $gaji->created_by ?: $gaji->user_id,
             'Gaji Ditolak',
-            'Gaji Anda sebesar Rp ' . number_format($gaji->thp, 0, ',', '.') . ' telah ditolak.',
+            'Gaji sebesar Rp ' . number_format($gaji->thp, 0, ',', '.') . ' ditolak. Alasan: ' . $validated['alasan_reject'],
             'warning',
             route('gaji.show', $gaji->id)
         );

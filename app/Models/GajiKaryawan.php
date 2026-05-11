@@ -7,7 +7,7 @@ class GajiKaryawan extends BaseModel
     protected $fillable = [
         'nomor_transaksi', 'user_id', 'gaji_pokok', 'upah_lembur', 'bonus',
         'thp', 'pajak', 'bpjs', 'potongan', 'jenis_pembayaran',
-        'account_bank_id', 'eviden', 'status', 'created_at',
+        'account_bank_id', 'eviden', 'status', 'created_by', 'reject_reason', 'created_at',
     ];
 
     protected function casts(): array
@@ -22,4 +22,5 @@ class GajiKaryawan extends BaseModel
 
     public function user() { return $this->belongsTo(User::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
+    public function pembuat() { return $this->belongsTo(User::class, 'created_by'); }
 }

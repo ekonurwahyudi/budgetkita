@@ -7,7 +7,8 @@ class HutangPiutang extends BaseModel
     protected $fillable = [
         'nomor_transaksi', 'jenis', 'aktivitas', 'kategori_hutang_piutang_id',
         'nominal', 'total_bayar', 'jatuh_tempo', 'nominal_bayar', 'sisa_pembayaran',
-        'jenis_pembayaran', 'account_bank_id', 'eviden', 'catatan', 'status', 'created_at',
+        'jenis_pembayaran', 'account_bank_id', 'eviden', 'catatan', 'status',
+        'created_by', 'reject_reason', 'created_at',
     ];
 
     protected function casts(): array
@@ -24,4 +25,5 @@ class HutangPiutang extends BaseModel
     public function kategoriHutangPiutang() { return $this->belongsTo(KategoriHutangPiutang::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
     public function payments() { return $this->hasMany(HutangPiutangPayment::class); }
+    public function pembuat() { return $this->belongsTo(User::class, 'created_by'); }
 }

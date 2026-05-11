@@ -32,7 +32,9 @@
             <div class="flex items-center gap-2">
                 @if($transaksi->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
                 <form method="POST" action="{{ route('transaksi.approve', $transaksi) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm"><i class="ki-filled ki-check"></i> Approve</button></form>
-                <form method="POST" action="{{ route('transaksi.reject', $transaksi) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm"><i class="ki-filled ki-cross"></i> Reject</button></form>
+                <button type="button" class="kt-btn kt-btn-destructive kt-btn-sm" onclick="openRejectModal('{{ route('transaksi.reject', $transaksi) }}', '{{ e($transaksi->nomor_transaksi) }}')">
+                    <i class="ki-filled ki-cross"></i> Reject
+                </button>
                 @endif
                 @if(auth()->user()->hasRole('Owner') || in_array($transaksi->status, ['awaiting_approval','pending']))
                 @can('transaksi-keuangan.edit')
@@ -115,6 +117,16 @@
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Catatan</td>
                                 <td class="text-sm pb-3">{{ $transaksi->catatan ?? '-' }}</td>
                             </tr>
+                            @if($transaksi->status === 'cancel' && $transaksi->reject_reason)
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Alasan Reject</td>
+                                <td class="text-sm pb-3">
+                                    <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium" style="background:rgba(241,65,108,0.12); color:#f1416c;">
+                                        {{ $transaksi->reject_reason }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
@@ -163,6 +175,35 @@
     @endif
 </div>
 
+{{-- Reject Modal --}}
+<div id="rejectModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:30rem;" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+            <div>
+                <h3 class="text-base font-semibold text-foreground">Reject Transaksi</h3>
+                <p class="text-xs text-muted-foreground mt-1" id="rejectNomor">-</p>
+            </div>
+            <button type="button" onclick="closeRejectModal()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" id="rejectForm">
+            @csrf
+            <div class="p-4 flex flex-col gap-3">
+                <label class="text-sm font-medium text-foreground" for="alasan_reject">Alasan Reject <span class="text-danger">*</span></label>
+                <textarea id="alasan_reject" name="alasan_reject" class="kt-input" rows="4" style="height:120px;" placeholder="Tuliskan alasan transaksi ditolak..." required minlength="5"></textarea>
+                <p class="text-xs text-muted-foreground">Alasan ini akan dikirim sebagai notifikasi kepada pembuat transaksi.</p>
+            </div>
+            <div class="flex items-center justify-end gap-2 p-4 border-t border-border">
+                <button type="button" onclick="closeRejectModal()" class="kt-btn kt-btn-outline">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-destructive">
+                    <i class="ki-filled ki-cross"></i> Reject
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- Lightbox Modal --}}
 <div id="lb-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:1rem;">
     <button id="lb-close" style="position:absolute;top:1rem;right:1rem;color:#fff;font-size:1.5rem;background:none;border:none;cursor:pointer;">
@@ -174,6 +215,25 @@
 
 @push('scripts')
 <script>
+function openRejectModal(action, nomor) {
+    var modal = document.getElementById('rejectModal');
+    var form = document.getElementById('rejectForm');
+    var label = document.getElementById('rejectNomor');
+    var textarea = document.getElementById('alasan_reject');
+
+    form.action = action;
+    label.textContent = nomor || '-';
+    textarea.value = '';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { textarea.focus(); }, 50);
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     var modal = document.getElementById('lb-modal');
     if (!modal) return;

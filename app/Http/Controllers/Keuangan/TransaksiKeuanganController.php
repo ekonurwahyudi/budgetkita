@@ -127,6 +127,7 @@ class TransaksiKeuanganController extends Controller
         ]);
 
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVT');
+        $input['created_by'] = auth()->id();
 
         if ($request->hasFile('eviden')) {
             $paths = [];
@@ -260,6 +261,7 @@ class TransaksiKeuanganController extends Controller
 
     public function approve(TransaksiKeuangan $transaksi)
     {
+        $transaksi->update(['reject_reason' => null]);
         app(ApprovalService::class)->approve($transaksi);
         app(NotifikasiService::class)->kirimKeRole('Owner',
             'Transaksi Disetujui',
@@ -270,15 +272,28 @@ class TransaksiKeuanganController extends Controller
         return redirect()->back()->with('success', 'Transaksi berhasil di-approve.');
     }
 
-    public function reject(TransaksiKeuangan $transaksi)
+    public function reject(Request $request, TransaksiKeuangan $transaksi)
     {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $transaksi->update(['reject_reason' => $validated['alasan_reject']]);
         app(ApprovalService::class)->reject($transaksi);
-        app(NotifikasiService::class)->kirimKeRole('Owner',
-            'Transaksi Ditolak',
-            'Transaksi "' . $transaksi->aktivitas . '" telah ditolak.',
-            'warning',
-            route('transaksi.show', $transaksi->id)
-        );
+
+        if ($transaksi->created_by) {
+            app(NotifikasiService::class)->kirim(
+                $transaksi->created_by,
+                'Transaksi Ditolak',
+                'Transaksi "' . $transaksi->aktivitas . '" ditolak. Alasan: ' . $validated['alasan_reject'],
+                'warning',
+                route('transaksi.show', $transaksi->id)
+            );
+        }
+
         return redirect()->back()->with('success', 'Transaksi berhasil di-reject.');
     }
 

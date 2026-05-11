@@ -6,7 +6,8 @@ class Investasi extends BaseModel
 {
     protected $fillable = [
         'nomor_transaksi', 'deskripsi', 'nominal', 'kategori_investasi_id',
-        'eviden', 'catatan', 'jenis_pembayaran', 'account_bank_id', 'status', 'created_at',
+        'eviden', 'catatan', 'jenis_pembayaran', 'account_bank_id', 'status',
+        'created_by', 'reject_reason', 'created_at',
     ];
 
     protected function casts(): array
@@ -16,4 +17,5 @@ class Investasi extends BaseModel
 
     public function kategoriInvestasi() { return $this->belongsTo(KategoriInvestasi::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
+    public function pembuat() { return $this->belongsTo(User::class, 'created_by'); }
 }

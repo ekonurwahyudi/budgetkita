@@ -52,6 +52,7 @@ class HutangPiutangController extends Controller
         $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
         $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate($request->jenis === 'hutang' ? 'INVH' : 'INVP');
+        $input['created_by'] = auth()->id();
         // Sisa: untuk hutang = total_bayar - nominal_bayar, untuk piutang = nominal - nominal_bayar
         $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
         $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);
@@ -229,6 +230,38 @@ class HutangPiutangController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
-    public function approve(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->approve($hutangPiutang); $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang'; app(NotifikasiService::class)->kirimKeRole('Owner', $jenis . ' Disetujui', $jenis . ' "' . $hutangPiutang->aktivitas . '" telah disetujui.', 'info', route('hutang-piutang.show', $hutangPiutang->id)); return redirect()->back()->with('success', 'Data berhasil di-approve.'); }
-    public function reject(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->reject($hutangPiutang); $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang'; app(NotifikasiService::class)->kirimKeRole('Owner', $jenis . ' Ditolak', $jenis . ' "' . $hutangPiutang->aktivitas . '" telah ditolak.', 'warning', route('hutang-piutang.show', $hutangPiutang->id)); return redirect()->back()->with('success', 'Data berhasil di-reject.'); }
+    public function approve(HutangPiutang $hutangPiutang)
+    {
+        $hutangPiutang->update(['reject_reason' => null]);
+        app(ApprovalService::class)->approve($hutangPiutang);
+        $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang';
+        app(NotifikasiService::class)->kirimKeRole('Owner', $jenis . ' Disetujui', $jenis . ' "' . $hutangPiutang->aktivitas . '" telah disetujui.', 'info', route('hutang-piutang.show', $hutangPiutang->id));
+        return redirect()->back()->with('success', 'Data berhasil di-approve.');
+    }
+
+    public function reject(Request $request, HutangPiutang $hutangPiutang)
+    {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $hutangPiutang->update(['reject_reason' => $validated['alasan_reject']]);
+        app(ApprovalService::class)->reject($hutangPiutang);
+
+        if ($hutangPiutang->created_by) {
+            $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang';
+            app(NotifikasiService::class)->kirim(
+                $hutangPiutang->created_by,
+                $jenis . ' Ditolak',
+                $jenis . ' "' . $hutangPiutang->aktivitas . '" ditolak. Alasan: ' . $validated['alasan_reject'],
+                'warning',
+                route('hutang-piutang.show', $hutangPiutang->id)
+            );
+        }
+
+        return redirect()->back()->with('success', 'Data berhasil di-reject.');
+    }
 }

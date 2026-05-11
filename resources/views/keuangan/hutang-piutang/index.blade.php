@@ -158,7 +158,7 @@
                                 <span class="inline-flex gap-2.5">
                                     @if($item->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
                                     <form method="POST" action="{{ route('hutang-piutang.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm kt-btn-icon" title="Approve"><i class="ki-filled ki-check"></i></button></form>
-                                    <form method="POST" action="{{ route('hutang-piutang.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm kt-btn-icon" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
+                                    <button type="button" class="kt-btn kt-btn-destructive kt-btn-sm kt-btn-icon" title="Reject" onclick="openRejectModal('{{ route('hutang-piutang.reject', $item) }}', '{{ e($item->nomor_transaksi) }}')"><i class="ki-filled ki-cross"></i></button>
                                     @endif
 
                                     {{-- Tombol Bayar: tampil jika belum lunas dan status selesai --}}
@@ -188,6 +188,33 @@
                 <div class="kt-datatable-info"><span data-kt-datatable-info="true"></span><div class="kt-datatable-pagination" data-kt-datatable-pagination="true"></div></div>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="rejectModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;">
+    <div class="kt-card w-full max-w-[460px] shadow-2xl">
+        <div class="kt-card-header min-h-14">
+            <div>
+                <h3 class="kt-card-title">Reject Hutang/Piutang</h3>
+                <p class="text-xs text-muted-foreground mt-1" id="rejectNomor">-</p>
+            </div>
+            <button type="button" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" onclick="closeRejectModal()">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" id="rejectForm">
+            @csrf
+            <div class="kt-card-content py-4">
+                <label class="text-sm font-medium text-foreground" for="alasan_reject">Alasan Reject <span class="text-danger">*</span></label>
+                <textarea id="alasan_reject" name="alasan_reject" class="kt-input mt-2" rows="4" style="height:120px;" placeholder="Tuliskan alasan data ditolak..." required minlength="5"></textarea>
+            </div>
+            <div class="kt-card-footer justify-end gap-2">
+                <button type="button" class="kt-btn kt-btn-outline" onclick="closeRejectModal()">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-destructive">
+                    <i class="ki-filled ki-cross"></i> Reject
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -262,5 +289,22 @@ document.getElementById('bayar_jumlah_display').addEventListener('input', functi
     this.value = raw > 0 ? raw.toLocaleString('id-ID') : '';
     document.getElementById('bayar_jumlah_val').value = raw;
 });
+
+function openRejectModal(action, nomor) {
+    var modal = document.getElementById('rejectModal');
+    var form = document.getElementById('rejectForm');
+    var label = document.getElementById('rejectNomor');
+    var textarea = document.getElementById('alasan_reject');
+
+    form.action = action;
+    label.textContent = nomor;
+    textarea.value = '';
+    modal.style.display = 'flex';
+    textarea.focus();
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
 </script>
 @endpush

@@ -47,6 +47,7 @@ class InvestasiController extends Controller
         $input = $request->only(['deskripsi','nominal','kategori_investasi_id','jenis_pembayaran','account_bank_id','catatan']);
         $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVI');
+        $input['created_by'] = auth()->id();
         if ($request->hasFile('eviden')) {
             $paths = [];
             foreach ($request->file('eviden') as $file) {
@@ -146,6 +147,36 @@ class InvestasiController extends Controller
 
         return redirect()->back()->with('success', 'Investasi berhasil dihapus.');
     }
-    public function approve(Investasi $investasi) { app(ApprovalService::class)->approve($investasi); app(NotifikasiService::class)->kirimKeRole('Owner', 'Investasi Disetujui', 'Investasi "' . $investasi->deskripsi . '" telah disetujui.', 'info', route('investasi.show', $investasi->id)); return redirect()->back()->with('success', 'Investasi berhasil di-approve.'); }
-    public function reject(Investasi $investasi) { app(ApprovalService::class)->reject($investasi); app(NotifikasiService::class)->kirimKeRole('Owner', 'Investasi Ditolak', 'Investasi "' . $investasi->deskripsi . '" telah ditolak.', 'warning', route('investasi.show', $investasi->id)); return redirect()->back()->with('success', 'Investasi berhasil di-reject.'); }
+    public function approve(Investasi $investasi)
+    {
+        $investasi->update(['reject_reason' => null]);
+        app(ApprovalService::class)->approve($investasi);
+        app(NotifikasiService::class)->kirimKeRole('Owner', 'Investasi Disetujui', 'Investasi "' . $investasi->deskripsi . '" telah disetujui.', 'info', route('investasi.show', $investasi->id));
+        return redirect()->back()->with('success', 'Investasi berhasil di-approve.');
+    }
+
+    public function reject(Request $request, Investasi $investasi)
+    {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $investasi->update(['reject_reason' => $validated['alasan_reject']]);
+        app(ApprovalService::class)->reject($investasi);
+
+        if ($investasi->created_by) {
+            app(NotifikasiService::class)->kirim(
+                $investasi->created_by,
+                'Investasi Ditolak',
+                'Investasi "' . $investasi->deskripsi . '" ditolak. Alasan: ' . $validated['alasan_reject'],
+                'warning',
+                route('investasi.show', $investasi->id)
+            );
+        }
+
+        return redirect()->back()->with('success', 'Investasi berhasil di-reject.');
+    }
 }

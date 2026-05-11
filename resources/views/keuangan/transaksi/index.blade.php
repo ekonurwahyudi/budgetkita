@@ -116,7 +116,10 @@
                                 <span class="inline-flex gap-2.5">
                                     @if($item->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))
                                     <form method="POST" action="{{ route('transaksi.approve', $item) }}" class="inline">@csrf<button type="submit" class="kt-btn kt-btn-primary kt-btn-sm kt-btn-icon" title="Approve"><i class="ki-filled ki-check"></i></button></form>
-                                    <form method="POST" action="{{ route('transaksi.reject', $item) }}" class="inline" onsubmit="return confirm('Yakin reject?')">@csrf<button type="submit" class="kt-btn kt-btn-destructive kt-btn-sm kt-btn-icon" title="Reject"><i class="ki-filled ki-cross"></i></button></form>
+                                    <button type="button" class="kt-btn kt-btn-destructive kt-btn-sm kt-btn-icon" title="Reject"
+                                        onclick="openRejectModal('{{ route('transaksi.reject', $item) }}', '{{ e($item->nomor_transaksi) }}')">
+                                        <i class="ki-filled ki-cross"></i>
+                                    </button>
                                     @endif
                                     <a href="{{ route('transaksi.show', $item) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Lihat"><i class="ki-filled ki-eye"></i></a>
                                     @can('transaksi-keuangan.edit')
@@ -145,6 +148,35 @@
                 <div class="kt-datatable-info"><span data-kt-datatable-info="true"></span><div class="kt-datatable-pagination" data-kt-datatable-pagination="true"></div></div>
             </div>
         </div>
+    </div>
+</div>
+
+{{-- Reject Modal --}}
+<div id="rejectModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:30rem;" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+            <div>
+                <h3 class="text-base font-semibold text-foreground">Reject Transaksi</h3>
+                <p class="text-xs text-muted-foreground mt-1" id="rejectNomor">-</p>
+            </div>
+            <button type="button" onclick="closeRejectModal()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" id="rejectForm">
+            @csrf
+            <div class="p-4 flex flex-col gap-3">
+                <label class="text-sm font-medium text-foreground" for="alasan_reject">Alasan Reject <span class="text-danger">*</span></label>
+                <textarea id="alasan_reject" name="alasan_reject" class="kt-input" rows="4" style="height:120px;" placeholder="Tuliskan alasan transaksi ditolak..." required minlength="5"></textarea>
+                <p class="text-xs text-muted-foreground">Alasan ini akan dikirim sebagai notifikasi kepada pembuat transaksi.</p>
+            </div>
+            <div class="flex items-center justify-end gap-2 p-4 border-t border-border">
+                <button type="button" onclick="closeRejectModal()" class="kt-btn kt-btn-outline">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-destructive">
+                    <i class="ki-filled ki-cross"></i> Reject
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -263,6 +295,25 @@
     }
 </style>
 <script>
+function openRejectModal(action, nomor) {
+    var modal = document.getElementById('rejectModal');
+    var form = document.getElementById('rejectForm');
+    var label = document.getElementById('rejectNomor');
+    var textarea = document.getElementById('alasan_reject');
+
+    form.action = action;
+    label.textContent = nomor || '-';
+    textarea.value = '';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { textarea.focus(); }, 50);
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
 (function() {
     var filterBtn = document.getElementById('filter-btn');
     var panel = document.getElementById('filter-panel');

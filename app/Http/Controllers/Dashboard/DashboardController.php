@@ -250,20 +250,7 @@ class DashboardController extends Controller
                     ?? $blok->sikluses->first();
 
                 if (!$siklus) {
-                    return [
-                        'id' => null,
-                        'blok_id' => $blok->id,
-                        'nama_siklus' => 'Belum ada siklus',
-                        'blok_nama' => $blok->nama_blok,
-                        'total_kolam' => 0,
-                        'tgl_siklus' => null,
-                        'status' => $blok->status_blok,
-                        'uang_masuk' => 0,
-                        'uang_keluar' => 0,
-                        'keuntungan_kerugian' => 0,
-                        'sharing_terpakai' => 0,
-                        'sharing_sisa' => 100,
-                    ];
+                    return null;
                 }
 
                 $transaksis = TransaksiKeuangan::where(function ($q) use ($siklus) {
@@ -328,7 +315,9 @@ class DashboardController extends Controller
                     'sharing_terpakai' => min(100, $sharingTerpakai),
                     'sharing_sisa' => max(0, 100 - $sharingTerpakai),
                 ];
-            });
+            })
+            ->filter()
+            ->values();
 
         return view('dashboard.index', compact(
             'hasTambak',

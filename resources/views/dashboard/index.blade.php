@@ -36,6 +36,7 @@
 <div class="flex items-center gap-2">
     <form method="GET" action="{{ route('dashboard') }}" class="flex items-center gap-2">
         <select name="year" class="kt-select kt-select-sm" onchange="this.form.submit()">
+            <option value="all" {{ $filterYear === 'all' ? 'selected' : '' }}>ALL</option>
             @for($y = now()->year; $y >= now()->year - 5; $y--)
             <option value="{{ $y }}" {{ $filterYear == $y ? 'selected' : '' }}>{{ $y }}</option>
             @endfor
@@ -163,7 +164,7 @@
         <div class="dashboard-finance-chart kt-card">
             <div class="kt-card-header border-b border-border flex items-center justify-between gap-4">
                 <div>
-                    <h3 class="kt-card-title">Selama 1 Tahun</h3>
+                    <h3 class="kt-card-title">{{ $filterYear === 'all' ? 'Semua Tahun' : 'Selama 1 Tahun' }}</h3>
                     <p class="text-xs text-secondary-foreground mt-1">Pemasukan vs Pengeluaran</p>
                 </div>
                 <div class="flex items-center gap-4 text-sm text-[#536477]">
@@ -736,6 +737,7 @@ function exportModalToExcel() {
 document.addEventListener('DOMContentLoaded', function() {
     var months = @json(array_values($allMonths->toArray()));
     var shortMonths = months.map(function(m) {
+        if (String(m).indexOf('-') === -1) return m;
         var p = m.split('-');
         var n = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
         return n[parseInt(p[1])-1];

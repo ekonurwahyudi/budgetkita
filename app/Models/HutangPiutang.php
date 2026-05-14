@@ -5,7 +5,7 @@ namespace App\Models;
 class HutangPiutang extends BaseModel
 {
     protected $fillable = [
-        'nomor_transaksi', 'jenis', 'aktivitas', 'kategori_hutang_piutang_id',
+        'nomor_transaksi', 'jenis', 'nama_pemberi_hutang', 'aktivitas', 'kategori_hutang_piutang_id',
         'nominal', 'total_bayar', 'jatuh_tempo', 'nominal_bayar', 'sisa_pembayaran',
         'jenis_pembayaran', 'account_bank_id', 'eviden', 'catatan', 'status',
         'created_by', 'reject_reason', 'created_at',

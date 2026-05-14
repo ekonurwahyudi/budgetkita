@@ -58,6 +58,10 @@
                                 <td class="text-sm pb-3">{{ $hutangPiutang->kategoriHutangPiutang?->deskripsi ?? '-' }}</td>
                             </tr>
                             <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">{{ $hutangPiutang->jenis === 'piutang' ? 'Nama Penerima' : 'Nama Pemberi Hutang' }}</td>
+                                <td class="text-sm pb-3">{{ $hutangPiutang->nama_pemberi_hutang ?? '-' }}</td>
+                            </tr>
+                            <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Aktivitas</td>
                                 <td class="text-sm pb-3">{{ $hutangPiutang->aktivitas }}</td>
                             </tr>

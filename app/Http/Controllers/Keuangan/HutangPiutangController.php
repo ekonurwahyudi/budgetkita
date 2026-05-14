@@ -36,6 +36,7 @@ class HutangPiutangController extends Controller
     {
         $request->validate([
             'jenis' => 'required|in:hutang,piutang',
+            'nama_pemberi_hutang' => 'nullable|string|max:255',
             'aktivitas' => 'required|string',
             'kategori_hutang_piutang_id' => 'required|uuid|exists:kategori_hutang_piutangs,id',
             'nominal' => 'required|numeric|min:0',
@@ -49,7 +50,7 @@ class HutangPiutangController extends Controller
             'catatan' => 'nullable|string',
         ]);
 
-        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input = $request->only(['jenis','nama_pemberi_hutang','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
         $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate($request->jenis === 'hutang' ? 'INVH' : 'INVP');
         $input['created_by'] = auth()->id();
@@ -94,6 +95,7 @@ class HutangPiutangController extends Controller
     {
         $request->validate([
             'jenis' => 'required|in:hutang,piutang',
+            'nama_pemberi_hutang' => 'nullable|string|max:255',
             'aktivitas' => 'required|string',
             'kategori_hutang_piutang_id' => 'required|uuid|exists:kategori_hutang_piutangs,id',
             'nominal' => 'required|numeric|min:0',
@@ -106,7 +108,7 @@ class HutangPiutangController extends Controller
             'catatan' => 'nullable|string',
         ]);
 
-        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input = $request->only(['jenis','nama_pemberi_hutang','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
         $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
         $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);

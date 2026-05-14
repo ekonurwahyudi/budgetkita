@@ -597,6 +597,10 @@
                                 </div>
                             </div>
                             <div class="flex flex-col gap-1.5">
+                                <label class="text-sm font-medium text-foreground" id="nama_pemberi_hutang_hp_label">Nama Pemberi Hutang</label>
+                                <input type="text" name="nama_pemberi_hutang" id="nama_pemberi_hutang_hp" class="kt-input" value="{{ old('nama_pemberi_hutang') }}" placeholder="Nama pihak pemberi hutang" disabled/>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
                                 <label class="text-sm font-medium text-foreground">Aktivitas/Kegiatan <span class="text-danger">*</span></label>
                                 <textarea name="aktivitas" class="kt-input hp-required" rows="3" style="height:94px;" disabled>{{ old('aktivitas') }}</textarea>
                             </div>
@@ -883,6 +887,10 @@ function calcGajiMode() {
 function filterKategoriHp() {
     var jenis = document.getElementById('jenis_hp')?.value || 'hutang';
     var sel = document.getElementById('kategori_hutang_piutang_hp_id');
+    var namaLabel = document.getElementById('nama_pemberi_hutang_hp_label');
+    var namaInput = document.getElementById('nama_pemberi_hutang_hp');
+    if (namaLabel) namaLabel.textContent = jenis === 'piutang' ? 'Nama Penerima' : 'Nama Pemberi Hutang';
+    if (namaInput) namaInput.placeholder = jenis === 'piutang' ? 'Nama pihak penerima piutang' : 'Nama pihak pemberi hutang';
     if (sel) {
         Array.from(sel.options).forEach(function(opt) {
             if (!opt.value) return;

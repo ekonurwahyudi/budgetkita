@@ -75,6 +75,13 @@
                         </div>
                     </div>
 
+                    {{-- Pemberi Hutang --}}
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-foreground" id="nama_pemberi_hutang_label">Nama Pemberi Hutang</label>
+                        <input type="text" name="nama_pemberi_hutang" id="nama_pemberi_hutang" class="kt-input" value="{{ old('nama_pemberi_hutang', $hutangPiutang?->nama_pemberi_hutang) }}" placeholder="Nama pihak pemberi hutang" />
+                        @error('nama_pemberi_hutang')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
+                    </div>
+
                     {{-- Aktivitas --}}
                     <div class="flex flex-col gap-1.5">
                         <label class="text-sm font-medium text-foreground">Aktivitas/Kegiatan <span class="text-danger">*</span></label>
@@ -217,6 +224,10 @@
 function filterKategori() {
     var jenis = document.getElementById('jenis').value;
     var sel = document.getElementById('kategori_hutang_piutang_id');
+    var namaLabel = document.getElementById('nama_pemberi_hutang_label');
+    var namaInput = document.getElementById('nama_pemberi_hutang');
+    if (namaLabel) namaLabel.textContent = jenis === 'piutang' ? 'Nama Penerima' : 'Nama Pemberi Hutang';
+    if (namaInput) namaInput.placeholder = jenis === 'piutang' ? 'Nama pihak penerima piutang' : 'Nama pihak pemberi hutang';
     Array.from(sel.options).forEach(function(opt) {
         if (!opt.value) return;
         opt.hidden = opt.getAttribute('data-jenis') !== jenis;

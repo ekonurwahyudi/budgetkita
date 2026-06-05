@@ -5,6 +5,9 @@
 @section('page-description', 'Kelola transaksi keuangan')
 
 @section('content')
+<script>
+    localStorage.removeItem('transaksi_v2');
+</script>
 <div class="grid w-full space-y-5">
     <div class="kt-card">
         {{-- Header: Tabs kiri, Search/Filter/Export kanan --}}
@@ -58,7 +61,7 @@
         </div>
 
         {{-- Table --}}
-        <div id="transaksi_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="transaksi_v2">
+        <div id="transaksi_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="transaksi_v2">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>

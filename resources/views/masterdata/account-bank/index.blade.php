@@ -4,6 +4,96 @@
 @section('page-title', 'Account Bank')
 @section('page-description', 'Kelola data account bank')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .select2-container {
+        width: 100% !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+        min-height: 40px;
+        border-color: var(--input);
+        border-radius: 0.375rem;
+        background-color: var(--background);
+        display: flex;
+        align-items: center;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: var(--foreground);
+        font-size: 0.8125rem;
+        line-height: normal;
+        padding-left: 0.75rem;
+        padding-right: 2rem;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 0.5rem;
+    }
+
+    .select2-dropdown {
+        border-color: var(--input);
+        border-radius: 0.375rem;
+    }
+
+    .select2-container--default .select2-results > .select2-results__options {
+        max-height: 420px;
+    }
+
+    .account-bank-main-fields {
+        grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.5fr);
+    }
+
+    .bank-combobox {
+        position: relative;
+    }
+
+    .bank-combobox-panel {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 0.25rem);
+        z-index: 1050;
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1px solid var(--input);
+        border-radius: 0.375rem;
+        background: var(--background);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .bank-combobox .kt-input {
+        font-size: 0.8125rem;
+    }
+
+    .bank-combobox-option {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        font-size: 0.8125rem;
+        cursor: pointer;
+    }
+
+    .bank-combobox-option:hover,
+    .bank-combobox-option.is-active {
+        background: var(--accent);
+    }
+
+    .bank-combobox-add {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+    @media (max-width: 640px) {
+        .account-bank-main-fields {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="grid w-full space-y-5">
     <div class="kt-card">
@@ -103,7 +193,7 @@
             @csrf
             <input type="hidden" name="_method" id="formMethod" value="POST">
             <div class="kt-modal-body flex flex-col gap-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-4 account-bank-main-fields">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Kode Account <span class="text-danger">*</span></label>
                         <input type="text" name="kode_account" id="kode_account" class="kt-input" required>
@@ -219,7 +309,158 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    initBankSelect2();
+});
+
+function initBankSelect2() {
+    if (!window.jQuery || !jQuery.fn.select2) {
+        initBankComboboxFallback();
+        return;
+    }
+
+    jQuery('#nama_bank').select2({
+        tags: true,
+        width: '100%',
+        dropdownParent: jQuery('#formModal'),
+        placeholder: '-- Pilih Bank --',
+        allowClear: true,
+        createTag: function(params) {
+            var term = jQuery.trim(params.term);
+            if (term === '') return null;
+
+            return {
+                id: term,
+                text: term,
+                newTag: true
+            };
+        },
+        insertTag: function(data, tag) {
+            data.push(tag);
+        },
+        templateResult: function(data) {
+            if (data.newTag) {
+                return 'Tambah bank: ' + data.text;
+            }
+            return data.text;
+        }
+    });
+}
+
+function initBankComboboxFallback() {
+    var select = document.getElementById('nama_bank');
+    if (!select || select.dataset.comboboxReady === 'true') return;
+
+    select.dataset.comboboxReady = 'true';
+    select.classList.add('hidden');
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'bank-combobox';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'kt-input';
+    input.placeholder = '-- Pilih atau tambah bank --';
+    input.autocomplete = 'off';
+
+    var panel = document.createElement('div');
+    panel.className = 'bank-combobox-panel hidden';
+
+    select.parentNode.insertBefore(wrapper, select.nextSibling);
+    wrapper.appendChild(input);
+    wrapper.appendChild(panel);
+
+    function getOptions() {
+        return Array.from(select.options)
+            .filter(function(option) { return option.value; })
+            .map(function(option) { return option.value; });
+    }
+
+    function selectBank(value) {
+        if (value && !Array.from(select.options).some(function(option) { return option.value === value; })) {
+            select.add(new Option(value, value, true, true));
+        }
+
+        select.value = value;
+        input.value = value;
+        panel.classList.add('hidden');
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function renderOptions() {
+        var keyword = input.value.trim().toLowerCase();
+        var options = getOptions().filter(function(value) {
+            return value.toLowerCase().includes(keyword);
+        });
+        var exactMatch = getOptions().some(function(value) {
+            return value.toLowerCase() === keyword;
+        });
+
+        panel.innerHTML = '';
+
+        options.forEach(function(value) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'bank-combobox-option';
+            button.textContent = value;
+            button.addEventListener('click', function() {
+                selectBank(value);
+            });
+            panel.appendChild(button);
+        });
+
+        if (input.value.trim() && !exactMatch) {
+            var addButton = document.createElement('button');
+            addButton.type = 'button';
+            addButton.className = 'bank-combobox-option bank-combobox-add';
+            addButton.textContent = 'Tambah bank: ' + input.value.trim();
+            addButton.addEventListener('click', function() {
+                selectBank(input.value.trim());
+            });
+            panel.appendChild(addButton);
+        }
+
+        panel.classList.toggle('hidden', panel.children.length === 0);
+    }
+
+    input.addEventListener('focus', renderOptions);
+    input.addEventListener('input', renderOptions);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && input.value.trim()) {
+            e.preventDefault();
+            selectBank(input.value.trim());
+        }
+    });
+
+    select.addEventListener('change', function() {
+        input.value = select.value || '';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!wrapper.contains(e.target)) panel.classList.add('hidden');
+    });
+}
+
+function setBankValue(value) {
+    var select = document.getElementById('nama_bank');
+    var bankName = value || '';
+
+    if (bankName && !Array.from(select.options).some(option => option.value === bankName)) {
+        select.add(new Option(bankName, bankName, true, true));
+    }
+
+    select.value = bankName;
+
+    if (window.jQuery && jQuery.fn.select2) {
+        jQuery(select).val(bankName).trigger('change');
+    } else {
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+}
+
 function openTransferModal() {
     document.getElementById('transfer_dari_id').value = '';
     document.getElementById('transfer_ke_id').value = '';
@@ -287,7 +528,8 @@ function openCreateModal() {
     document.getElementById('modalTitle').textContent = 'Tambah Account Bank';
     document.getElementById('dataForm').action = "{{ route('account-bank.store') }}";
     document.getElementById('formMethod').value = 'POST';
-    ['kode_account','nama_bank','nama_pemilik','nomor_rekening','deskripsi_saldo','saldo_awal'].forEach(f => document.getElementById(f).value = '');
+    ['kode_account','nama_pemilik','nomor_rekening','deskripsi_saldo','saldo_awal'].forEach(f => document.getElementById(f).value = '');
+    setBankValue('');
     document.getElementById('saldo').value = '0';
     document.getElementById('status').value = 'aktif';
     document.getElementById('deskripsi_saldo_wrapper').style.display = 'none';
@@ -302,7 +544,7 @@ function openEditModal(id) {
             document.getElementById('dataForm').action = `/masterdata/account-bank/${id}`;
             document.getElementById('formMethod').value = 'PUT';
             document.getElementById('kode_account').value = data.kode_account;
-            document.getElementById('nama_bank').value = data.nama_bank;
+            setBankValue(data.nama_bank);
             document.getElementById('nama_pemilik').value = data.nama_pemilik || '';
             document.getElementById('nomor_rekening').value = data.nomor_rekening || '';
             document.getElementById('saldo').value = formatRupiah(data.saldo);

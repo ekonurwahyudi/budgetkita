@@ -60,6 +60,14 @@ class TransaksiKeuanganController extends Controller
         if ($request->filled('siklus_id')) $query->where('siklus_id', $request->siklus_id);
         if ($request->filled('tgl_dari')) $query->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
         if ($request->filled('tgl_sampai')) $query->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nomor_transaksi', 'like', "%{$search}%")
+                    ->orWhere('aktivitas', 'like', "%{$search}%")
+                    ->orWhereHas('kategoriTransaksi', fn ($qq) => $qq->where('deskripsi', 'like', "%{$search}%"));
+            });
+        }
 
         $data = $query->latest()->get();
 
@@ -76,6 +84,14 @@ class TransaksiKeuanganController extends Controller
         if ($request->filled('tgl_dari')) $baseQuery->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
         if ($request->filled('tgl_sampai')) $baseQuery->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
         if ($request->filled('status')) $baseQuery->where('status', $request->status);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('nomor_transaksi', 'like', "%{$search}%")
+                    ->orWhere('aktivitas', 'like', "%{$search}%")
+                    ->orWhereHas('kategoriTransaksi', fn ($qq) => $qq->where('deskripsi', 'like', "%{$search}%"));
+            });
+        }
 
         $allCount = (clone $baseQuery)->count();
         $counts = [
@@ -100,6 +116,14 @@ class TransaksiKeuanganController extends Controller
         if ($request->filled('siklus_id')) $query->where('siklus_id', $request->siklus_id);
         if ($request->filled('tgl_dari')) $query->whereDate('tgl_kwitansi', '>=', $request->tgl_dari);
         if ($request->filled('tgl_sampai')) $query->whereDate('tgl_kwitansi', '<=', $request->tgl_sampai);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nomor_transaksi', 'like', "%{$search}%")
+                    ->orWhere('aktivitas', 'like', "%{$search}%")
+                    ->orWhereHas('kategoriTransaksi', fn ($qq) => $qq->where('deskripsi', 'like', "%{$search}%"));
+            });
+        }
 
         $data = $query->latest()->get();
         $filename = 'transaksi-keuangan-' . now()->format('Ymd-His') . '.xlsx';

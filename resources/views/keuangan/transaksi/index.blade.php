@@ -8,6 +8,15 @@
 <script>
     localStorage.removeItem('transaksi_v2');
 </script>
+@php
+    $sampleIncomeItem = $itemTransaksis->first(fn ($item) => str_contains(strtolower($item->kategoriTransaksi?->deskripsi ?? ''), 'masuk')) ?: $itemTransaksis->first();
+    $sampleExpenseItem = $itemTransaksis->first(fn ($item) => str_contains(strtolower($item->kategoriTransaksi?->deskripsi ?? ''), 'keluar')) ?: $itemTransaksis->first();
+    $sampleTambak = $tambaks->first();
+    $sampleBlok = $bloks->first();
+    $sampleSiklus = $sikluses->first();
+    $sampleSumberDana = $sumberDanas->first();
+    $sampleAccountBank = $accountBanks->first();
+@endphp
 <div class="grid w-full space-y-5">
     <div class="kt-card">
         {{-- Header: Tabs kiri, Search/Filter/Export kanan --}}
@@ -53,6 +62,10 @@
                 </a>
 
                 @can('transaksi-keuangan.create')
+                <button type="button" onclick="openImportModal()" class="kt-btn kt-btn-outline flex items-center gap-2">
+                    <i class="ki-filled ki-file-up"></i> Import Excel
+                </button>
+
                 <a href="{{ route('transaksi.create') }}" class="kt-btn kt-btn-primary">
                     <i class="ki-filled ki-plus-squared"></i> Tambah
                 </a>
@@ -151,6 +164,265 @@
                 <div class="kt-datatable-info"><span data-kt-datatable-info="true"></span><div class="kt-datatable-pagination" data-kt-datatable-pagination="true"></div></div>
             </div>
         </div>
+    </div>
+</div>
+
+{{-- Import Modal --}}
+<div id="importModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;" onclick="closeImportModal()">
+    <div class="transaksi-import-dialog" style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:72rem; max-height:92vh; overflow:hidden;" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+            <div>
+                <h3 class="text-base font-semibold text-foreground">Import Transaksi Excel</h3>
+                <p class="text-xs text-muted-foreground mt-1">Upload format CSV/Excel, lalu sistem membuat transaksi awaiting otomatis.</p>
+            </div>
+            <button type="button" onclick="closeImportModal()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('transaksi.import') }}" enctype="multipart/form-data">
+            @csrf
+            <div class="p-4 space-y-5" style="max-height:calc(92vh - 132px); overflow:auto;">
+                <div class="transaksi-import-note">
+                    <div class="font-semibold text-gray-900 mb-1">Nomor transaksi dan status tidak perlu diisi.</div>
+                    <div class="text-xs text-muted-foreground">Kolom No. Transaksi dan Status boleh ada di file, tetapi akan diabaikan. Sistem memakai nomor otomatis prefix INVT dan semua data import masuk sebagai Awaiting.</div>
+                </div>
+
+                <div class="transaksi-import-upload-row">
+                    <div>
+                        <label class="text-sm font-medium text-foreground" for="import_file">Upload File <span class="text-danger">*</span></label>
+                        <input id="import_file" type="file" name="file" accept=".xlsx,.xls,.csv" class="kt-input w-full mt-2" required>
+                        <!-- <div class="text-xs text-muted-foreground mt-2">Bisa pakai .xlsx, .xls, atau .csv. Untuk aman, gunakan tombol download format di samping.</div> -->
+                    </div>
+
+                    <div class="flex items-end">
+                        <button type="button" id="downloadImportSample" class="kt-btn w-full justify-center text-white border-0" style="background-color:#111827;">
+                            <i class="ki-filled ki-tablet-text-down"></i> Download Format CSV
+                        </button>
+                    </div>
+                </div>
+
+                @if($errors->has('file'))
+                    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 space-y-1">
+                        @foreach($errors->get('file') as $error)
+                            <div>{{ $error }}</div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="transaksi-import-grid">
+                    <div class="transaksi-import-format">
+                        <div class="font-semibold text-gray-900 mb-2">Format Kolom</div>
+                        <div class="transaksi-import-sample kt-scrollable">
+                            <table class="kt-table text-xs">
+                                <thead>
+                                    <tr>
+                                        <th>Jenis</th>
+                                        <th>Tanggal</th>
+                                        <th>Aktivitas</th>
+                                        <th>Kategori</th>
+                                        <th>Item Transaksi</th>
+                                        <th>Tambak</th>
+                                        <th>Blok</th>
+                                        <th>Siklus</th>
+                                        <th>Nominal</th>
+                                        <th>Jenis Pembayaran</th>
+                                        <th>Sumber Dana</th>
+                                        <th>Account Bank</th>
+                                        <th>Catatan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Uang Masuk</td>
+                                        <td>{{ now()->format('Y-m-d') }}</td>
+                                        <td>Contoh pemasukan</td>
+                                        <td>{{ $sampleIncomeItem?->kategoriTransaksi?->deskripsi ?? 'KATEGORI' }}</td>
+                                        <td>{{ $sampleIncomeItem?->kode_item ?? 'KODE_ITEM' }}</td>
+                                        <td>{{ $sampleTambak?->nama_tambak ?? 'NAMA_TAMBAK' }}</td>
+                                        <td>{{ $sampleBlok?->nama_blok ?? '' }}</td>
+                                        <td>{{ $sampleSiklus?->nama_siklus ?? '' }}</td>
+                                        <td>250000</td>
+                                        <td>Cash</td>
+                                        <td>{{ $sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA' }}</td>
+                                        <td></td>
+                                        <td>Contoh import pemasukan</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Uang Keluar</td>
+                                        <td>{{ now()->format('Y-m-d') }}</td>
+                                        <td>Contoh pengeluaran</td>
+                                        <td>{{ $sampleExpenseItem?->kategoriTransaksi?->deskripsi ?? 'KATEGORI' }}</td>
+                                        <td>{{ $sampleExpenseItem?->kode_item ?? 'KODE_ITEM' }}</td>
+                                        <td>{{ $sampleTambak?->nama_tambak ?? 'NAMA_TAMBAK' }}</td>
+                                        <td>{{ $sampleBlok?->nama_blok ?? '' }}</td>
+                                        <td>{{ $sampleSiklus?->nama_siklus ?? '' }}</td>
+                                        <td>100000</td>
+                                        <td>Bank</td>
+                                        <td>{{ $sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA' }}</td>
+                                        <td>{{ $sampleAccountBank?->kode_account ?? $sampleAccountBank?->nama_bank ?? 'KODE_BANK' }}</td>
+                                        <td>Contoh import pengeluaran</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-xs text-muted-foreground mt-2">Gunakan kode atau nama/deskripsi sesuai referensi di bawah. Account Bank wajib diisi hanya untuk pembayaran Bank.</div>
+                    </div>
+
+                    <div class="transaksi-import-col">
+                        <div class="transaksi-import-reference">
+                            <div>
+                                <div class="transaksi-import-reference-head">
+                                    <div class="font-semibold text-gray-900">Kode Item Transaksi</div>
+                                    <div class="text-xs text-muted-foreground">Gunakan kode pada kolom Item Transaksi.</div>
+                                </div>
+                                <div class="transaksi-import-reference-body">
+                                    <table class="kt-table text-xs">
+                                        <thead><tr><th>Kode</th><th>Nama Item</th></tr></thead>
+                                        <tbody>
+                                            @forelse($itemTransaksis as $item)
+                                                <tr>
+                                                    <td><span class="transaksi-import-code">{{ $item->kode_item }}</span></td>
+                                                    <td>{{ $item->deskripsi }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr><td colspan="2" class="text-center text-gray-400 py-5">Belum ada item transaksi.</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="transaksi-import-col">
+                        <div class="transaksi-import-reference">
+                            <div class="transaksi-import-reference-head">
+                                <div class="font-semibold text-gray-900">Kode Rekening Aktif</div>
+                                <div class="text-xs text-muted-foreground">Gunakan kode/nama bank/no rekening pada kolom Account Bank.</div>
+                            </div>
+                            <div class="transaksi-import-reference-body">
+                                <table class="kt-table text-xs">
+                                    <thead><tr><th>Kode</th><th>Bank</th><th>Pemilik</th></tr></thead>
+                                    <tbody>
+                                        @forelse($accountBanks as $account)
+                                            <tr>
+                                                <td><span class="transaksi-import-code">{{ $account->kode_account }}</span></td>
+                                                <td>{{ $account->nama_bank }}</td>
+                                                <td>{{ $account->nama_pemilik ?? '-' }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="3" class="text-center text-gray-400 py-5">Belum ada rekening aktif.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="transaksi-import-col">
+                        <div class="transaksi-import-reference">
+                            <div class="transaksi-import-reference-head">
+                                <div class="font-semibold text-gray-900">Sumber Dana</div>
+                                <div class="text-xs text-muted-foreground">Gunakan kode atau deskripsi pada kolom Sumber Dana.</div>
+                            </div>
+                            <div class="transaksi-import-reference-body">
+                                <table class="kt-table text-xs">
+                                    <thead><tr><th>Kode</th><th>Deskripsi</th></tr></thead>
+                                    <tbody>
+                                        @forelse($sumberDanas as $sumber)
+                                            <tr>
+                                                <td><span class="transaksi-import-code">{{ $sumber->kode_sumber_dana }}</span></td>
+                                                <td>{{ $sumber->deskripsi }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="2" class="text-center text-gray-400 py-5">Belum ada sumber dana.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="transaksi-import-col">
+                        <div class="transaksi-import-reference">
+                            <div class="transaksi-import-reference-head">
+                                <div class="font-semibold text-gray-900">Tambak Yang Bisa Diakses</div>
+                                <div class="text-xs text-muted-foreground">Gunakan nama tambak pada kolom Tambak.</div>
+                            </div>
+                            <div class="transaksi-import-reference-body">
+                                <table class="kt-table text-xs">
+                                    <thead><tr><th>Tambak</th><th>Lokasi</th></tr></thead>
+                                    <tbody>
+                                        @forelse($tambaks as $tambak)
+                                            <tr>
+                                                <td><span class="transaksi-import-code">{{ $tambak->nama_tambak }}</span></td>
+                                                <td>{{ $tambak->lokasi ?? '-' }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="2" class="text-center text-gray-400 py-5">Belum ada tambak yang bisa diakses.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="transaksi-import-col">
+                        <div class="transaksi-import-reference">
+                            <div class="transaksi-import-reference-head">
+                                <div class="font-semibold text-gray-900">Blok</div>
+                                <div class="text-xs text-muted-foreground">Gunakan nama blok yang sesuai dengan tambaknya.</div>
+                            </div>
+                            <div class="transaksi-import-reference-body">
+                                <table class="kt-table text-xs">
+                                    <thead><tr><th>Blok</th><th>Tambak</th></tr></thead>
+                                    <tbody>
+                                        @forelse($bloks as $blok)
+                                            <tr>
+                                                <td><span class="transaksi-import-code">{{ $blok->nama_blok }}</span></td>
+                                                <td>{{ $blok->tambak?->nama_tambak ?? '-' }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="2" class="text-center text-gray-400 py-5">Belum ada blok.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="transaksi-import-col">
+                        <div class="transaksi-import-reference">
+                            <div class="transaksi-import-reference-head">
+                                <div class="font-semibold text-gray-900">Siklus</div>
+                                <div class="text-xs text-muted-foreground">Siklus wajib cocok dengan blok pada baris import.</div>
+                            </div>
+                            <div class="transaksi-import-reference-body">
+                                <table class="kt-table text-xs">
+                                    <thead><tr><th>Siklus</th><th>Blok</th></tr></thead>
+                                    <tbody>
+                                        @forelse($sikluses as $siklus)
+                                            <tr>
+                                                <td><span class="transaksi-import-code">{{ $siklus->nama_siklus }}</span></td>
+                                                <td>{{ $siklus->blok?->nama_blok ?? '-' }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="2" class="text-center text-gray-400 py-5">Belum ada siklus.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 p-4 border-t border-border">
+                <button type="button" onclick="closeImportModal()" class="kt-btn kt-btn-outline">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-primary">
+                    <i class="ki-filled ki-file-up"></i> Import
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -296,6 +568,88 @@
     [data-popper-placement] {
         z-index: 9999 !important;
     }
+    .transaksi-import-note {
+        border: 1px dashed #cbdaf5;
+        border-radius: 12px;
+        background: #f8fbff;
+        padding: 14px;
+    }
+    .transaksi-import-upload-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+        gap: 1rem;
+        align-items: end;
+    }
+    .transaksi-import-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 1.25rem;
+    }
+    .transaksi-import-format {
+        grid-column: span 12;
+    }
+    .transaksi-import-col {
+        grid-column: span 4;
+        min-width: 0;
+    }
+    .transaksi-import-sample,
+    .transaksi-import-reference {
+        border: 1px solid #e4e8f0;
+        border-radius: 12px;
+        background: #fff;
+        overflow: hidden;
+    }
+    .transaksi-import-sample {
+        overflow: auto;
+    }
+    .transaksi-import-sample table,
+    .transaksi-import-reference table {
+        margin-bottom: 0;
+        min-width: 100%;
+    }
+    .transaksi-import-reference-head {
+        padding: 12px 14px;
+        border-bottom: 1px solid #edf1f7;
+        background: #f8fbff;
+    }
+    .transaksi-import-reference-body {
+        max-height: 240px;
+        overflow: auto;
+    }
+    .transaksi-import-reference th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f3f6fa;
+        white-space: nowrap;
+    }
+    .transaksi-import-code {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        padding: 4px 8px;
+        background: #eef6ff;
+        color: #1b84ff;
+        font-weight: 600;
+        letter-spacing: .02em;
+        white-space: nowrap;
+    }
+    @media (max-width: 1024px) {
+        .transaksi-import-col {
+            grid-column: span 6;
+        }
+    }
+    @media (max-width: 768px) {
+        .transaksi-import-upload-row,
+        .transaksi-import-grid {
+            grid-template-columns: 1fr;
+        }
+        .transaksi-import-format,
+        .transaksi-import-col {
+            grid-column: auto;
+        }
+    }
 </style>
 <script>
 function openRejectModal(action, nomor) {
@@ -316,6 +670,76 @@ function closeRejectModal() {
     document.getElementById('rejectModal').style.display = 'none';
     document.body.style.overflow = '';
 }
+
+function openImportModal() {
+    var modal = document.getElementById('importModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() {
+        var input = document.getElementById('import_file');
+        if (input) input.focus();
+    }, 50);
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+@if($errors->has('file'))
+    document.addEventListener('DOMContentLoaded', openImportModal);
+@endif
+
+document.getElementById('downloadImportSample')?.addEventListener('click', function() {
+    var csv = [
+        ['Jenis','Tanggal','Aktivitas','Kategori','Item Transaksi','Tambak','Blok','Siklus','Nominal','Jenis Pembayaran','Sumber Dana','Account Bank','Catatan'],
+        [
+            'Uang Masuk',
+            @js(now()->format('Y-m-d')),
+            'Contoh pemasukan',
+            @js($sampleIncomeItem?->kategoriTransaksi?->deskripsi ?? 'KATEGORI'),
+            @js($sampleIncomeItem?->kode_item ?? 'KODE_ITEM'),
+            @js($sampleTambak?->nama_tambak ?? 'NAMA_TAMBAK'),
+            @js($sampleBlok?->nama_blok ?? ''),
+            @js($sampleSiklus?->nama_siklus ?? ''),
+            '250000',
+            'Cash',
+            @js($sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA'),
+            '',
+            'Contoh import pemasukan'
+        ],
+        [
+            'Uang Keluar',
+            @js(now()->format('Y-m-d')),
+            'Contoh pengeluaran',
+            @js($sampleExpenseItem?->kategoriTransaksi?->deskripsi ?? 'KATEGORI'),
+            @js($sampleExpenseItem?->kode_item ?? 'KODE_ITEM'),
+            @js($sampleTambak?->nama_tambak ?? 'NAMA_TAMBAK'),
+            @js($sampleBlok?->nama_blok ?? ''),
+            @js($sampleSiklus?->nama_siklus ?? ''),
+            '100000',
+            'Bank',
+            @js($sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA'),
+            @js($sampleAccountBank?->kode_account ?? $sampleAccountBank?->nama_bank ?? 'KODE_BANK'),
+            'Contoh import pengeluaran'
+        ]
+    ].map(function(row) {
+        return row.map(function(value) {
+            value = String(value || '');
+            return '"' + value.replace(/"/g, '""') + '"';
+        }).join(',');
+    }).join('\r\n');
+
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'format-import-transaksi-keuangan.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+});
 
 (function() {
     var filterBtn = document.getElementById('filter-btn');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Keuangan;
 
 use App\Exports\TransaksiKeuanganExport;
 use App\Http\Controllers\Controller;
+use App\Imports\TransaksiKeuanganImport;
 use App\Models\AccountBank;
 use App\Models\Blok;
 use App\Models\ItemTransaksi;
@@ -73,8 +74,12 @@ class TransaksiKeuanganController extends Controller
 
         $tambakIds2 = auth()->user()->tambaks()->pluck('tambaks.id');
         $kategoriTransaksis = KategoriTransaksi::orderBy('deskripsi')->get();
-        $bloks = Blok::whereIn('tambak_id', $tambakIds2)->orderBy('nama_blok')->get();
-        $sikluses = Siklus::whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds2))->orderBy('nama_siklus')->get();
+        $itemTransaksis = ItemTransaksi::with('kategoriTransaksi')->orderBy('kode_item')->get();
+        $tambaks = Tambak::whereIn('id', $tambakIds2)->orderBy('nama_tambak')->get();
+        $bloks = Blok::with('tambak')->whereIn('tambak_id', $tambakIds2)->orderBy('nama_blok')->get();
+        $sikluses = Siklus::with('blok')->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds2))->orderBy('nama_siklus')->get();
+        $sumberDanas = SumberDana::orderBy('deskripsi')->get();
+        $accountBanks = AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
 
         // Counts per tab - hitung dari total tanpa filter jenis_transaksi
         $baseQuery = TransaksiKeuangan::whereIn('tambak_id', $tambakIds);
@@ -100,7 +105,7 @@ class TransaksiKeuanganController extends Controller
             'uang_keluar' => (clone $baseQuery)->where('jenis_transaksi', 'uang_keluar')->count(),
         ];
 
-        return view('keuangan.transaksi.index', compact('data', 'kategoriTransaksis', 'bloks', 'sikluses', 'counts'));
+        return view('keuangan.transaksi.index', compact('data', 'kategoriTransaksis', 'itemTransaksis', 'tambaks', 'bloks', 'sikluses', 'sumberDanas', 'accountBanks', 'counts'));
     }
 
     public function export(Request $request)
@@ -129,6 +134,26 @@ class TransaksiKeuanganController extends Controller
         $filename = 'transaksi-keuangan-' . now()->format('Ymd-His') . '.xlsx';
 
         return Excel::download(new TransaksiKeuanganExport($data), $filename);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        $import = new TransaksiKeuanganImport();
+        Excel::import($import, $request->file('file'));
+
+        if ($import->imported() > 0) {
+            app(NotifikasiService::class)->kirimApprovalRequest(
+                'Import Transaksi Menunggu Approval',
+                $import->imported() . ' transaksi hasil import Excel memerlukan persetujuan.',
+                route('transaksi.index', ['status' => 'awaiting_approval'])
+            );
+        }
+
+        return redirect()->route('transaksi.index')->with('success', $import->imported() . ' transaksi berhasil diimport dengan status awaiting.');
     }
 
     public function create()

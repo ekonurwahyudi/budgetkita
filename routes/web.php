@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('neraca/cutoff/{id}', [\App\Http\Controllers\Keuangan\NeracaKeuanganController::class, 'destroyCutoff'])->name('neraca-keuangan.cutoff.destroy')->middleware('can:laporan-keuangan.view');
 
         Route::get('transaksi/create', [\App\Http\Controllers\Keuangan\TransaksiKeuanganController::class, 'create'])->name('transaksi.create')->middleware('can:transaksi-keuangan.create');
+        Route::post('transaksi/import', [TransaksiKeuanganController::class, 'import'])->name('transaksi.import')->middleware('can:transaksi-keuangan.create');
         Route::resource('transaksi', TransaksiKeuanganController::class)->except(['create'])->parameters(['transaksi' => 'transaksi'])->middleware('can:transaksi-keuangan.view');
         Route::post('transaksi/{transaksi}/approve', [TransaksiKeuanganController::class, 'approve'])->name('transaksi.approve');
         Route::post('transaksi/{transaksi}/reject', [TransaksiKeuanganController::class, 'reject'])->name('transaksi.reject');

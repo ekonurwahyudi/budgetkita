@@ -59,13 +59,6 @@ class SiklusController extends Controller
             'harga_pakan' => 'nullable|numeric|min:0',
         ]);
 
-        // Check only 1 active siklus per blok
-        if ($request->status === 'aktif') {
-            $existing = Siklus::where('blok_id', $request->blok_id)->where('status', 'aktif')->exists();
-            if ($existing) {
-                return redirect()->back()->with('error', 'Blok ini sudah memiliki siklus aktif. Selesaikan siklus aktif terlebih dahulu.');
-            }
-        }
 
         $input = $request->only([
             'blok_id', 'nama_siklus', 'tgl_siklus', 'lama_persiapan', 'tgl_tebar',
@@ -192,12 +185,6 @@ class SiklusController extends Controller
             'harga_pakan' => 'nullable|numeric|min:0',
         ]);
 
-        if ($request->status === 'aktif' && $siklus->status !== 'aktif') {
-            $existing = Siklus::where('blok_id', $request->blok_id)->where('status', 'aktif')->where('id', '!=', $siklus->id)->exists();
-            if ($existing) {
-                return redirect()->back()->with('error', 'Blok ini sudah memiliki siklus aktif.');
-            }
-        }
 
         $input = $request->only([
             'blok_id', 'nama_siklus', 'tgl_siklus', 'lama_persiapan', 'tgl_tebar',

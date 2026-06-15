@@ -213,14 +213,13 @@
         <div class="kt-card-header min-h-14">
             <h3 class="kt-card-title">Parameter Harian</h3>
             <div class="flex items-center gap-2">
-                <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" onclick="document.getElementById('importFile').click()">
-                    <i class="ki-filled ki-upload-file"></i> Import
+                <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" onclick="openImportModal()">
+                    <i class="ki-filled ki-tablet-text-down"></i> Import
                 </button>
                 <a href="{{ route('kolam.parameter.export', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-outline">
                     <i class="ki-filled ki-tablet-text-up"></i> Export Excel
                 </a>
             </div>
-            <input type="file" id="importFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleImport(this)">
         </div>
         <div class="excel-wrap">
             <table class="excel-table" id="paramTable">
@@ -301,6 +300,12 @@
         <div class="kt-card-header min-h-16">
             <h3 class="kt-card-title">Pemberian Pakan</h3>
             <div class="flex items-center gap-2">
+                <!-- <button type="button" class="kt-btn kt-btn-sm kt-btn-outline" onclick="openPakanImportModal()">
+                    <i class="ki-filled ki-tablet-text-down"></i> Import
+                </button> -->
+                <a href="{{ route('kolam.pakan.export', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-outline">
+                    <i class="ki-filled ki-tablet-text-up"></i> Export Excel
+                </a>
                 <select id="perPagePakan" class="kt-select kt-select-sm w-20" onchange="changePakanPerPage()">
                     <option value="5" {{ request('per_page', 10) == 5 ? 'selected' : '' }}>5</option>
                     <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
@@ -461,27 +466,83 @@
     </div>
 </div>
 
-{{-- Import Dialog --}}
-<dialog id="importDialog" class="kt-modal">
-    <div class="kt-modal-content sm:max-w-md">
-        <div class="kt-modal-header">
-            <h3 class="kt-modal-title">Import Parameter dari Excel</h3>
-            <button type="button" class="kt-modal-close" onclick="document.getElementById('importDialog').close()">&times;</button>
+{{-- Import Pakan Modal --}}
+<div id="pakanImportModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;" onclick="closePakanImportModal()">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:32rem; overflow:hidden;" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+            <div>
+                <h3 class="text-base font-semibold text-foreground">Import Pemberian Pakan</h3>
+                <p class="text-xs text-muted-foreground mt-1">Upload file Excel/CSV pemberian pakan kolam.</p>
+            </div>
+            <button type="button" onclick="closePakanImportModal()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                <i class="ki-filled ki-cross"></i>
+            </button>
         </div>
-        <div class="kt-modal-body">
-            <p class="text-sm text-muted-foreground mb-3">Upload file Excel (.xlsx/.xls) yang berisi data parameter harian. Format harus sesuai template export.</p>
-            <form id="importForm" method="POST" action="{{ route('kolam.parameter.import', $kolam) }}" enctype="multipart/form-data">
+        <div class="p-4">
+            <p class="text-sm text-muted-foreground mb-3">Gunakan template agar kolom sesuai. Isi jumlah pakan langsung pada kolom jam 06:00, 10:00, 14:00, atau 18:00.</p>
+            <form id="pakanImportForm" method="POST" action="{{ route('kolam.pakan.import', $kolam) }}" enctype="multipart/form-data">
                 @csrf
-                <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="kt-input w-full mb-3">
-                <p class="text-xs text-muted-foreground">Kolom wajib di Excel: <strong>Tanggal</strong> (format d/m/Y). Kolom lain bersifat opsional.</p>
+                <a href="{{ route('kolam.pakan.template', $kolam) }}" class="kt-btn kt-btn-outline w-full justify-center mb-4">
+                    <i class="ki-filled ki-tablet-text-down"></i> Download Template Import
+                </a>
+                <label class="text-sm font-medium text-foreground" for="pakanImportFormFile">Upload File <span class="text-danger">*</span></label>
+                <input type="file" id="pakanImportFormFile" name="file" accept=".xlsx,.xls,.csv" required class="kt-input w-full mt-2 mb-3">
+                <p class="text-xs text-muted-foreground">Kolom wajib: <strong>Tanggal</strong> dan <strong>Jenis Pakan</strong>. Isi hanya kolom jam; <strong>Jumlah Pakan</strong> dan <strong>Pakan Kumulatif</strong> dihitung otomatis. Untuk puasa, isi kolom <strong>Puasa</strong> dengan Ya.</p>
+                <div id="pakanImportLoadingInfo" class="hidden mt-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                    <span class="inline-flex items-center gap-2">
+                        <i class="ki-filled ki-loading animate-spin"></i>
+                        Data pakan sedang importing, mohon tunggu...
+                    </span>
+                </div>
             </form>
         </div>
-        <div class="kt-modal-footer">
-            <button type="button" class="kt-btn kt-btn-outline" onclick="document.getElementById('importDialog').close()">Batal</button>
-            <button type="button" class="kt-btn kt-btn-primary" onclick="document.getElementById('importForm').submit()">Import</button>
+        <div class="flex items-center justify-end gap-2 p-4 border-t border-border">
+            <button type="button" id="pakanImportCancelBtn" class="kt-btn kt-btn-outline" onclick="closePakanImportModal()">Batal</button>
+            <button type="submit" form="pakanImportForm" id="pakanImportSubmitBtn" class="kt-btn kt-btn-primary">
+                <i class="ki-filled ki-file-up"></i> Import
+            </button>
         </div>
     </div>
-</dialog>
+</div>
+
+{{-- Import Modal --}}
+<div id="importModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;" onclick="closeImportModal()">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:32rem; overflow:hidden;" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+            <div>
+                <h3 class="text-base font-semibold text-foreground">Import Parameter dari Excel</h3>
+                <p class="text-xs text-muted-foreground mt-1">Upload file Excel/CSV parameter harian.</p>
+            </div>
+            <button type="button" onclick="closeImportModal()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <div class="p-4">
+            <p class="text-sm text-muted-foreground mb-3">Upload file Excel (.xlsx/.xls) yang berisi data parameter harian. Gunakan template import agar urutan kolom sesuai.</p>
+            <form id="importForm" method="POST" action="{{ route('kolam.parameter.import', $kolam) }}" enctype="multipart/form-data">
+                @csrf
+                <a href="{{ route('kolam.parameter.template', $kolam) }}" class="kt-btn kt-btn-outline w-full justify-center mb-4">
+                    <i class="ki-filled ki-tablet-text-down"></i> Download Template Import
+                </a>
+                <label class="text-sm font-medium text-foreground" for="importFormFile">Upload File <span class="text-danger">*</span></label>
+                <input type="file" id="importFormFile" name="file" accept=".xlsx,.xls,.csv" required class="kt-input w-full mt-2 mb-3">
+                <p class="text-xs text-muted-foreground">Kolom wajib di Excel: <strong>Tanggal</strong> (format d/m/Y). Status import otomatis Normal dan Oleh otomatis dari user yang upload.</p>
+                <div id="importLoadingInfo" class="hidden mt-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                    <span class="inline-flex items-center gap-2">
+                        <i class="ki-filled ki-loading animate-spin"></i>
+                        Data sedang importing, mohon tunggu...
+                    </span>
+                </div>
+            </form>
+        </div>
+        <div class="flex items-center justify-end gap-2 p-4 border-t border-border">
+            <button type="button" id="importCancelBtn" class="kt-btn kt-btn-outline" onclick="closeImportModal()">Batal</button>
+            <button type="submit" form="importForm" id="importSubmitBtn" class="kt-btn kt-btn-primary">
+                <i class="ki-filled ki-file-up"></i> Import
+            </button>
+        </div>
+    </div>
+</div>
 
 @push('scripts')
 <script>
@@ -595,12 +656,90 @@ function deleteParam(btn, id) {
     }).catch(function() { alert('Gagal menghapus parameter.'); });
 }
 
-function handleImport(input) {
-    if (!input.files.length) return;
-    var dialog = document.getElementById('importDialog');
+function openImportModal() {
+    var modal = document.getElementById('importModal');
     var form = document.getElementById('importForm');
-    form.querySelector('input[name="file"]').files = input.files;
-    dialog.showModal();
+    if (form) form.reset();
+    resetImportLoading();
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() {
+        var input = document.getElementById('importFormFile');
+        if (input) input.focus();
+    }, 50);
+}
+
+function closeImportModal() {
+    var modal = document.getElementById('importModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function openPakanImportModal() {
+    var modal = document.getElementById('pakanImportModal');
+    var form = document.getElementById('pakanImportForm');
+    if (form) form.reset();
+    resetPakanImportLoading();
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() {
+        var input = document.getElementById('pakanImportFormFile');
+        if (input) input.focus();
+    }, 50);
+}
+
+function closePakanImportModal() {
+    var modal = document.getElementById('pakanImportModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function resetPakanImportLoading() {
+    var loadingInfo = document.getElementById('pakanImportLoadingInfo');
+    var submitBtn = document.getElementById('pakanImportSubmitBtn');
+    var cancelBtn = document.getElementById('pakanImportCancelBtn');
+    if (loadingInfo) loadingInfo.classList.add('hidden');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="ki-filled ki-file-up"></i> Import';
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
+}
+
+function setPakanImportLoading() {
+    var loadingInfo = document.getElementById('pakanImportLoadingInfo');
+    var submitBtn = document.getElementById('pakanImportSubmitBtn');
+    var cancelBtn = document.getElementById('pakanImportCancelBtn');
+    if (loadingInfo) loadingInfo.classList.remove('hidden');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ki-filled ki-loading animate-spin"></i> Importing...';
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
+}
+
+function resetImportLoading() {
+    var loadingInfo = document.getElementById('importLoadingInfo');
+    var submitBtn = document.getElementById('importSubmitBtn');
+    var cancelBtn = document.getElementById('importCancelBtn');
+    if (loadingInfo) loadingInfo.classList.add('hidden');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="ki-filled ki-file-up"></i> Import';
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
+}
+
+function setImportLoading() {
+    var loadingInfo = document.getElementById('importLoadingInfo');
+    var submitBtn = document.getElementById('importSubmitBtn');
+    var cancelBtn = document.getElementById('importCancelBtn');
+    if (loadingInfo) loadingInfo.classList.remove('hidden');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ki-filled ki-loading animate-spin"></i> Importing...';
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
 }
 
 function initPakanDonutChart() {
@@ -630,6 +769,18 @@ function initPakanDonutChart() {
 document.addEventListener('DOMContentLoaded', function() {
     var todayRow = document.querySelector('tr[data-date="{{ now()->format('Y-m-d') }}"]');
     if (todayRow) { setTimeout(function() { todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }
+    var importForm = document.getElementById('importForm');
+    if (importForm) {
+        importForm.addEventListener('submit', function() {
+            setImportLoading();
+        });
+    }
+    var pakanImportForm = document.getElementById('pakanImportForm');
+    if (pakanImportForm) {
+        pakanImportForm.addEventListener('submit', function() {
+            setPakanImportLoading();
+        });
+    }
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('param-field') && e.target.tagName === 'SELECT') { saveField(e.target); }
     });

@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Budidaya;
 
 use App\Http\Controllers\Controller;
+use App\Exports\KolamPakanExport;
+use App\Exports\KolamPakanTemplateExport;
 use App\Exports\KolamParameterExport;
+use App\Exports\KolamParameterTemplateExport;
+use App\Imports\KolamPakanImport;
 use App\Imports\KolamParameterImport;
 use App\Models\Kolam;
 use App\Models\KolamParameter;
@@ -252,6 +256,12 @@ class KolamController extends Controller
         return Excel::download(new KolamParameterExport($kolam), $filename);
     }
 
+    public function templateParameter(Kolam $kolam)
+    {
+        $filename = 'template_import_parameter_' . str_replace(' ', '_', $kolam->nama_kolam) . '_' . now()->format('Ymd') . '.xlsx';
+        return Excel::download(new KolamParameterTemplateExport($kolam), $filename);
+    }
+
     public function importParameter(Request $request, Kolam $kolam)
     {
         $request->validate([
@@ -259,10 +269,36 @@ class KolamController extends Controller
         ]);
 
         try {
-            Excel::import(new KolamParameterImport($kolam), $request->file('file'));
+            Excel::import(new KolamParameterImport($kolam, auth()->id()), $request->file('file'));
             return redirect()->back()->with('success', 'Parameter berhasil diimport.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal import: ' . $e->getMessage());
+        }
+    }
+
+    public function exportPakan(Kolam $kolam)
+    {
+        $filename = 'pakan_' . str_replace(' ', '_', $kolam->nama_kolam) . '_' . now()->format('Ymd') . '.xlsx';
+        return Excel::download(new KolamPakanExport($kolam), $filename);
+    }
+
+    public function templatePakan(Kolam $kolam)
+    {
+        $filename = 'template_import_pakan_' . str_replace(' ', '_', $kolam->nama_kolam) . '_' . now()->format('Ymd') . '.xlsx';
+        return Excel::download(new KolamPakanTemplateExport($kolam), $filename);
+    }
+
+    public function importPakan(Request $request, Kolam $kolam)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        try {
+            Excel::import(new KolamPakanImport($kolam), $request->file('file'));
+            return redirect()->back()->with('success', 'Pemberian pakan berhasil diimport.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal import pakan: ' . $e->getMessage());
         }
     }
 

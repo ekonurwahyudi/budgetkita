@@ -106,7 +106,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('kolam/{kolam}', [KolamController::class, 'destroy'])->name('kolam.destroy');
         Route::get('kolam/{kolam}', [KolamController::class, 'show'])->name('kolam.show');
         Route::get('kolam/{kolam}/export-parameter', [KolamController::class, 'exportParameter'])->name('kolam.parameter.export');
+        Route::get('kolam/{kolam}/template-parameter', [KolamController::class, 'templateParameter'])->name('kolam.parameter.template');
         Route::post('kolam/{kolam}/import-parameter', [KolamController::class, 'importParameter'])->name('kolam.parameter.import');
+        Route::get('kolam/{kolam}/export-pakan', [KolamController::class, 'exportPakan'])->name('kolam.pakan.export');
+        Route::get('kolam/{kolam}/template-pakan', [KolamController::class, 'templatePakan'])->name('kolam.pakan.template');
+        Route::post('kolam/{kolam}/import-pakan', [KolamController::class, 'importPakan'])->name('kolam.pakan.import');
         Route::post('kolam/{kolam}/pakan', [KolamController::class, 'storePakan'])->name('kolam.pakan.store');
         Route::delete('kolam-pakan/{pakan}', [KolamController::class, 'destroyPakan'])->name('kolam.pakan.destroy');
         Route::post('kolam/{kolam}/parameter', [KolamController::class, 'storeParameter'])->name('kolam.parameter.store');

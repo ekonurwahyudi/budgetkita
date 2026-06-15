@@ -7,15 +7,16 @@ use App\Models\KolamParameter;
 use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 
 class KolamParameterImport implements ToCollection
 {
     protected Kolam $kolam;
+    protected ?string $userId;
 
-    public function __construct(Kolam $kolam)
+    public function __construct(Kolam $kolam, ?string $userId = null)
     {
         $this->kolam = $kolam;
+        $this->userId = $userId;
     }
 
     public function collection(Collection $rows)
@@ -50,7 +51,8 @@ class KolamParameterImport implements ToCollection
                 'sr'               => $this->parseNumeric($row[18] ?? null),
                 'pcr'              => $this->parseNumeric($row[19] ?? null),
                 'perlakuan_harian' => $this->nullIfDash($row[20] ?? null),
-                'status'           => $this->parseStatus($row[1] ?? null),
+                'status'           => 'normal',
+                'user_id'          => $this->userId,
             ];
 
             $existing = $existingParams->get($dateStr);
@@ -62,7 +64,6 @@ class KolamParameterImport implements ToCollection
                 KolamParameter::create(array_merge($data, [
                     'kolam_id'      => $this->kolam->id,
                     'tgl_parameter' => $dateStr,
-                    'user_id'       => Auth::id(),
                 ]));
             }
         }
@@ -76,7 +77,7 @@ class KolamParameterImport implements ToCollection
             return Carbon::instance($value)->format('Y-m-d');
         }
 
-        foreach ('d/m/Y' as $format) {
+        foreach (['d/m/Y', 'Y-m-d'] as $format) {
             try {
                 return Carbon::createFromFormat($format, $value)->format('Y-m-d');
             } catch (\Exception $e) {
@@ -104,11 +105,4 @@ class KolamParameterImport implements ToCollection
         return (string) $value;
     }
 
-    private function parseStatus($value): string
-    {
-        $lower = strtolower(trim((string) ($value ?? '')));
-        if ($lower === 'perhatian') return 'perhatian';
-        if ($lower === 'kritis') return 'kritis';
-        return 'normal';
-    }
 }

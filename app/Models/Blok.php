@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToActiveTambak;
+
 class Blok extends BaseModel
 {
+    use BelongsToActiveTambak;
+
     protected $fillable = ['tambak_id', 'nama_blok', 'didirikan_pada', 'jumlah_anco', 'panjang', 'lebar', 'kedalaman', 'status_blok'];
 
     protected function casts(): array

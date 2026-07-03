@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ScopedByActiveTambakRelation;
+
 class PemberianPakan extends BaseModel
 {
+    use ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'blok';
+
     protected $fillable = ['blok_id', 'siklus_id', 'kolam_id', 'tgl_pakan', 'jumlah_pakan', 'unit', 'puasa', 'item_persediaan_id'];
 
     protected function casts(): array

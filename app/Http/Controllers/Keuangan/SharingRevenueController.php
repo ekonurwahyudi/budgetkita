@@ -32,10 +32,7 @@ class SharingRevenueController extends Controller
     {
         $siklus->loadMissing('panens');
 
-        $transaksis = TransaksiKeuangan::where(function ($q) use ($siklus) {
-            $q->where('siklus_id', $siklus->id)
-              ->orWhere('blok_id', $siklus->blok_id);
-        })->get();
+        $transaksis = TransaksiKeuangan::where('siklus_id', $siklus->id)->get();
 
         $uangMasukTransaksi = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal');
         $uangKeluarTransaksi = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
@@ -63,10 +60,7 @@ class SharingRevenueController extends Controller
             ->limit(8)
             ->get()
             ->map(function ($siklus) {
-                $transaksis = TransaksiKeuangan::where(function ($q) use ($siklus) {
-                    $q->where('siklus_id', $siklus->id)
-                      ->orWhere('blok_id', $siklus->blok_id);
-                })->get();
+                $transaksis = TransaksiKeuangan::where('siklus_id', $siklus->id)->get();
 
                 $uangMasukTransaksi = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal');
                 $uangKeluarTransaksi = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal');

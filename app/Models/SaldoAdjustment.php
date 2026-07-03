@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ScopedByActiveTambakRelation;
+
 class SaldoAdjustment extends BaseModel
 {
+    use ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'accountBank';
+
     protected $fillable = [
         'account_bank_id',
         'saldo_sebelumnya',

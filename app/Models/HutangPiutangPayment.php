@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\Traits\HasUuid;
+use App\Traits\ScopedByActiveTambakRelation;
 use Illuminate\Database\Eloquent\Model;
 
 class HutangPiutangPayment extends Model
 {
-    use HasUuid;
+    use HasUuid, ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'hutangPiutang';
 
     protected $keyType = 'string';
     public $incrementing = false;

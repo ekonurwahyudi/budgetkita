@@ -77,10 +77,7 @@ class SiklusController extends Controller
     {
         $siklus->load(['blok.tambak', 'panens.kolam', 'panens.accountBank']);
         $transaksis = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'sumberDana'])
-            ->where(function ($q) use ($siklus) {
-                $q->where('siklus_id', $siklus->id)
-                  ->orWhere('blok_id', $siklus->blok_id);
-            })
+            ->where('siklus_id', $siklus->id)
             ->latest('tgl_kwitansi')
             ->get();
 

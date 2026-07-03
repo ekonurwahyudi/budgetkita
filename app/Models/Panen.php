@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ScopedByActiveTambakRelation;
+
 class Panen extends BaseModel
 {
+    use ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'siklus.blok';
+
     protected $fillable = [
         'siklus_id', 'kolam_id', 'tgl_panen', 'umur', 'ukuran', 'total_berat',
         'harga_jual', 'sisa_bayar', 'total_penjualan', 'pembeli',

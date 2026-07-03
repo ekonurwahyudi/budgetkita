@@ -437,7 +437,7 @@
                     $kategoriColors = ['#2563eb', '#3b82f6', '#4f67c7', '#7db7f0', '#9ecdf5', '#6b7a8a'];
                 @endphp
                 <div class="flex flex-col gap-4">
-                    @foreach($pengeluaranKategori->take(6) as $kategori)
+                    @foreach($pengeluaranKategori as $kategori)
                     @php
                         $kategoriPct = round(((float) $kategori['total'] / $maxKategoriTotal) * 100);
                         $kategoriColor = $kategoriColors[$loop->index % count($kategoriColors)];

@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToActiveTambak;
+
 class PembelianPersediaan extends BaseModel
 {
+    use BelongsToActiveTambak;
+
     protected $fillable = [
-        'nomor_transaksi', 'tgl_pembelian', 'jenis_pembayaran',
+        'tambak_id', 'nomor_transaksi', 'tgl_pembelian', 'jenis_pembayaran',
         'account_bank_id', 'eviden', 'catatan', 'status', 'created_by', 'reject_reason',
     ];
 

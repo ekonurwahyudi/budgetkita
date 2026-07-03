@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToActiveTambak;
 use Carbon\Carbon;
 
 class PembelianAset extends BaseModel
 {
+    use BelongsToActiveTambak;
+
     protected $fillable = [
-        'nomor_transaksi', 'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
+        'tambak_id', 'nomor_transaksi', 'nama_aset', 'kategori_aset_id', 'tgl_pembelian', 'nominal_pembelian',
         'umur_manfaat', 'nilai_residu', 'metode_depresiasi', 'persen_depresiasi',
         'jenis_pembayaran', 'account_bank_id', 'status', 'created_by', 'reject_reason',
         'catatan', 'eviden', 'foto_aset',

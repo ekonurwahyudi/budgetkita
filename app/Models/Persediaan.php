@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToActiveTambak;
+
 class Persediaan extends BaseModel
 {
-    protected $fillable = ['item_persediaan_id', 'qty', 'minimum_stok', 'unit', 'harga_per_unit', 'total_harga'];
+    use BelongsToActiveTambak;
+
+    protected $fillable = ['tambak_id', 'item_persediaan_id', 'qty', 'minimum_stok', 'unit', 'harga_per_unit', 'total_harga'];
 
     protected function casts(): array
     {

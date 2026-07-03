@@ -269,7 +269,7 @@
                 <div class="kt-card-header min-h-16">
                     <div class="flex flex-col gap-1">
                         <h3 class="kt-card-title">Transaksi Keuangan</h3>
-                        <span class="text-xs text-muted-foreground">{{ $transaksis->count() }} transaksi terkait siklus/blok</span>
+                        <span class="text-xs text-muted-foreground">{{ $transaksis->count() }} transaksi terkait siklus ini</span>
                     </div>
                     <span class="kt-badge kt-badge-sm kt-badge-outline">Rp {{ number_format($transaksis->sum('nominal') ?? 0, 0, ',', '.') }}</span>
                 </div>

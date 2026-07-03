@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ScopedByActiveTambakRelation;
+
 class SharingRevenue extends BaseModel
 {
+    use ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'blok';
+
     protected $fillable = [
         'nomor_transaksi', 'nama_penerima', 'blok_id', 'siklus_id',
         'total_keuntungan', 'persentase', 'nominal', 'jenis_pembayaran',

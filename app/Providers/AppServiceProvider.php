@@ -32,12 +32,8 @@ class AppServiceProvider extends ServiceProvider
                 ->pluck('tambak')
                 ->filter();
 
-            $activeTambakId = session('active_tambak_id');
+            $activeTambakId = \App\Support\ActiveTambak::id();
             $activeTambak = $tambaks->firstWhere('id', $activeTambakId) ?? $tambaks->first();
-
-            if ($activeTambak && !$activeTambakId) {
-                session(['active_tambak_id' => $activeTambak->id]);
-            }
 
             $view->with('headerTambaks', $tambaks);
             $view->with('activeTambak', $activeTambak);

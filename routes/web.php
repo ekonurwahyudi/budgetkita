@@ -46,6 +46,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/transactions', [DashboardController::class, 'transactions'])->name('dashboard.transactions');
     Route::get('/api/lokasi/search', [LokasiController::class, 'search'])->name('api.lokasi.search');
     Route::post('/switch-tambak/{tambak}', function (\App\Models\Tambak $tambak) {
+        abort_unless(
+            \App\Models\TambakAnggota::where('user_id', auth()->id())->where('tambak_id', $tambak->id)->exists(),
+            403
+        );
+
         session(['active_tambak_id' => $tambak->id]);
         return redirect()->back();
     })->name('switch-tambak');

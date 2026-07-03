@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ScopedByActiveTambakRelation;
+
 class KolamParameter extends BaseModel
 {
+    use ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'kolam.blok';
+
     protected $fillable = [
         'kolam_id', 'user_id', 'tgl_parameter',
         'ph_pagi', 'ph_sore', 'do_pagi', 'do_sore',

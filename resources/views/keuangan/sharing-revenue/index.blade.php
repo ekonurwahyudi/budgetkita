@@ -114,18 +114,18 @@
             </a>
             @endcan
         </div>
-        <div id="sharing_revenue_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="sharing_revenue">
+        <div id="sharing_revenue_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="sharing_revenue">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>
                         <tr>
-                            <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="penerima"><span class="kt-table-col"><span class="kt-table-col-label">Penerima</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="blok"><span class="kt-table-col"><span class="kt-table-col-label">Blok/Siklus</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="persen"><span class="kt-table-col"><span class="kt-table-col-label">Persen</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="nominal"><span class="kt-table-col"><span class="kt-table-col-label">Nominal</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th>
+                            <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span></span></th>
+                            <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span></span></th>
+                            <th data-kt-datatable-column="penerima"><span class="kt-table-col"><span class="kt-table-col-label">Penerima</span></span></th>
+                            <th data-kt-datatable-column="blok"><span class="kt-table-col"><span class="kt-table-col-label">Blok/Siklus</span></span></th>
+                            <th data-kt-datatable-column="persen"><span class="kt-table-col"><span class="kt-table-col-label">Persen</span></span></th>
+                            <th data-kt-datatable-column="nominal"><span class="kt-table-col"><span class="kt-table-col-label">Nominal</span></span></th>
+                            <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span></span></th>
                             <th class="w-28" data-kt-datatable-column="aksi"></th>
                         </tr>
                     </thead>

@@ -29,5 +29,8 @@ class HutangPiutang extends BaseModel
     public function kategoriHutangPiutang() { return $this->belongsTo(KategoriHutangPiutang::class); }
     public function accountBank() { return $this->belongsTo(AccountBank::class); }
     public function payments() { return $this->hasMany(HutangPiutangPayment::class); }
+    public function pembelianAset() { return $this->hasOne(PembelianAset::class, 'hutang_piutang_id'); }
+    public function pembelianPersediaan() { return $this->hasOne(PembelianPersediaan::class, 'hutang_piutang_id'); }
+    public function penjualanAset() { return $this->hasOne(PenjualanAset::class, 'piutang_id'); }
     public function pembuat() { return $this->belongsTo(User::class, 'created_by'); }
 }

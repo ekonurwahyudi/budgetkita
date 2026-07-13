@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Imports\TransaksiKeuanganImport;
 use App\Models\AccountBank;
 use App\Models\Blok;
+use App\Models\HutangPiutang;
 use App\Models\ItemTransaksi;
 use App\Models\ItemPersediaan;
 use App\Models\KategoriAset;
@@ -23,6 +24,8 @@ use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
 use App\Services\FileUploadService;
 use App\Services\NotifikasiService;
+use App\Support\ActiveTambak;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -41,6 +44,7 @@ class TransaksiKeuanganController extends Controller
             'itemPersediaans'    => ItemPersediaan::with('kategoriPersediaan')->orderBy('deskripsi')->get(),
             'itemTransaksis'     => ItemTransaksi::orderBy('kode_item')->get(),
             'tambaks'            => Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get(),
+            'selectedTambakId'   => old('tambak_id', ActiveTambak::id() ?? $tambakIds->first()),
             'karyawans'          => User::orderBy('nama')->get(),
             'sumberDanas'        => SumberDana::orderBy('deskripsi')->get(),
             'accountBanks'       => AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get(),
@@ -70,7 +74,7 @@ class TransaksiKeuanganController extends Controller
             });
         }
 
-        $data = $query->latest()->get();
+        $data = $query->latest('created_at')->get();
 
         $tambakIds2 = auth()->user()->tambaks()->pluck('tambaks.id');
         $kategoriTransaksis = KategoriTransaksi::orderBy('deskripsi')->get();
@@ -130,7 +134,7 @@ class TransaksiKeuanganController extends Controller
             });
         }
 
-        $data = $query->latest()->get();
+        $data = $query->latest('created_at')->get();
         $filename = 'transaksi-keuangan-' . now()->format('Ymd-His') . '.xlsx';
 
         return Excel::download(new TransaksiKeuanganExport($data), $filename);
@@ -174,8 +178,11 @@ class TransaksiKeuanganController extends Controller
             'blok_id'               => 'nullable|uuid|exists:bloks,id',
             'siklus_id'             => 'nullable|uuid|exists:sikluses,id',
             'sumber_dana_id'        => 'required|uuid|exists:sumber_danas,id',
+            'status_pembayaran'     => 'required|in:lunas,hutang,sebagian',
+            'nominal_dibayar'       => 'nullable|numeric|min:0',
+            'konfirmasi_hutang'     => 'nullable|accepted_if:status_pembayaran,sebagian',
             'jenis_pembayaran'      => 'required|in:cash,bank',
-            'account_bank_id'       => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
+            'account_bank_id'       => 'nullable|required_if:status_pembayaran,lunas,sebagian|uuid|exists:account_banks,id',
             'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
             'catatan'               => 'nullable|string',
         ]);
@@ -183,9 +190,15 @@ class TransaksiKeuanganController extends Controller
         $input = $request->only([
             'jenis_transaksi', 'tgl_kwitansi', 'aktivitas', 'nominal',
             'item_transaksi_id', 'kategori_transaksi_id', 'tambak_id',
-            'blok_id', 'siklus_id', 'sumber_dana_id', 'jenis_pembayaran',
-            'account_bank_id', 'catatan',
+            'blok_id', 'siklus_id', 'sumber_dana_id', 'status_pembayaran',
+            'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        $input['nominal'] = (float) $request->input('nominal');
+        $input['nominal_dibayar'] = $this->calculatePaidAmount($request, $input['nominal']);
+        if ($input['status_pembayaran'] === 'hutang') {
+            $input['account_bank_id'] = null;
+        }
 
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVT');
         $input['created_by'] = auth()->id();
@@ -198,7 +211,11 @@ class TransaksiKeuanganController extends Controller
             $input['eviden'] = $paths;
         }
 
-        $transaksi = TransaksiKeuangan::create($input);
+        $transaksi = DB::transaction(function () use ($input) {
+            $transaksi = TransaksiKeuangan::create($input);
+            $this->syncHutangForTransaksi($transaksi);
+            return $transaksi;
+        });
 
         app(NotifikasiService::class)->kirimApprovalRequest(
             'Transaksi Baru Menunggu Approval',
@@ -239,8 +256,11 @@ class TransaksiKeuanganController extends Controller
             'blok_id'               => 'nullable|uuid|exists:bloks,id',
             'siklus_id'             => 'nullable|uuid|exists:sikluses,id',
             'sumber_dana_id'        => 'required|uuid|exists:sumber_danas,id',
+            'status_pembayaran'     => 'required|in:lunas,hutang,sebagian',
+            'nominal_dibayar'       => 'nullable|numeric|min:0',
+            'konfirmasi_hutang'     => 'nullable|accepted_if:status_pembayaran,sebagian',
             'jenis_pembayaran'      => 'required|in:cash,bank',
-            'account_bank_id'       => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
+            'account_bank_id'       => 'nullable|required_if:status_pembayaran,lunas,sebagian|uuid|exists:account_banks,id',
             'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
             'catatan'               => 'nullable|string',
         ]);
@@ -248,9 +268,15 @@ class TransaksiKeuanganController extends Controller
         $input = $request->only([
             'jenis_transaksi', 'tgl_kwitansi', 'aktivitas', 'nominal',
             'item_transaksi_id', 'kategori_transaksi_id', 'tambak_id',
-            'blok_id', 'siklus_id', 'sumber_dana_id', 'jenis_pembayaran',
-            'account_bank_id', 'catatan',
+            'blok_id', 'siklus_id', 'sumber_dana_id', 'status_pembayaran',
+            'jenis_pembayaran', 'account_bank_id', 'catatan',
         ]);
+
+        $input['nominal'] = (float) $request->input('nominal');
+        $input['nominal_dibayar'] = $this->calculatePaidAmount($request, $input['nominal']);
+        if ($input['status_pembayaran'] === 'hutang') {
+            $input['account_bank_id'] = null;
+        }
 
         if ($request->hasFile('eviden')) {
             $existing = $transaksi->eviden ?? [];
@@ -273,14 +299,15 @@ class TransaksiKeuanganController extends Controller
                 $bankLama = AccountBank::find($transaksi->account_bank_id);
                 if ($bankLama) {
                     if ($transaksi->jenis_transaksi === 'uang_masuk') {
-                        $bankLama->decrement('saldo', $transaksi->nominal);
+                        $bankLama->decrement('saldo', $this->getTransaksiPaidAmount($transaksi));
                     } elseif ($transaksi->jenis_transaksi === 'uang_keluar') {
-                        $bankLama->increment('saldo', $transaksi->nominal);
+                        $bankLama->increment('saldo', $this->getTransaksiPaidAmount($transaksi));
                     }
                 }
             }
 
             $transaksi->update($input);
+            $this->syncHutangForTransaksi($transaksi->refresh());
 
             // Apply saldo baru jika transaksi masih selesai via bank
             $transaksi->refresh();
@@ -288,9 +315,9 @@ class TransaksiKeuanganController extends Controller
                 $bankBaru = AccountBank::find($transaksi->account_bank_id);
                 if ($bankBaru) {
                     if ($transaksi->jenis_transaksi === 'uang_masuk') {
-                        $bankBaru->increment('saldo', $transaksi->nominal);
+                        $bankBaru->increment('saldo', $this->getTransaksiPaidAmount($transaksi));
                     } elseif ($transaksi->jenis_transaksi === 'uang_keluar') {
-                        $bankBaru->decrement('saldo', $transaksi->nominal);
+                        $bankBaru->decrement('saldo', $this->getTransaksiPaidAmount($transaksi));
                     }
                 }
             }
@@ -307,13 +334,14 @@ class TransaksiKeuanganController extends Controller
                 $bank = AccountBank::find($transaksi->account_bank_id);
                 if ($bank) {
                     if ($transaksi->jenis_transaksi === 'uang_masuk') {
-                        $bank->decrement('saldo', $transaksi->nominal);
+                        $bank->decrement('saldo', $this->getTransaksiPaidAmount($transaksi));
                     } elseif ($transaksi->jenis_transaksi === 'uang_keluar') {
-                        $bank->increment('saldo', $transaksi->nominal);
+                        $bank->increment('saldo', $this->getTransaksiPaidAmount($transaksi));
                     }
                 }
             }
 
+            $this->removeLinkedHutang($transaksi);
             $transaksi->delete();
         });
 
@@ -322,8 +350,19 @@ class TransaksiKeuanganController extends Controller
 
     public function approve(TransaksiKeuangan $transaksi)
     {
-        $transaksi->update(['reject_reason' => null]);
-        app(ApprovalService::class)->approve($transaksi);
+        DB::transaction(function () use ($transaksi) {
+            $transaksi->update(['reject_reason' => null]);
+            app(ApprovalService::class)->approve($transaksi);
+
+            $transaksi->refresh();
+            if ($transaksi->hutang_piutang_id) {
+                HutangPiutang::whereKey($transaksi->hutang_piutang_id)->update([
+                    'status' => 'selesai',
+                    'reject_reason' => null,
+                ]);
+            }
+        });
+
         app(NotifikasiService::class)->kirimKeRole('Owner',
             'Transaksi Disetujui',
             'Transaksi "' . $transaksi->aktivitas . '" telah disetujui.',
@@ -344,6 +383,12 @@ class TransaksiKeuanganController extends Controller
 
         $transaksi->update(['reject_reason' => $validated['alasan_reject']]);
         app(ApprovalService::class)->reject($transaksi);
+        if ($transaksi->hutang_piutang_id) {
+            HutangPiutang::whereKey($transaksi->hutang_piutang_id)->update([
+                'status' => 'cancel',
+                'reject_reason' => 'Transaksi ditolak: ' . $validated['alasan_reject'],
+            ]);
+        }
 
         if ($transaksi->created_by) {
             app(NotifikasiService::class)->kirim(
@@ -361,5 +406,94 @@ class TransaksiKeuanganController extends Controller
     public function itemsByKategori(KategoriTransaksi $kategori)
     {
         return response()->json($kategori->itemTransaksis()->orderBy('kode_item')->get());
+    }
+
+    private function calculatePaidAmount(Request $request, float $total): float
+    {
+        return match ($request->input('status_pembayaran')) {
+            'hutang' => 0,
+            'sebagian' => min((float) $request->input('nominal_dibayar', 0), $total),
+            default => $total,
+        };
+    }
+
+    private function getTransaksiPaidAmount(TransaksiKeuangan $transaksi): float
+    {
+        return match ($transaksi->status_pembayaran) {
+            'hutang' => 0,
+            'sebagian' => (float) ($transaksi->nominal_dibayar ?? 0),
+            default => (float) $transaksi->nominal,
+        };
+    }
+
+    private function syncHutangForTransaksi(TransaksiKeuangan $transaksi): void
+    {
+        if (!in_array($transaksi->status_pembayaran, ['hutang', 'sebagian'], true)) {
+            $this->removeLinkedHutang($transaksi);
+            return;
+        }
+
+        $total = (float) $transaksi->nominal;
+        $dibayar = (float) $transaksi->nominal_dibayar;
+        $sisa = max(0, $total - $dibayar);
+
+        if ($sisa <= 0) {
+            $this->removeLinkedHutang($transaksi);
+            return;
+        }
+
+        $isPiutang = $transaksi->jenis_transaksi === 'uang_masuk';
+        $kategori = KategoriHutangPiutang::firstOrCreate(
+            ['kode_hutang_piutang' => 'TRANS'],
+            ['deskripsi' => 'Hutang/Piutang Transaksi']
+        );
+
+        $payload = [
+            'jenis' => $isPiutang ? 'piutang' : 'hutang',
+            'nama_pemberi_hutang' => null,
+            'aktivitas' => $transaksi->aktivitas . ' (' . $transaksi->nomor_transaksi . ')',
+            'kategori_hutang_piutang_id' => $kategori->id,
+            'nominal' => $total,
+            'total_bayar' => $total,
+            'jatuh_tempo' => Carbon::parse($transaksi->tgl_kwitansi)->addDays(30)->toDateString(),
+            'nominal_bayar' => $dibayar,
+            'sisa_pembayaran' => $sisa,
+            'jenis_pembayaran' => 'cash',
+            'account_bank_id' => null,
+            'catatan' => trim(($transaksi->catatan ?? '') . "\n\nOtomatis dari transaksi " . $transaksi->nomor_transaksi),
+            'status' => $transaksi->status === 'selesai' ? 'selesai' : 'awaiting_approval',
+            'created_by' => $transaksi->created_by,
+            'created_at' => Carbon::parse($transaksi->tgl_kwitansi),
+        ];
+
+        if ($transaksi->hutang_piutang_id) {
+            $hutang = HutangPiutang::find($transaksi->hutang_piutang_id);
+            if ($hutang) {
+                $hutang->update($payload);
+                return;
+            }
+        }
+
+        $payload['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVH');
+        $hutang = HutangPiutang::create($payload);
+        $transaksi->updateQuietly(['hutang_piutang_id' => $hutang->id]);
+    }
+
+    private function removeLinkedHutang(TransaksiKeuangan $transaksi): void
+    {
+        if (!$transaksi->hutang_piutang_id) {
+            return;
+        }
+
+        $hutang = HutangPiutang::with('payments')->find($transaksi->hutang_piutang_id);
+        if ($hutang) {
+            if ($hutang->payments->isEmpty()) {
+                $hutang->delete();
+            } else {
+                $hutang->update(['status' => 'cancel']);
+            }
+        }
+
+        $transaksi->updateQuietly(['hutang_piutang_id' => null]);
     }
 }

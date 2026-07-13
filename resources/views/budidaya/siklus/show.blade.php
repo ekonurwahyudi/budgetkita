@@ -57,7 +57,7 @@
                         <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Uang Keluar</span>
                     </div>
                     <span class="text-2xl font-semibold text-mono text-destructive leading-none truncate">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
-                    <span class="text-xs text-muted-foreground">{{ $detailTransaksiKeluar->count() }} transaksi, {{ $pemberianPakans->count() + $pemberianKimia->count() }} pemakaian stok</span>
+                    <span class="text-xs text-muted-foreground">{{ $detailTransaksiKeluar->count() }} transaksi, {{ $pemberianPakans->count() + $pemberianKimia->count() }} pemakaian stok, {{ $pembelianAsets->count() }} aset</span>
                 </div>
                 <span class="size-11 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
                     <i class="ki-filled ki-cheque text-xl"></i>
@@ -75,6 +75,10 @@
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-secondary-foreground">Bahan Kimia</span>
                     <span class="text-mono font-medium">Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Aset</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalBiayaAset ?? 0, 0, ',', '.') }}</span>
                 </div>
             </div>
             <div class="mt-3 flex items-center justify-end">
@@ -931,7 +935,7 @@
             <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
                 <i class="ki-filled ki-flask text-red-600"></i> Biaya Bahan Kimia
             </h4>
-            <div class="kt-table-wrapper">
+            <div class="kt-table-wrapper mb-5">
                 <table class="kt-table">
                     <thead>
                         <tr>
@@ -957,6 +961,54 @@
                         <tr class="font-semibold">
                             <td colspan="3" class="text-end">Subtotal Kimia:</td>
                             <td class="text-mono text-end text-red-600">Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-briefcase text-red-600"></i> Pembelian Aset
+            </h4>
+            <div class="kt-table-wrapper">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>No. Transaksi</th>
+                            <th>Tanggal</th>
+                            <th>Aset</th>
+                            <th>Pembayaran</th>
+                            <th class="text-end">Dibayar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pembelianAsets as $aset)
+                        <tr>
+                            <td class="text-mono">
+                                <a href="{{ route('pembelian-aset.show', $aset) }}" class="text-primary hover:underline">
+                                    {{ $aset->nomor_transaksi }}
+                                </a>
+                            </td>
+                            <td>{{ $aset->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $aset->nama_aset }}</td>
+                            <td>
+                                @if($aset->status_pembayaran === 'hutang')
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning">Hutang</span>
+                                @elseif($aset->status_pembayaran === 'sebagian')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary">Sebagian</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                @endif
+                            </td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($aset->nominal_dibayar ?? $aset->nominal_pembelian ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="5" class="text-center text-muted-foreground py-3">Belum ada pembelian aset</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="4" class="text-end">Subtotal Aset:</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($totalBiayaAset ?? 0, 0, ',', '.') }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -994,7 +1046,8 @@
                     <div class="text-xs text-secondary-foreground">
                         Transaksi: Rp {{ number_format($detailTransaksiKeluar->sum('nominal') ?? 0, 0, ',', '.') }} + 
                         Pakan: Rp {{ number_format($totalBiayaPakan ?? 0, 0, ',', '.') }} + 
-                        Kimia: Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}
+                        Kimia: Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }} +
+                        Aset: Rp {{ number_format($totalBiayaAset ?? 0, 0, ',', '.') }}
                     </div>
                 </div>
                 @php

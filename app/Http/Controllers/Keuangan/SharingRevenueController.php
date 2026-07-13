@@ -160,7 +160,7 @@ class SharingRevenueController extends Controller
     {
         $hasTambak = auth()->user()->tambaks()->exists();
         $data = $hasTambak
-            ? SharingRevenue::with(['blok', 'siklus', 'accountBank'])->latest()->get()
+            ? SharingRevenue::with(['blok', 'siklus', 'accountBank'])->latest('created_at')->get()
             : collect();
         $tambakIds = auth()->user()->tambaks()->pluck('tambaks.id');
         $siklusCards = $hasTambak ? $this->buildSiklusCards($tambakIds) : collect();

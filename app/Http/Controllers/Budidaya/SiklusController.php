@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Budidaya;
 use App\Http\Controllers\Controller;
 use App\Models\Blok;
 use App\Models\PemberianPakan;
+use App\Models\PembelianAset;
 use App\Models\Siklus;
 use App\Models\Tambak;
 use App\Models\TransaksiKeuangan;
@@ -75,7 +76,12 @@ class SiklusController extends Controller
 
     public function show(Siklus $siklus)
     {
-        $siklus->load(['blok.tambak', 'panens.kolam', 'panens.accountBank']);
+        $siklus->load([
+            'blok.tambak',
+            'panens' => fn ($q) => $q->latest('tgl_panen')->latest('created_at'),
+            'panens.kolam',
+            'panens.accountBank',
+        ]);
         $transaksis = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'sumberDana'])
             ->where('siklus_id', $siklus->id)
             ->latest('tgl_kwitansi')
@@ -121,8 +127,13 @@ class SiklusController extends Controller
         $detailTransaksiKeluar = $transaksis->where('jenis_transaksi', 'uang_keluar');
         $totalBiayaPakan = $pemberianPakans->sum('biaya');
         $totalBiayaKimia = $pemberianKimia->sum('biaya');
+        $pembelianAsets = PembelianAset::with(['kategoriAset', 'accountBank'])
+            ->where('siklus_id', $siklus->id)
+            ->latest('tgl_pembelian')
+            ->get();
+        $totalBiayaAset = $pembelianAsets->sum(fn ($aset) => (float) ($aset->nominal_dibayar ?? $aset->nominal_pembelian ?? 0));
 
-        $uangKeluar = $uangKeluarTransaksi + $totalBiayaPakan + $totalBiayaKimia;
+        $uangKeluar = $uangKeluarTransaksi + $totalBiayaPakan + $totalBiayaKimia + $totalBiayaAset;
 
         $keuntunganKerugian = $uangMasuk - $uangKeluar;
 
@@ -150,7 +161,7 @@ class SiklusController extends Controller
             'accountBanks', 'kolams', 'users',
             'uangMasuk', 'uangKeluar', 'keuntunganKerugian',
             'detailPanen', 'detailTransaksiMasuk', 'detailTransaksiKeluar',
-            'totalBiayaPakan', 'totalBiayaKimia'
+            'totalBiayaPakan', 'totalBiayaKimia', 'pembelianAsets', 'totalBiayaAset'
         ));
     }
 

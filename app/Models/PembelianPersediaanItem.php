@@ -17,4 +17,5 @@ class PembelianPersediaanItem extends BaseModel
 
     public function pembelianPersediaan() { return $this->belongsTo(PembelianPersediaan::class); }
     public function itemPersediaan() { return $this->belongsTo(ItemPersediaan::class); }
+    public function returns() { return $this->hasMany(PembelianPersediaanReturn::class); }
 }

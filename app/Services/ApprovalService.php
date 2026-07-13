@@ -59,7 +59,39 @@ class ApprovalService
     {
         // Gaji → THP, Pembelian → sum items, lainnya → nominal
         if (method_exists($model, 'items') && $model->relationLoaded('items')) {
+            if (class_basename($model) === 'PembelianPersediaan') {
+                return match ($model->status_pembayaran) {
+                    'hutang' => 0,
+                    'sebagian' => $model->nominal_dibayar ?? 0,
+                    default => $model->items->sum('harga_total'),
+                };
+            }
+
             return $model->items->sum('harga_total');
+        }
+
+        if (class_basename($model) === 'PembelianAset') {
+            return match ($model->status_pembayaran) {
+                'hutang' => 0,
+                'sebagian' => $model->nominal_dibayar ?? 0,
+                default => $model->nominal_pembelian ?? 0,
+            };
+        }
+
+        if (class_basename($model) === 'TransaksiKeuangan') {
+            return match ($model->status_pembayaran) {
+                'hutang' => 0,
+                'sebagian' => $model->nominal_dibayar ?? 0,
+                default => $model->nominal ?? 0,
+            };
+        }
+
+        if (class_basename($model) === 'Panen') {
+            return match ($model->pembayaran) {
+                'piutang' => 0,
+                'sebagian' => $model->nominal_dibayar ?? 0,
+                default => $model->total_penjualan ?? 0,
+            };
         }
 
         return $model->thp ?? $model->total_penjualan ?? $model->nominal_pembelian ?? $model->nominal ?? 0;

@@ -17,7 +17,7 @@
             </a>
             @endcan
         </div>
-        <div id="pembelian_persediaan_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="pembelian_persediaan">
+        <div id="pembelian_persediaan_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="pembelian_persediaan">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>
@@ -25,8 +25,10 @@
                             <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tanggal</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="siklus"><span class="kt-table-col"><span class="kt-table-col-label">Blok/Siklus</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="jumlah"><span class="kt-table-col"><span class="kt-table-col-label">Jumlah Item</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="total"><span class="kt-table-col"><span class="kt-table-col-label">Grand Total</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="pembayaran"><span class="kt-table-col"><span class="kt-table-col-label">Pembayaran</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th>
                             <th class="w-28" data-kt-datatable-column="aksi"></th>
                         </tr>
@@ -37,8 +39,24 @@
                             <td>{{ $i + 1 }}</td>
                             <td class="text-mono">{{ $item->nomor_transaksi }}</td>
                             <td>{{ $item->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>
+                            <td>
+                                <div class="text-sm">{{ $item->blok?->nama_blok ?? '-' }}</div>
+                                <div class="text-xs text-muted-foreground">{{ $item->siklus?->nama_siklus ?? '-' }}</div>
+                            </td>
                             <td class="text-mono">{{ $item->items->count() }}</td>
                             <td class="text-mono">Rp {{ number_format($item->items->sum('harga_total'), 0, ',', '.') }}</td>
+                            <td>
+                                @if($item->status_pembayaran === 'hutang')
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning">Hutang</span>
+                                @elseif($item->status_pembayaran === 'sebagian')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary">Sebagian</span>
+                                    <div class="text-xs text-muted-foreground text-mono mt-1">
+                                        Sisa Rp {{ number_format(max(0, $item->items->sum('harga_total') - ($item->nominal_dibayar ?? 0)), 0, ',', '.') }}
+                                    </div>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                @endif
+                            </td>
                             <td>
                                 @if($item->status === 'selesai')
                                     <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>

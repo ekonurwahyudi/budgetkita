@@ -176,11 +176,14 @@ Route::middleware('auth')->group(function () {
 
         Route::get('pembelian-persediaan/create', [PembelianPersediaanController::class, 'create'])->name('pembelian-persediaan.create')->middleware('can:pembelian-persediaan.create');
         Route::resource('pembelian-persediaan', PembelianPersediaanController::class)->except(['create'])->parameters(['pembelian-persediaan' => 'pembelianPersediaan'])->middleware('can:pembelian-persediaan.view');
+        Route::post('pembelian-persediaan/{pembelianPersediaan}/return-stock', [PembelianPersediaanController::class, 'returnStock'])->name('pembelian-persediaan.return-stock')->middleware('can:pembelian-persediaan.edit');
         Route::post('pembelian-persediaan/{pembelianPersediaan}/approve', [PembelianPersediaanController::class, 'approve'])->name('pembelian-persediaan.approve');
         Route::post('pembelian-persediaan/{pembelianPersediaan}/reject', [PembelianPersediaanController::class, 'reject'])->name('pembelian-persediaan.reject');
 
         Route::get('pembelian-aset/create', [PembelianAsetController::class, 'create'])->name('pembelian-aset.create')->middleware('can:pembelian-aset.create');
         Route::resource('pembelian-aset', PembelianAsetController::class)->except(['create'])->parameters(['pembelian-aset' => 'pembelianAset'])->middleware('can:pembelian-aset.view');
+        Route::patch('pembelian-aset/{pembelianAset}/kondisi', [PembelianAsetController::class, 'updateKondisi'])->name('pembelian-aset.kondisi')->middleware('can:pembelian-aset.edit');
+        Route::post('pembelian-aset/{pembelianAset}/jual', [PembelianAsetController::class, 'jual'])->name('pembelian-aset.jual')->middleware('can:pembelian-aset.edit');
         Route::post('pembelian-aset/{pembelianAset}/approve', [PembelianAsetController::class, 'approve'])->name('pembelian-aset.approve');
         Route::post('pembelian-aset/{pembelianAset}/reject', [PembelianAsetController::class, 'reject'])->name('pembelian-aset.reject');
     });

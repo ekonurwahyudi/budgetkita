@@ -164,24 +164,44 @@
                             </div>
                         </div>
 
-                        {{-- Pembayaran & Sisa Bayar --}}
+                        {{-- Pembayaran & Dibayar Sekarang --}}
+                        <input type="hidden" name="nominal_dibayar" id="nominal_dibayar" value="{{ old('nominal_dibayar', (int)($panen?->nominal_dibayar ?? 0)) }}">
+                        <input type="hidden" name="sisa_bayar" id="sisa_bayar" value="{{ old('sisa_bayar', $panen?->sisa_bayar ?? 0) }}">
+                        <input type="hidden" name="konfirmasi_hutang" id="konfirmasi_hutang" value="0">
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-sm font-medium text-foreground">Pembayaran <span class="text-danger">*</span></label>
-                                <select name="pembayaran" id="pembayaran" class="kt-select" required onchange="toggleSisaBayar()">
+                                <select name="pembayaran" id="pembayaran" class="kt-select" required onchange="onPembayaranPanenChange()">
                                     <option value="lunas" {{ old('pembayaran', $panen?->pembayaran) === 'lunas' ? 'selected' : '' }}>Lunas</option>
                                     <option value="piutang" {{ old('pembayaran', $panen?->pembayaran) === 'piutang' ? 'selected' : '' }}>Piutang</option>
+                                    <option value="sebagian" {{ old('pembayaran', $panen?->pembayaran) === 'sebagian' ? 'selected' : '' }}>Bayar Sebagian</option>
                                 </select>
                             </div>
-                            <div class="flex flex-col gap-1.5" id="sisaBayarField" style="display:none;">
-                                <label class="text-sm font-medium text-foreground">Sisa Bayar</label>
+                            <div class="flex flex-col gap-1.5" id="nominalDibayarField" style="display:none;">
+                                <label class="text-sm font-medium text-foreground">Dibayar Sekarang <span class="text-danger">*</span></label>
                                 <div class="kt-input-group">
                                     <span class="kt-input-addon">Rp.</span>
-                                    <input class="kt-input" type="text" id="sisa_bayar_display" placeholder="0"
-                                           oninput="formatMoney(this,'sisa_bayar')"
-                                           value="{{ old('sisa_bayar', $panen && $panen->sisa_bayar ? number_format($panen->sisa_bayar, 0, ',', '.') : '') }}"/>
-                                    <input type="hidden" name="sisa_bayar" id="sisa_bayar"
-                                           value="{{ old('sisa_bayar', $panen?->sisa_bayar) }}"/>
+                                    <input class="kt-input" type="text" id="nominal_dibayar_display" placeholder="0"
+                                           oninput="formatMoney(this,'nominal_dibayar'); updatePanenBayar()"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Keterangan Piutang (muncul saat piutang / bayar sebagian) --}}
+                        <div id="piutang_preview" class="hidden rounded-xl border border-warning/30 bg-warning/10 p-4">
+                            <p class="text-sm font-medium text-foreground mb-2">Ringkasan Piutang</p>
+                            <div class="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                    <span class="text-muted-foreground block">Total Penjualan</span>
+                                    <span class="font-semibold text-mono" id="preview_total">Rp 0</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted-foreground block">Dibayar</span>
+                                    <span class="font-semibold text-mono" id="preview_dibayar">Rp 0</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted-foreground block">Dicatat Piutang</span>
+                                    <span class="font-semibold text-mono text-warning" id="preview_piutang">Rp 0</span>
                                 </div>
                             </div>
                         </div>
@@ -228,6 +248,63 @@ function calcPanen() {
     var total = berat * harga;
     document.getElementById('total_penjualan').value = total;
     document.getElementById('total_penjualan_display').value = total ? Number(total).toLocaleString('id-ID') : '0';
+    updatePanenBayar();
+}
+
+function formatRpPanen(num) {
+    return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+}
+
+function updatePanenBayar() {
+    var statusEl = document.getElementById('pembayaran');
+    if (!statusEl) return;
+    var status = statusEl.value;
+    var total = parseFloat(document.getElementById('total_penjualan').value) || 0;
+    var dibayarHidden = document.getElementById('nominal_dibayar');
+    var dibayarDisplay = document.getElementById('nominal_dibayar_display');
+    var sisaHidden = document.getElementById('sisa_bayar');
+    var dibayar = parseFloat(dibayarHidden.value) || 0;
+
+    if (status === 'lunas') {
+        dibayar = total;
+    } else if (status === 'piutang') {
+        dibayar = 0;
+    } else {
+        dibayar = Math.min(dibayar, total);
+    }
+
+    dibayarHidden.value = dibayar;
+    if (dibayarDisplay) dibayarDisplay.value = dibayar ? Number(dibayar).toLocaleString('id-ID') : '';
+    if (sisaHidden) sisaHidden.value = Math.max(0, total - dibayar);
+    updatePanenPreview();
+}
+
+function onPembayaranPanenChange() {
+    var status = document.getElementById('pembayaran').value;
+    var dibayarField = document.getElementById('nominalDibayarField');
+    if (dibayarField) dibayarField.style.display = status === 'sebagian' ? '' : 'none';
+    var konf = document.getElementById('konfirmasi_hutang');
+    if (konf) konf.value = '0';
+    updatePanenBayar();
+}
+
+function updatePanenPreview() {
+    var status = document.getElementById('pembayaran').value;
+    var preview = document.getElementById('piutang_preview');
+    if (!preview) return;
+    var total = parseFloat(document.getElementById('total_penjualan').value) || 0;
+    var dibayar = parseFloat(document.getElementById('nominal_dibayar').value) || 0;
+    var sisa = Math.max(0, total - dibayar);
+
+    if (!['piutang', 'sebagian'].includes(status) || sisa <= 0) {
+        preview.classList.add('hidden');
+        return;
+    }
+
+    document.getElementById('preview_total').textContent = formatRpPanen(total);
+    document.getElementById('preview_dibayar').textContent = formatRpPanen(dibayar);
+    document.getElementById('preview_piutang').textContent = formatRpPanen(sisa);
+    preview.classList.remove('hidden');
 }
 
 function toggleBankField() {
@@ -254,13 +331,13 @@ function showSaldo() {
 }
 
 function toggleSisaBayar() {
-    document.getElementById('sisaBayarField').style.display = document.getElementById('pembayaran').value === 'piutang' ? '' : 'none';
+    onPembayaranPanenChange();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     filterKolam();
     toggleBankField();
-    toggleSisaBayar();
+    onPembayaranPanenChange();
     showSaldo();
     // Init display values for edit mode
     var beratEl = document.getElementById('total_berat_display');
@@ -273,6 +350,20 @@ document.addEventListener('DOMContentLoaded', function() {
         var raw2 = hargaEl.value.replace(/[^0-9]/g, '');
         if (raw2) hargaEl.value = Number(raw2).toLocaleString('id-ID');
     }
+
+    document.querySelector('form').addEventListener('submit', function(e) {
+        var status = document.getElementById('pembayaran').value;
+        var total = parseFloat(document.getElementById('total_penjualan').value) || 0;
+        var dibayar = parseFloat(document.getElementById('nominal_dibayar').value) || 0;
+        var sisa = Math.max(0, total - dibayar);
+        if (status === 'sebagian' && sisa > 0 && document.getElementById('konfirmasi_hutang').value !== '1') {
+            if (!confirm('Sisa pembayaran sebesar ' + formatRpPanen(sisa) + ' akan dicatat sebagai piutang. Lanjutkan?')) {
+                e.preventDefault();
+                return;
+            }
+            document.getElementById('konfirmasi_hutang').value = '1';
+        }
+    });
 });
 </script>
 @endpush

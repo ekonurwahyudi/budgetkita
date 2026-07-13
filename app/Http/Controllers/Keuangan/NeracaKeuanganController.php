@@ -153,12 +153,10 @@ class NeracaKeuanganController extends Controller
                 ->sum('thp')
             + PembelianPersediaan::where('status', 'selesai')
                 ->whereBetween('tgl_pembelian', [$awalTahun, $tanggalCutoff])
-                ->withSum('items as total_nominal', 'harga_total')
-                ->get()
-                ->sum('total_nominal')
+                ->sum('nominal_dibayar')
             + PembelianAset::where('status', 'selesai')
                 ->whereBetween('tgl_pembelian', [$awalTahun, $tanggalCutoff])
-                ->sum('nominal_pembelian');
+                ->sum('nominal_dibayar');
 
         $labaBerjalan = $totalPendapatan - $totalPengeluaran;
 

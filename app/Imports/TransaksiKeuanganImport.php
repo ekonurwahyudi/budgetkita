@@ -39,8 +39,8 @@ class TransaksiKeuanganImport implements ToCollection
                 $data = $this->rowData($row, $headers);
 
                 try {
-                    $kategori = $this->kategori($data['kategori'] ?? null);
-                    $item = $this->item($data['item_transaksi'] ?? null, $kategori);
+                    $item = $this->item($data['item_transaksi'] ?? null);
+                    $kategori = $this->kategori($data['kategori'] ?? null, $item);
                     $tambak = $this->tambak($data['tambak'] ?? null, $tambakIds);
                     $blok = $this->blok($data['blok'] ?? null, $tambak);
                     $siklus = $this->siklus($data['siklus'] ?? null, $blok);
@@ -174,25 +174,44 @@ class TransaksiKeuanganImport implements ToCollection
 
     private function nominal($value): float
     {
-        if (is_numeric($value)) {
-            $nominal = (float) $value;
-
-            if ($nominal < 0) {
+        // Angka asli dari cell numerik Excel → langsung pakai.
+        if (is_int($value) || is_float($value)) {
+            if ($value < 0) {
                 throw new \InvalidArgumentException('Nominal harus angka dan minimal 0.');
             }
 
-            return $nominal;
+            return (float) $value;
         }
 
-        $clean = preg_replace('/[^0-9,.-]/', '', (string) $value);
-        $clean = str_replace('.', '', $clean);
-        $clean = str_replace(',', '.', $clean);
+        $s = preg_replace('/[^0-9.,]/', '', (string) $value);
 
-        if (!is_numeric($clean) || (float) $clean < 0) {
+        // Deteksi pola RIBUAN DULU (sebelum is_numeric), karena "946.500" & "946,500"
+        // valid sebagai 946.5 padahal maksudnya 946500.
+        if (preg_match('/^\d{1,3}(\.\d{3})+$/', $s)) {
+            // Ribuan ID: 946.500 / 1.950.000
+            $s = str_replace('.', '', $s);
+        } elseif (preg_match('/^\d{1,3}(,\d{3})+$/', $s)) {
+            // Ribuan US: 946,500 / 1,950,000
+            $s = str_replace(',', '', $s);
+        } elseif (!is_numeric($s)) {
+            $hasDot = str_contains($s, '.');
+            $hasComma = str_contains($s, ',');
+            if ($hasDot && $hasComma) {
+                // Separator TERAKHIR = desimal, yang lain = ribuan.
+                $s = (strrpos($s, ',') > strrpos($s, '.'))
+                    ? str_replace(',', '.', str_replace('.', '', $s))   // ID: 1.234,56
+                    : str_replace(',', '', $s);                          // US: 1,234.56
+            } elseif ($hasComma) {
+                // Sisa koma diikuti 1-2 digit => desimal (ID).
+                $s = str_replace(',', '.', $s);
+            }
+        }
+
+        if (!is_numeric($s) || (float) $s < 0) {
             throw new \InvalidArgumentException('Nominal harus angka dan minimal 0.');
         }
 
-        return (float) $clean;
+        return (float) $s;
     }
 
     private function requiredText($value, string $label): string
@@ -211,8 +230,13 @@ class TransaksiKeuanganImport implements ToCollection
         return $text === '' ? null : $text;
     }
 
-    private function kategori($value): KategoriTransaksi
+    private function kategori($value, ?ItemTransaksi $item): KategoriTransaksi
     {
+        // Kategori diturunkan dari item (lebih spesifik). Kolom kategori hanya fallback.
+        if ($item?->kategoriTransaksi) {
+            return $item->kategoriTransaksi;
+        }
+
         $value = $this->requiredText($value, 'Kategori');
 
         return KategoriTransaksi::where('kode_kategori', $value)
@@ -220,13 +244,13 @@ class TransaksiKeuanganImport implements ToCollection
             ->firstOr(fn () => throw new \InvalidArgumentException("Kategori '{$value}' tidak ditemukan."));
     }
 
-    private function item($value, KategoriTransaksi $kategori): ItemTransaksi
+    private function item($value): ItemTransaksi
     {
         $value = $this->requiredText($value, 'Item transaksi');
 
-        return ItemTransaksi::where('kategori_transaksi_id', $kategori->id)
-            ->where(fn ($q) => $q->where('kode_item', $value)->orWhere('deskripsi', $value))
-            ->firstOr(fn () => throw new \InvalidArgumentException("Item transaksi '{$value}' tidak ditemukan pada kategori tersebut."));
+        return ItemTransaksi::where('kode_item', $value)
+            ->orWhere('deskripsi', $value)
+            ->firstOr(fn () => throw new \InvalidArgumentException("Item transaksi '{$value}' tidak ditemukan. Periksa kode item pada referensi."));
     }
 
     private function tambak($value, array $tambakIds): Tambak

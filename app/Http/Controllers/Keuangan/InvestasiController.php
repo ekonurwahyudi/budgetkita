@@ -19,7 +19,7 @@ class InvestasiController extends Controller
     {
         $hasTambak = auth()->user()->tambaks()->exists();
         $data = $hasTambak
-            ? Investasi::with(['kategoriInvestasi', 'accountBank'])->latest()->get()
+            ? Investasi::with(['kategoriInvestasi', 'accountBank'])->latest('created_at')->get()
             : collect();
         return view('keuangan.investasi.index', compact('data'));
     }

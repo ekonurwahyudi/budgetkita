@@ -43,6 +43,8 @@
                 @if($transaksi) @method('PUT') @endif
 
                 <div id="transaksiHarianSection">
+                <input type="hidden" name="nominal_dibayar" id="nominal_dibayar_val" value="{{ old('nominal_dibayar', (int)($transaksi?->nominal_dibayar ?? 0)) }}">
+                <input type="hidden" name="konfirmasi_hutang" id="konfirmasi_hutang" value="0">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {{-- Kolom Kiri --}}
                     <div class="flex flex-col gap-5">
@@ -50,7 +52,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-sm font-medium text-foreground">Jenis Transaksi <span class="text-danger">*</span></label>
-                                <select name="jenis_transaksi" id="jenis_transaksi" class="kt-select" required>
+                                <select name="jenis_transaksi" id="jenis_transaksi" class="kt-select" required onchange="updateHutangPreview()">
                                     <option value="uang_masuk" {{ old('jenis_transaksi', $transaksi?->jenis_transaksi ?? 'uang_keluar') === 'uang_masuk' ? 'selected' : '' }}>Uang Masuk</option>
                                     <option value="uang_keluar" {{ old('jenis_transaksi', $transaksi?->jenis_transaksi ?? 'uang_keluar') === 'uang_keluar' ? 'selected' : '' }}>Uang Keluar</option>
                                 </select>
@@ -116,7 +118,7 @@
                                 <select name="tambak_id" id="tambak_id" class="kt-select" required onchange="loadBlokByTambak()">
                                     <option value="">-- Pilih --</option>
                                     @foreach($tambaks as $t)
-                                    <option value="{{ $t->id }}" {{ old('tambak_id', $transaksi?->tambak_id) === $t->id ? 'selected' : '' }}>{{ $t->nama_tambak }}</option>
+                                    <option value="{{ $t->id }}" {{ old('tambak_id', $transaksi?->tambak_id ?? $selectedTambakId) === $t->id ? 'selected' : '' }}>{{ $t->nama_tambak }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -143,7 +145,7 @@
 
                     {{-- Kolom Kanan --}}
                     <div class="flex flex-col gap-5">
-                        {{-- Sumber Dana & Pembayaran --}}
+                        {{-- Sumber Dana & Status Pembayaran --}}
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-sm font-medium text-foreground">Sumber Dana <span class="text-danger">*</span></label>
@@ -155,6 +157,18 @@
                                 </select>
                             </div>
                             <div class="flex flex-col gap-1.5">
+                                <label class="text-sm font-medium text-foreground">Status Pembayaran <span class="text-danger">*</span></label>
+                                <select name="status_pembayaran" id="status_pembayaran" class="kt-select" required onchange="onStatusPembayaranChange()">
+                                    <option value="lunas" {{ old('status_pembayaran', $transaksi?->status_pembayaran ?? 'lunas') === 'lunas' ? 'selected' : '' }}>Lunas</option>
+                                    <option value="hutang" {{ old('status_pembayaran', $transaksi?->status_pembayaran) === 'hutang' ? 'selected' : '' }}>Hutang</option>
+                                    <option value="sebagian" {{ old('status_pembayaran', $transaksi?->status_pembayaran) === 'sebagian' ? 'selected' : '' }}>Bayar Sebagian</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Pembayaran & Dibayar Sekarang --}}
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-1.5" id="pembayaran_bank_wrap">
                                 <label class="text-sm font-medium text-foreground">Pembayaran <span class="text-danger">*</span></label>
                                 <select name="pembayaran_combo" id="pembayaran_combo" class="kt-select" required onchange="onPembayaranChange()">
                                     @foreach($accountBanks as $bank)
@@ -167,6 +181,32 @@
                                 <input type="hidden" name="jenis_pembayaran" id="jenis_pembayaran" value="{{ old('jenis_pembayaran', $transaksi?->jenis_pembayaran ?? 'bank') }}">
                                 <input type="hidden" name="account_bank_id" id="account_bank_id" value="{{ old('account_bank_id', $transaksi?->account_bank_id) }}">
                                 <span class="text-xs text-muted-foreground mt-1" id="saldoInfo">Saldo: <span class="text-mono font-medium text-primary" id="saldoValue"></span></span>
+                            </div>
+                            <div class="flex flex-col gap-1.5" id="nominal_dibayar_wrap" style="display:none;">
+                                <label class="text-sm font-medium text-foreground">Dibayar Sekarang <span class="text-danger">*</span></label>
+                                <div class="kt-input-group">
+                                    <span class="kt-input-addon">Rp.</span>
+                                    <input class="kt-input money-input" type="text" id="nominal_dibayar_display" placeholder="0" data-target="nominal_dibayar_val"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Keterangan Hutang (muncul saat hutang / bayar sebagian) --}}
+                        <div id="hutang_preview" class="hidden rounded-xl border border-warning/30 bg-warning/10 p-4">
+                            <p class="text-sm font-medium text-foreground mb-2">Ringkasan Hutang</p>
+                            <div class="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                    <span class="text-muted-foreground block">Total Transaksi</span>
+                                    <span class="font-semibold text-mono" id="preview_total">Rp 0</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted-foreground block">Dibayar</span>
+                                    <span class="font-semibold text-mono" id="preview_dibayar">Rp 0</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted-foreground block" id="preview_sisa_label">Dicatat Hutang</span>
+                                    <span class="font-semibold text-mono text-warning" id="preview_hutang">Rp 0</span>
+                                </div>
                             </div>
                         </div>
 
@@ -679,10 +719,12 @@
 <script>
 function onPembayaranChange() {
     var sel = document.getElementById('pembayaran_combo');
+    if (!sel) return;
     var val = sel.value;
     var parts = val.split('|');
+    var status = document.getElementById('status_pembayaran')?.value || 'lunas';
     document.getElementById('jenis_pembayaran').value = 'bank';
-    document.getElementById('account_bank_id').value = parts[1] || '';
+    document.getElementById('account_bank_id').value = status === 'hutang' ? '' : (parts[1] || '');
     var saldo = sel.options[sel.selectedIndex]?.getAttribute('data-saldo');
     var saldoEl = document.getElementById('saldoValue');
     if (saldo !== null && saldo !== '') {
@@ -691,6 +733,67 @@ function onPembayaranChange() {
     } else {
         document.getElementById('saldoInfo').style.display = 'none';
     }
+}
+
+function updateNominalDibayar() {
+    var statusEl = document.getElementById('status_pembayaran');
+    var nominalVal = document.getElementById('nominal_val');
+    var dibayarVal = document.getElementById('nominal_dibayar_val');
+    var dibayarDisplay = document.getElementById('nominal_dibayar_display');
+    if (!statusEl || !nominalVal || !dibayarVal) return;
+    var status = statusEl.value;
+    var nominal = parseMoney(nominalVal.value);
+    if (status === 'lunas') {
+        dibayarVal.value = nominal;
+        if (dibayarDisplay) dibayarDisplay.value = nominal > 0 ? formatMoney(nominal) : '';
+    } else if (status === 'hutang') {
+        dibayarVal.value = 0;
+        if (dibayarDisplay) dibayarDisplay.value = '';
+    } else {
+        var dibayar = Math.min(parseMoney(dibayarVal.value), nominal);
+        dibayarVal.value = dibayar;
+        if (dibayarDisplay) dibayarDisplay.value = dibayar > 0 ? formatMoney(dibayar) : '';
+    }
+    updateHutangPreview();
+}
+
+function onStatusPembayaranChange() {
+    var statusEl = document.getElementById('status_pembayaran');
+    if (!statusEl) return;
+    var status = statusEl.value;
+    var bankWrap = document.getElementById('pembayaran_bank_wrap');
+    var dibayarWrap = document.getElementById('nominal_dibayar_wrap');
+    var bankSelect = document.getElementById('pembayaran_combo');
+    var konf = document.getElementById('konfirmasi_hutang');
+    if (bankWrap) bankWrap.style.display = status === 'hutang' ? 'none' : '';
+    if (dibayarWrap) dibayarWrap.style.display = status === 'sebagian' ? '' : 'none';
+    if (bankSelect) bankSelect.required = status !== 'hutang';
+    if (konf) konf.value = '0';
+    updateNominalDibayar();
+    onPembayaranChange();
+}
+
+function updateHutangPreview() {
+    var statusEl = document.getElementById('status_pembayaran');
+    var preview = document.getElementById('hutang_preview');
+    if (!statusEl || !preview) return;
+    var status = statusEl.value;
+    var nominal = parseMoney(document.getElementById('nominal_val').value);
+    var dibayar = parseMoney(document.getElementById('nominal_dibayar_val').value);
+    var hutang = Math.max(0, nominal - dibayar);
+
+    if (!['hutang', 'sebagian'].includes(status) || hutang <= 0) {
+        preview.classList.add('hidden');
+        return;
+    }
+
+    var isMasuk = document.getElementById('jenis_transaksi')?.value === 'uang_masuk';
+    var sisaLabel = document.getElementById('preview_sisa_label');
+    if (sisaLabel) sisaLabel.textContent = isMasuk ? 'Dicatat Piutang' : 'Dicatat Hutang';
+    document.getElementById('preview_total').textContent = formatRp(nominal);
+    document.getElementById('preview_dibayar').textContent = formatRp(dibayar);
+    document.getElementById('preview_hutang').textContent = formatRp(hutang);
+    preview.classList.remove('hidden');
 }
 
 function onPembayaranAsetChange() {
@@ -796,7 +899,7 @@ function onTipeTransaksiChange() {
         onBankModeChange('hutang_piutang');
         filterKategoriHp();
     } else {
-        onPembayaranChange();
+        onStatusPembayaranChange();
     }
 }
 
@@ -1191,6 +1294,9 @@ function initMoneyInput(el) {
         if (target.id && target.id.includes('_gaji_val')) {
             calcGajiMode();
         }
+        if (target.id === 'nominal_val') {
+            updateNominalDibayar();
+        }
     });
 }
 
@@ -1199,7 +1305,24 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.money-input').forEach(initMoneyInput);
     onPembayaranChange();
     onPembayaranAsetChange();
+    onStatusPembayaranChange();
     onTipeTransaksiChange();
+
+    document.querySelector('form[enctype="multipart/form-data"]').addEventListener('submit', function(e) {
+        var statusEl = document.getElementById('status_pembayaran');
+        if (!statusEl) return;
+        var status = statusEl.value;
+        var nominal = parseMoney(document.getElementById('nominal_val').value);
+        var dibayar = parseMoney(document.getElementById('nominal_dibayar_val').value);
+        var sisa = Math.max(0, nominal - dibayar);
+        if (status === 'sebagian' && sisa > 0 && document.getElementById('konfirmasi_hutang').value !== '1') {
+            if (!confirm('Sisa pembayaran sebesar ' + formatRp(sisa) + ' akan dicatat sebagai hutang. Lanjutkan?')) {
+                e.preventDefault();
+                return;
+            }
+            document.getElementById('konfirmasi_hutang').value = '1';
+        }
+    });
 
     var nominalAset = document.getElementById('nominal_pembelian_display');
     var residuAset = document.getElementById('nilai_residu_display');
@@ -1208,9 +1331,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (residuAset) residuAset.addEventListener('input', updateDepresiasiPreview);
     if (umurAset) umurAset.addEventListener('input', updateDepresiasiPreview);
 
-    @if($transaksi?->tambak_id)
-    loadBlokByTambak('{{ $transaksi->blok_id }}');
-    @endif
+    var dibayarDisplay = document.getElementById('nominal_dibayar_display');
+    if (dibayarDisplay) dibayarDisplay.addEventListener('input', updateHutangPreview);
+
+    var initTambak = document.getElementById('tambak_id');
+    if (initTambak && initTambak.value) {
+        loadBlokByTambak('{{ old('blok_id', $transaksi?->blok_id) }}');
+    }
 
     // Lightbox
     var modal = document.getElementById('lb-modal');

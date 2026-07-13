@@ -19,7 +19,7 @@ class GajiKaryawanController extends Controller
     {
         $hasTambak = auth()->user()->tambaks()->exists();
         $data = $hasTambak
-            ? GajiKaryawan::with(['user', 'accountBank'])->latest()->get()
+            ? GajiKaryawan::with(['user', 'accountBank'])->latest('created_at')->get()
             : collect();
         return view('keuangan.gaji.index', compact('data'));
     }

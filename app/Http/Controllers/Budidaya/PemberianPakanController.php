@@ -215,6 +215,7 @@ class PemberianPakanController extends Controller
             ->where('blok_id', $pemberianPakan->blok_id)
             ->where('siklus_id', $pemberianPakan->siklus_id)
             ->orderBy('puasa', 'desc')
+            ->latest('created_at')
             ->get();
 
         return view('budidaya.pemberian-pakan.show', compact('pemberianPakan', 'groupItems'));

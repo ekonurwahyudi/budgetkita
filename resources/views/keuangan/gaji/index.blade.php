@@ -17,18 +17,18 @@
             </a>
             @endcan
         </div>
-        <div id="gaji_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="gaji">
+        <div id="gaji_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="gaji">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>
                         <tr>
-                            <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="karyawan"><span class="kt-table-col"><span class="kt-table-col-label">Karyawan</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="jabatan"><span class="kt-table-col"><span class="kt-table-col-label">Jabatan</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="gaji_pokok"><span class="kt-table-col"><span class="kt-table-col-label">Gaji Pokok</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="thp"><span class="kt-table-col"><span class="kt-table-col-label">THP</span><span class="kt-table-col-sort"></span></span></th>
-                            <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th>
+                            <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span></span></th>
+                            <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span></span></th>
+                            <th data-kt-datatable-column="karyawan"><span class="kt-table-col"><span class="kt-table-col-label">Karyawan</span></span></th>
+                            <th data-kt-datatable-column="jabatan"><span class="kt-table-col"><span class="kt-table-col-label">Jabatan</span></span></th>
+                            <th data-kt-datatable-column="gaji_pokok"><span class="kt-table-col"><span class="kt-table-col-label">Gaji Pokok</span></span></th>
+                            <th data-kt-datatable-column="thp"><span class="kt-table-col"><span class="kt-table-col-label">THP</span></span></th>
+                            <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span></span></th>
                             <th class="w-28" data-kt-datatable-column="aksi"></th>
                         </tr>
                     </thead>

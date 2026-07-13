@@ -11,6 +11,8 @@ use App\Models\Investasi;
 use App\Models\Panen;
 use App\Models\PembelianAset;
 use App\Models\PembelianPersediaan;
+use App\Models\PembelianPersediaanReturn;
+use App\Models\PenjualanAset;
 use App\Models\TransaksiKeuangan;
 use App\Models\SaldoAdjustment;
 use App\Models\SharingRevenue;
@@ -128,6 +130,7 @@ class AccountBankController extends Controller
             ->where('account_bank_id', $id)
             ->where('jenis_pembayaran', 'bank')
             ->where('status', 'selesai')
+            ->where('nominal_dibayar', '>', 0)
             ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->tgl_pembelian,
@@ -135,24 +138,55 @@ class AccountBankController extends Controller
                 'nomor'     => $t->nomor_transaksi,
                 'keterangan'=> 'Pembelian persediaan',
                 'jenis'     => 'keluar',
-                'nominal'   => $t->items->sum('harga_total'),
+                'nominal'   => $t->nominal_dibayar,
                 'status'    => $t->status,
                 'view_url'  => route('pembelian-persediaan.show', $t->id),
+            ]));
+
+        PembelianPersediaanReturn::with(['pembelianPersediaan', 'item.itemPersediaan'])
+            ->where('nominal_refund', '>', 0)
+            ->whereHas('pembelianPersediaan', fn($q) => $q->where('account_bank_id', $id))
+            ->get()
+            ->each(fn($t) => $histories->push([
+                'tanggal'   => $t->created_at,
+                'modul'     => 'Pengembalian Persediaan',
+                'nomor'     => $t->pembelianPersediaan?->nomor_transaksi,
+                'keterangan'=> 'Pengembalian ' . ($t->item?->itemPersediaan?->deskripsi ?? 'persediaan'),
+                'jenis'     => 'masuk',
+                'nominal'   => $t->nominal_refund,
+                'status'    => 'selesai',
+                'view_url'  => $t->pembelianPersediaan ? route('pembelian-persediaan.show', $t->pembelianPersediaan->id) : null,
             ]));
 
         PembelianAset::where('account_bank_id', $id)
             ->where('jenis_pembayaran', 'bank')
             ->where('status', 'selesai')
+            ->where('nominal_dibayar', '>', 0)
             ->get()
             ->each(fn($t) => $histories->push([
                 'tanggal'   => $t->tgl_pembelian,
                 'modul'     => 'Pembelian Aset',
-                'nomor'     => $t->id,
+                'nomor'     => $t->nomor_transaksi,
                 'keterangan'=> $t->nama_aset,
                 'jenis'     => 'keluar',
-                'nominal'   => $t->nominal_pembelian,
+                'nominal'   => $t->nominal_dibayar,
                 'status'    => $t->status,
                 'view_url'  => route('pembelian-aset.show', $t->id),
+            ]));
+
+        PenjualanAset::with('pembelianAset')
+            ->where('account_bank_id', $id)
+            ->where('nominal_dibayar', '>', 0)
+            ->get()
+            ->each(fn($t) => $histories->push([
+                'tanggal'   => $t->tgl_penjualan,
+                'modul'     => 'Penjualan Aset',
+                'nomor'     => $t->nomor_transaksi,
+                'keterangan'=> 'Penjualan aset ' . ($t->pembelianAset?->nama_aset ?? '-'),
+                'jenis'     => 'masuk',
+                'nominal'   => $t->nominal_dibayar,
+                'status'    => 'selesai',
+                'view_url'  => $t->pembelianAset ? route('pembelian-aset.show', $t->pembelianAset->id) : null,
             ]));
 
         Panen::with('siklus')
@@ -216,7 +250,9 @@ class AccountBankController extends Controller
 
     private function getBankAdjustments(string $id): \Illuminate\Support\Collection
     {
-        return SaldoAdjustment::where('account_bank_id', $id)->get()
+        return SaldoAdjustment::where('account_bank_id', $id)
+            ->latest('created_at')
+            ->get()
             ->map(fn($a) => [
                 'tanggal'   => $a->created_at,
                 'modul'     => 'Penyesuaian Saldo',

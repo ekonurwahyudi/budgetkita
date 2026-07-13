@@ -58,11 +58,34 @@
                                 <td class="text-sm pb-3">{{ $pembelianAset->kategoriAset?->deskripsi ?? '-' }}</td>
                             </tr>
                             <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Tambak</td>
+                                <td class="text-sm pb-3">{{ $pembelianAset->tambak?->nama_tambak ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Blok</td>
+                                <td class="text-sm pb-3">{{ $pembelianAset->blok?->nama_blok ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Siklus</td>
+                                <td class="text-sm pb-3">{{ $pembelianAset->siklus?->nama_siklus ?? '-' }}</td>
+                            </tr>
+                            <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Tanggal Pembelian</td>
                                 <td class="text-sm text-mono pb-3">{{ $pembelianAset->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>
                             </tr>
+                            @php
+                                $qtyOnHandDetail = (int) ($pembelianAset->qty_tersedia ?? $pembelianAset->qty) + (int) ($pembelianAset->qty_rusak ?? 0);
+                            @endphp
                             <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Nominal Pembelian</td>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Qty On Hand</td>
+                                <td class="text-sm text-mono pb-3">{{ number_format($qtyOnHandDetail, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Harga Satuan</td>
+                                <td class="text-sm text-mono pb-3">Rp {{ number_format($pembelianAset->harga_satuan ?: $pembelianAset->nominal_pembelian, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Total Harga</td>
                                 <td class="text-sm text-mono pb-3 font-semibold">Rp {{ number_format($pembelianAset->nominal_pembelian, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
@@ -92,8 +115,24 @@
                                 <td class="text-sm text-mono pb-3">Rp {{ number_format($pembelianAset->nilai_residu, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Jenis Pembayaran</td>
-                                <td class="text-sm pb-3 capitalize">{{ $pembelianAset->jenis_pembayaran }}</td>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Status Pembayaran</td>
+                                <td class="text-sm pb-3">
+                                    @if($pembelianAset->status_pembayaran === 'hutang')
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning">Hutang</span>
+                                    @elseif($pembelianAset->status_pembayaran === 'sebagian')
+                                        <span class="kt-badge kt-badge-sm kt-badge-primary">Bayar Sebagian</span>
+                                    @else
+                                        <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Dibayar</td>
+                                <td class="text-sm text-mono pb-3">Rp {{ number_format($pembelianAset->nominal_dibayar ?? $pembelianAset->nominal_pembelian, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Sisa Hutang</td>
+                                <td class="text-sm text-mono pb-3">Rp {{ number_format(max(0, $pembelianAset->nominal_pembelian - ($pembelianAset->nominal_dibayar ?? 0)), 0, ',', '.') }}</td>
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Account Bank</td>
@@ -105,6 +144,16 @@
                                     @endif
                                 </td>
                             </tr>
+                            @if($pembelianAset->hutangPiutang)
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Catatan Hutang</td>
+                                <td class="text-sm pb-3">
+                                    <a href="{{ route('hutang-piutang.show', $pembelianAset->hutangPiutang) }}" class="text-primary hover:underline">
+                                        {{ $pembelianAset->hutangPiutang->nomor_transaksi }}
+                                    </a>
+                                </td>
+                            </tr>
+                            @endif
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Catatan</td>
                                 <td class="text-sm pb-3">{{ $pembelianAset->catatan ?? '-' }}</td>
@@ -187,6 +236,197 @@
                 <p class="text-sm font-medium">Tanpa Depresiasi</p>
                 <p class="text-xs text-muted-foreground">Aset ini tidak memiliki depresiasi (seperti tanah)</p>
                 <p class="text-base font-semibold text-success text-mono mt-1">Nilai Buku: Rp {{ number_format($pembelianAset->nilai_buku_aset, 0, ',', '.') }}</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Kondisi & Penjualan Aset --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="kt-card">
+            <div class="kt-card-header min-h-14">
+                <h3 class="kt-card-title">Jual Aset</h3>
+            </div>
+            <form method="POST" action="{{ route('pembelian-aset.jual', $pembelianAset) }}" id="jualAsetForm">
+                @csrf
+                <input type="hidden" name="harga_satuan_jual" id="harga_satuan_jual_val" value="0">
+                <input type="hidden" name="nominal_dibayar_jual" id="nominal_dibayar_jual_val" value="0">
+                <div class="kt-card-content py-4 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Tanggal</label>
+                            <div class="kt-input">
+                                <i class="ki-outline ki-calendar"></i>
+                                <input class="grow" name="tgl_penjualan" data-kt-date-picker="true" data-kt-date-picker-input-mode="true" readonly type="text" value="{{ now()->format('Y-m-d') }}" required />
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Kondisi Dijual</label>
+                            <select name="kondisi" id="jual_kondisi" class="kt-select" required>
+                                <option value="baik">Baik</option>
+                                <option value="rusak">Rusak</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Qty Jual</label>
+                            <input type="number" name="qty_jual" id="qty_jual" class="kt-input" min="1" step="1" value="1" required>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Harga Satuan</label>
+                            <div class="kt-input-group">
+                                <span class="kt-input-addon">Rp.</span>
+                                <input type="text" id="harga_satuan_jual_display" class="kt-input sale-money" data-target="harga_satuan_jual_val" value="0" required>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Total</label>
+                            <div class="kt-input-group">
+                                <span class="kt-input-addon">Rp.</span>
+                                <input type="text" id="total_jual_display" class="kt-input" readonly style="background:var(--muted);" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Pembeli</label>
+                            <input type="text" name="pembeli" class="kt-input" placeholder="Nama pembeli">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-sm font-medium text-foreground">Status Pembayaran</label>
+                            <select name="status_pembayaran_jual" id="status_pembayaran_jual" class="kt-select" required>
+                                <option value="lunas">Lunas</option>
+                                <option value="piutang">Piutang</option>
+                                <option value="sebagian">Bayar Sebagian</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5" id="nominal_dibayar_jual_wrap" style="display:none;">
+                            <label class="text-sm font-medium text-foreground">Dibayar Sekarang</label>
+                            <div class="kt-input-group">
+                                <span class="kt-input-addon">Rp.</span>
+                                <input type="text" id="nominal_dibayar_jual_display" class="kt-input sale-money" data-target="nominal_dibayar_jual_val" value="0">
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1.5" id="account_bank_jual_wrap">
+                            <label class="text-sm font-medium text-foreground">Masuk Ke Bank</label>
+                            <select name="account_bank_id_jual" id="account_bank_id_jual" class="kt-select">
+                                <option value="">-- Pilih Bank --</option>
+                                @foreach($accountBanks as $bank)
+                                <option value="{{ $bank->id }}">{{ $bank->nama_bank }} - {{ $bank->nama_pemilik }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium text-foreground">Catatan</label>
+                        <textarea name="catatan_jual" class="kt-input" rows="2" style="height:64px;"></textarea>
+                    </div>
+                </div>
+                <div class="kt-card-footer justify-end">
+                    <button type="submit" class="kt-btn kt-btn-primary">
+                        <i class="ki-filled ki-dollar"></i> Simpan Penjualan
+                    </button>
+                </div>
+            </form>
+        </div>    
+    <div class="kt-card">
+            <div class="kt-card-header min-h-14">
+                <h3 class="kt-card-title">Kondisi Aset</h3>
+            </div>
+            <div class="kt-card-content py-4 space-y-4">
+                @php
+                    $qtyBaik = (int) ($pembelianAset->qty_tersedia ?? $pembelianAset->qty);
+                    $qtyRusak = (int) ($pembelianAset->qty_rusak ?? 0);
+                    $qtyTerjual = (int) $pembelianAset->penjualanAsets->sum('qty');
+                    $qtyOnHand = $qtyBaik + $qtyRusak;
+                @endphp
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.5rem;">
+                    <div class="rounded-lg border border-border p-2.5 min-w-0">
+                        <p class="text-xs text-muted-foreground">Qty On Hand</p>
+                        <p class="text-lg font-semibold text-mono">{{ number_format($qtyOnHand, 0, ',', '.') }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border p-2.5 min-w-0">
+                        <p class="text-xs text-muted-foreground">Baik</p>
+                        <p class="text-lg font-semibold text-success text-mono">{{ number_format($qtyBaik, 0, ',', '.') }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border p-2.5 min-w-0">
+                        <p class="text-xs text-muted-foreground">Rusak</p>
+                        <p class="text-lg font-semibold text-warning text-mono">{{ number_format($qtyRusak, 0, ',', '.') }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border p-2.5 min-w-0">
+                        <p class="text-xs text-muted-foreground">Terjual</p>
+                        <p class="text-lg font-semibold text-primary text-mono">{{ number_format($qtyTerjual, 0, ',', '.') }}</p>
+                    </div>
+                </div>
+
+                @can('pembelian-aset.edit')
+                <form method="POST" action="{{ route('pembelian-aset.kondisi', $pembelianAset) }}" class="flex items-end gap-3">
+                    @csrf
+                    @method('PATCH')
+                    <div class="flex flex-col gap-1.5 grow">
+                        <label class="text-sm font-medium text-foreground">Qty Rusak</label>
+                        <input type="number" name="qty_rusak" class="kt-input" min="0" step="1" value="{{ (int) ($pembelianAset->qty_rusak ?? 0) }}" />
+                    </div>
+                    <button type="submit" class="kt-btn kt-btn-outline">Simpan Kondisi</button>
+                </form>
+                @endcan
+            </div>
+        </div>
+    </div>
+
+    @if($pembelianAset->penjualanAsets->isNotEmpty())
+    <div class="kt-card">
+        <div class="kt-card-header min-h-14">
+            <h3 class="kt-card-title">Riwayat Penjualan Aset</h3>
+        </div>
+        <div class="kt-card-content py-4">
+            <div class="kt-table-wrapper kt-scrollable">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>No. Transaksi</th>
+                            <th>Tanggal</th>
+                            <th>Qty</th>
+                            <th>Kondisi</th>
+                            <th>Total</th>
+                            <th>Dibayar</th>
+                            <th>Status</th>
+                            <th>Bank/Piutang</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($pembelianAset->penjualanAsets as $jual)
+                        <tr>
+                            <td class="text-mono">{{ $jual->nomor_transaksi }}</td>
+                            <td>{{ $jual->tgl_penjualan?->format('d/m/Y') }}</td>
+                            <td class="text-mono">{{ number_format($jual->qty, 0, ',', '.') }}</td>
+                            <td>{{ ucfirst($jual->kondisi) }}</td>
+                            <td class="text-mono">Rp {{ number_format($jual->total_penjualan, 0, ',', '.') }}</td>
+                            <td class="text-mono">Rp {{ number_format($jual->nominal_dibayar, 0, ',', '.') }}</td>
+                            <td>
+                                @if($jual->status_pembayaran === 'lunas')
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                @elseif($jual->status_pembayaran === 'sebagian')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary">Sebagian</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning">Piutang</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($jual->accountBank)
+                                    {{ $jual->accountBank->nama_bank }}
+                                @endif
+                                @if($jual->piutang)
+                                    <a href="{{ route('hutang-piutang.show', $jual->piutang) }}" class="text-primary hover:underline ms-2">{{ $jual->piutang->nomor_transaksi }}</a>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -289,6 +529,63 @@
 
 @push('scripts')
 <script>
+function parseSaleMoney(val) {
+    return parseInt(String(val).replace(/\D/g, '')) || 0;
+}
+
+function formatSaleMoney(val) {
+    return (parseInt(val) || 0).toLocaleString('id-ID');
+}
+
+function updateSaleTotal() {
+    var qty = parseInt(document.getElementById('qty_jual')?.value) || 0;
+    var harga = parseSaleMoney(document.getElementById('harga_satuan_jual_val')?.value || 0);
+    var total = qty * harga;
+    var status = document.getElementById('status_pembayaran_jual')?.value;
+    var paidVal = document.getElementById('nominal_dibayar_jual_val');
+    var paidDisplay = document.getElementById('nominal_dibayar_jual_display');
+
+    document.getElementById('total_jual_display').value = formatSaleMoney(total);
+
+    if (status === 'lunas') {
+        paidVal.value = total;
+        if (paidDisplay) paidDisplay.value = formatSaleMoney(total);
+    } else if (status === 'piutang') {
+        paidVal.value = 0;
+        if (paidDisplay) paidDisplay.value = '0';
+    } else {
+        var paid = Math.min(parseSaleMoney(paidVal.value), total);
+        paidVal.value = paid;
+        if (paidDisplay) paidDisplay.value = formatSaleMoney(paid);
+    }
+}
+
+function onSalePaymentChange() {
+    var status = document.getElementById('status_pembayaran_jual').value;
+    document.getElementById('nominal_dibayar_jual_wrap').style.display = status === 'sebagian' ? '' : 'none';
+    document.getElementById('account_bank_jual_wrap').style.display = status === 'piutang' ? 'none' : '';
+    document.getElementById('account_bank_id_jual').required = status !== 'piutang';
+    updateSaleTotal();
+}
+
+function initSaleMoneyInputs() {
+    document.querySelectorAll('.sale-money').forEach(function(el) {
+        var target = document.getElementById(el.dataset.target);
+        el.addEventListener('input', function() {
+            var raw = parseSaleMoney(this.value);
+            this.value = formatSaleMoney(raw);
+            target.value = raw;
+            updateSaleTotal();
+        });
+        el.addEventListener('blur', function() {
+            var raw = parseSaleMoney(this.value);
+            this.value = formatSaleMoney(raw);
+            target.value = raw;
+            updateSaleTotal();
+        });
+    });
+}
+
 function openRejectModal(action, nomor) {
     var modal = document.getElementById('rejectModal');
     var form = document.getElementById('rejectForm');
@@ -307,6 +604,26 @@ function closeRejectModal() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    initSaleMoneyInputs();
+    if (document.getElementById('jualAsetForm')) {
+        document.getElementById('qty_jual').addEventListener('input', updateSaleTotal);
+        document.getElementById('status_pembayaran_jual').addEventListener('change', onSalePaymentChange);
+        onSalePaymentChange();
+
+        document.getElementById('jualAsetForm').addEventListener('submit', function(e) {
+            var status = document.getElementById('status_pembayaran_jual').value;
+            var total = parseSaleMoney(document.getElementById('total_jual_display').value);
+            var paid = parseSaleMoney(document.getElementById('nominal_dibayar_jual_val').value);
+            var sisa = Math.max(0, total - paid);
+
+            if ((status === 'piutang' || status === 'sebagian') && sisa > 0) {
+                if (!confirm('Sisa penjualan sebesar Rp ' + formatSaleMoney(sisa) + ' akan dicatat sebagai piutang. Lanjutkan?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+
     var modal = document.getElementById('lb-modal');
     var img = document.getElementById('lb-img');
     var closeBtn = document.getElementById('lb-close');

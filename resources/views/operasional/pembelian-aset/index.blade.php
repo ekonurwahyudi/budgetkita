@@ -17,7 +17,7 @@
             </a>
             @endcan
         </div>
-        <div id="pembelian_aset_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="pembelian_aset">
+        <div id="pembelian_aset_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="pembelian_aset">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>
@@ -28,11 +28,13 @@
                             <th data-kt-datatable-column="nama"><span class="kt-table-col"><span class="kt-table-col-label">Nama Aset</span><span class="kt-table-col-sort"></span></span></th>
                             <!-- <th data-kt-datatable-column="kategori"><span class="kt-table-col"><span class="kt-table-col-label">Kategori</span><span class="kt-table-col-sort"></span></span></th> -->
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tgl Pembelian</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="stok"><span class="kt-table-col"><span class="kt-table-col-label">Qty On Hand</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nominal"><span class="kt-table-col"><span class="kt-table-col-label">Nominal</span><span class="kt-table-col-sort"></span></span></th>
+                            <th data-kt-datatable-column="pembayaran"><span class="kt-table-col"><span class="kt-table-col-label">Pembayaran</span><span class="kt-table-col-sort"></span></span></th>
                             <th data-kt-datatable-column="nilai_buku"><span class="kt-table-col"><span class="kt-table-col-label">Nilai Buku</span><span class="kt-table-col-sort"></span></span></th>
                             <!-- <th data-kt-datatable-column="depresiasi"><span class="kt-table-col"><span class="kt-table-col-label">Depresiasi/Thn</span><span class="kt-table-col-sort"></span></span></th> -->
-                            <th data-kt-datatable-column="metode"><span class="kt-table-col"><span class="kt-table-col-label">Metode</span></span></th>
-                            <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th>
+                            <!-- <th data-kt-datatable-column="metode"><span class="kt-table-col"><span class="kt-table-col-label">Metode</span></span></th> -->
+                            <!-- <th data-kt-datatable-column="status"><span class="kt-table-col"><span class="kt-table-col-label">Status</span><span class="kt-table-col-sort"></span></span></th> -->
                             <th class="w-28" data-kt-datatable-column="aksi"></th>
                         </tr>
                     </thead>
@@ -50,13 +52,44 @@
                                 @endif
                             </td>
                             <td class="text-mono text-sm whitespace-nowrap">{{ $item->nomor_transaksi }}</td>
-                            <td>{{ $item->nama_aset }}</td>
+                            <td>
+                                <div class="font-medium">{{ $item->nama_aset }}</div>
+                                @if($item->siklus || $item->blok)
+                                <div class="text-xs text-muted-foreground">
+                                    {{ $item->blok?->nama_blok ?? '-' }}{{ $item->siklus ? ' · ' . $item->siklus->nama_siklus : '' }}
+                                </div>
+                                @endif
+                            </td>
                             <!-- <td>{{ $item->kategoriAset?->deskripsi ?? '-' }}</td> -->
                             <td>{{ $item->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>
+                            <td>
+                                @php
+                                    $qtyTerjual = $item->penjualanAsets->sum('qty');
+                                    $qtyTersedia = $item->qty_tersedia ?? $item->qty;
+                                    $qtyRusak = $item->qty_rusak ?? 0;
+                                    $qtyOnHand = $qtyTersedia + $qtyRusak;
+                                @endphp
+                                <div class="text-sm text-mono font-semibold">{{ number_format($qtyOnHand, 0, ',', '.') }}</div>
+                                <div class="text-xs text-muted-foreground text-mono">
+                                    {{ number_format($qtyTersedia, 0, ',', '.') }} baik · {{ number_format($qtyRusak, 0, ',', '.') }} rusak · {{ number_format($qtyTerjual, 0, ',', '.') }} terjual
+                                </div>
+                            </td>
                             <td class="text-mono whitespace-nowrap">Rp {{ number_format($item->nominal_pembelian, 0, ',', '.') }}</td>
+                            <td>
+                                @if($item->status_pembayaran === 'hutang')
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning">Hutang</span>
+                                @elseif($item->status_pembayaran === 'sebagian')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary">Sebagian</span>
+                                    <div class="text-xs text-muted-foreground text-mono mt-1">
+                                        Sisa Rp {{ number_format(max(0, $item->nominal_pembelian - ($item->nominal_dibayar ?? 0)), 0, ',', '.') }}
+                                    </div>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                @endif
+                            </td>
                             <td class="text-mono whitespace-nowrap">Rp {{ number_format($item->nilai_buku_aset, 0, ',', '.') }}</td>
                             <!-- <td class="text-mono">Rp {{ number_format($item->depresiasi_per_tahun, 0, ',', '.') }}</td> -->
-                            <td>
+                            <!-- <td>
                                 @if($item->metode_depresiasi === 'persen')
                                     <span class="kt-badge kt-badge-sm kt-badge-primary kt-badge-outline">{{ $item->persen_depresiasi }}%</span>
                                 @elseif($item->metode_depresiasi === 'tanpa')
@@ -64,8 +97,8 @@
                                 @else
                                     <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Garis Lurus</span>
                                 @endif
-                            </td>
-                            <td>
+                            </td> -->
+                            <!-- <td>
                                 @if($item->status === 'selesai')
                                     <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
                                 @elseif($item->status === 'cancel')
@@ -77,7 +110,7 @@
                                 @else
                                     <span class="kt-badge kt-badge-sm kt-badge-outline">Awaiting</span>
                                 @endif
-                            </td>
+                            </td> -->
                             <td class="text-end">
                                 <span class="inline-flex gap-2.5">
                                     @if($item->status === 'awaiting_approval' && auth()->user()->hasRole('Owner'))

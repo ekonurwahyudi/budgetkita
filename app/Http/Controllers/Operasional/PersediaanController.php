@@ -21,7 +21,12 @@ class PersediaanController extends Controller
 
     public function show(Persediaan $persediaan)
     {
-        $persediaan->load(['itemPersediaan.kategoriPersediaan', 'riwayats.blok', 'riwayats.siklus']);
+        $persediaan->load([
+            'itemPersediaan.kategoriPersediaan',
+            'riwayats' => fn ($q) => $q->latest('created_at'),
+            'riwayats.blok',
+            'riwayats.siklus',
+        ]);
         $penyesuaians = PenyesuaianPersediaan::where('persediaan_id', $persediaan->id)->latest()->get();
         return view('operasional.persediaan.show', compact('persediaan', 'penyesuaians'));
     }

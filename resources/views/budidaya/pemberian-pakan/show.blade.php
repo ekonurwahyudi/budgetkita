@@ -82,7 +82,7 @@
             <h3 class="kt-card-title">Item Pakan</h3>
             <span class="text-sm text-muted-foreground">{{ $groupItems->count() }} item · Total {{ number_format($groupItems->where('puasa', false)->sum('jumlah_pakan'), 2) }} {{ $pemberianPakan->unit ?? 'kg' }}</span>
         </div>
-        <div id="pemberian_pakan_items_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true" data-kt-datatable-state-namespace="pemberian_pakan_items">
+        <div id="pemberian_pakan_items_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="pemberian_pakan_items">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>

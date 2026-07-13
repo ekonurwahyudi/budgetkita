@@ -20,7 +20,10 @@ class HutangPiutangController extends Controller
     {
         $hasTambak = auth()->user()->tambaks()->exists();
         $data = $hasTambak
-            ? HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])->latest()->get()
+            ? HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])
+                ->orderByDesc('updated_at')
+                ->orderByDesc('created_at')
+                ->get()
             : collect();
         return view('keuangan.hutang-piutang.index', compact('data'));
     }
@@ -198,33 +201,87 @@ class HutangPiutangController extends Controller
         ]);
 
         $jumlah = (float) $request->jumlah_bayar;
-        $sisaBaru = max(0, ($hutangPiutang->sisa_pembayaran ?? $hutangPiutang->nominal) - $jumlah);
-        $nominalBayarBaru = ($hutangPiutang->nominal_bayar ?? 0) + $jumlah;
+        $sisaBaru = 0;
 
-        $hutangPiutang->update([
-            'nominal_bayar'   => $nominalBayarBaru,
-            'sisa_pembayaran' => $sisaBaru,
-        ]);
+        DB::transaction(function () use ($request, $hutangPiutang, $jumlah, &$sisaBaru) {
+            $sisaBaru = max(0, ($hutangPiutang->sisa_pembayaran ?? $hutangPiutang->nominal) - $jumlah);
+            $nominalBayarBaru = ($hutangPiutang->nominal_bayar ?? 0) + $jumlah;
 
-        // Simpan riwayat pembayaran
-        HutangPiutangPayment::create([
-            'hutang_piutang_id' => $hutangPiutang->id,
-            'jumlah'            => $jumlah,
-            'account_bank_id'   => $request->account_bank_id ?: null,
-            'catatan'           => $request->catatan_bayar,
-        ]);
+            $hutangPiutang->update([
+                'nominal_bayar'   => $nominalBayarBaru,
+                'sisa_pembayaran' => $sisaBaru,
+            ]);
 
-        // Update saldo bank jika bayar via bank
-        if ($request->filled('account_bank_id')) {
-            $bank = AccountBank::find($request->account_bank_id);
-            if ($bank) {
-                if ($hutangPiutang->jenis === 'hutang') {
-                    $bank->decrement('saldo', $jumlah);
-                } else {
-                    $bank->increment('saldo', $jumlah);
+            // Simpan riwayat pembayaran
+            HutangPiutangPayment::create([
+                'hutang_piutang_id' => $hutangPiutang->id,
+                'jumlah'            => $jumlah,
+                'account_bank_id'   => $request->account_bank_id ?: null,
+                'catatan'           => $request->catatan_bayar,
+            ]);
+
+            // Update saldo bank jika bayar via bank
+            if ($request->filled('account_bank_id')) {
+                $bank = AccountBank::find($request->account_bank_id);
+                if ($bank) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bank->decrement('saldo', $jumlah);
+                    } else {
+                        $bank->increment('saldo', $jumlah);
+                    }
                 }
             }
-        }
+
+            $aset = $hutangPiutang->pembelianAset;
+            if ($aset) {
+                $asetPayload = [
+                    'nominal_dibayar' => min((float) $aset->nominal_pembelian, $nominalBayarBaru),
+                ];
+
+                if ($sisaBaru <= 0) {
+                    $asetPayload['status_pembayaran'] = 'lunas';
+                } elseif ($asetPayload['nominal_dibayar'] > 0) {
+                    $asetPayload['status_pembayaran'] = 'sebagian';
+                }
+
+                $aset->update($asetPayload);
+            }
+
+            $pembelianPersediaan = $hutangPiutang->pembelianPersediaan;
+            if ($pembelianPersediaan) {
+                $pembelianPersediaan->load('items');
+                $totalPersediaan = (float) $pembelianPersediaan->items->sum('harga_total');
+                $persediaanPayload = [
+                    'nominal_dibayar' => min($totalPersediaan, $nominalBayarBaru),
+                ];
+
+                if ($sisaBaru <= 0) {
+                    $persediaanPayload['status_pembayaran'] = 'lunas';
+                } elseif ($persediaanPayload['nominal_dibayar'] > 0) {
+                    $persediaanPayload['status_pembayaran'] = 'sebagian';
+                }
+
+                $pembelianPersediaan->update($persediaanPayload);
+            }
+
+            $penjualanAset = $hutangPiutang->penjualanAset;
+            if ($penjualanAset) {
+                $penjualanPayload = [
+                    'nominal_dibayar' => min(
+                        (float) $penjualanAset->total_penjualan,
+                        max(0, (float) $penjualanAset->total_penjualan - $sisaBaru)
+                    ),
+                ];
+
+                if ($sisaBaru <= 0) {
+                    $penjualanPayload['status_pembayaran'] = 'lunas';
+                } elseif ($penjualanPayload['nominal_dibayar'] > 0) {
+                    $penjualanPayload['status_pembayaran'] = 'sebagian';
+                }
+
+                $penjualanAset->update($penjualanPayload);
+            }
+        });
 
         $msg = 'Pembayaran Rp ' . number_format($jumlah, 0, ',', '.') . ' berhasil dicatat.';
         if ($sisaBaru <= 0) $msg .= ' Hutang/Piutang sudah LUNAS.';

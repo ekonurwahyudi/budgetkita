@@ -13,6 +13,7 @@ use App\Models\Panen;
 use App\Models\PembelianAset;
 use App\Models\PembelianPersediaan;
 use App\Models\PemberianPakan;
+use App\Models\PenjualanAset;
 use App\Models\Persediaan;
 use App\Models\Siklus;
 use App\Models\SharingRevenue;
@@ -69,14 +70,15 @@ class DashboardController extends Controller
 
         $pendapatanTransaksi = (clone $transaksiScope)->where('jenis_transaksi', 'uang_masuk')->sum('nominal');
         $pendapatanPanen = $panenScope->sum('total_penjualan');
-        $totalPendapatan = $pendapatanTransaksi + $pendapatanPanen;
+        $pendapatanPenjualanAset = $filterActiveTambak($filterDate(PenjualanAset::query(), 'tgl_penjualan'))->sum('nominal_dibayar');
+        $totalPendapatan = $pendapatanTransaksi + $pendapatanPanen + $pendapatanPenjualanAset;
 
         $pengeluaranTransaksi = (clone $transaksiScope)->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
         $pengeluaranGaji = $filterDateTime(GajiKaryawan::where('status', 'selesai'), 'created_at')->sum('thp');
         $pengeluaranPersediaan = $filterDate(PembelianPersediaan::where('status', 'selesai'), 'tgl_pembelian')
-            ->with('items')->get()->sum(fn($p) => $p->items->sum('harga_total'));
-        $pengeluaranAset = $filterDate(PembelianAset::where('status', 'selesai'), 'tgl_pembelian')->sum('nominal_pembelian');
-        $pengeluaranPiutang = $filterDateTime(HutangPiutang::where('jenis', 'piutang')->where('status', 'selesai'), 'created_at')->sum('nominal');
+            ->sum('nominal_dibayar');
+        $pengeluaranAset = $filterDate(PembelianAset::where('status', 'selesai'), 'tgl_pembelian')->sum('nominal_dibayar');
+        $pengeluaranPiutang = $filterDateTime(HutangPiutang::where('jenis', 'piutang')->where('status', 'selesai')->doesntHave('penjualanAset'), 'created_at')->sum('nominal');
         $totalPengeluaran = $pengeluaranTransaksi + $pengeluaranGaji + $pengeluaranPersediaan + $pengeluaranAset + $pengeluaranPiutang;
 
         $labaRugi = $totalPendapatan - $totalPengeluaran;
@@ -98,16 +100,15 @@ class DashboardController extends Controller
             ->groupBy(fn($aset) => $aset->kategoriAset?->deskripsi ?? 'Aset')
             ->map(fn($items, $kategori) => [
                 'kategori' => $kategori,
-                'total' => (float) $items->sum('nominal_pembelian'),
+                'total' => (float) $items->sum('nominal_dibayar'),
             ])
             ->values();
 
         $pengeluaranKategoriPersediaan = $filterDate(PembelianPersediaan::where('status', 'selesai'), 'tgl_pembelian')
-            ->with('items')
             ->get()
             ->map(fn($pembelian) => [
                 'kategori' => 'Persediaan',
-                'total' => (float) $pembelian->items->sum('harga_total'),
+                'total' => (float) $pembelian->nominal_dibayar,
             ])
             ->groupBy('kategori')
             ->map(fn($items, $kategori) => [
@@ -177,15 +178,14 @@ class DashboardController extends Controller
             ->pluck('total', 'bulan');
 
         $pengeluaranPersediaanBulanan = $filterDate(PembelianPersediaan::query()
-            ->join('pembelian_persediaan_items', 'pembelian_persediaans.id', '=', 'pembelian_persediaan_items.pembelian_persediaan_id')
             ->where('pembelian_persediaans.status', 'selesai'), 'pembelian_persediaans.tgl_pembelian')
-            ->selectRaw("TO_CHAR(pembelian_persediaans.tgl_pembelian, '{$chartBucket}') as bulan, SUM(pembelian_persediaan_items.harga_total) as total")
+            ->selectRaw("TO_CHAR(pembelian_persediaans.tgl_pembelian, '{$chartBucket}') as bulan, SUM(pembelian_persediaans.nominal_dibayar) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
         $pengeluaranAsetBulanan = $filterDate(PembelianAset::query()
             ->where('status', 'selesai'), 'tgl_pembelian')
-            ->selectRaw("TO_CHAR(tgl_pembelian, '{$chartBucket}') as bulan, SUM(nominal_pembelian) as total")
+            ->selectRaw("TO_CHAR(tgl_pembelian, '{$chartBucket}') as bulan, SUM(nominal_dibayar) as total")
             ->groupBy('bulan')->orderBy('bulan')
             ->pluck('total', 'bulan');
 
@@ -247,7 +247,9 @@ class DashboardController extends Controller
         $totalSaldoBank = $accountBanks->sum('saldo');
 
         // === Hutang & Piutang ===
-        $hutangPiutangs = $filterDateTime(HutangPiutang::where('status', '!=', 'cancel'), 'created_at')->get();
+        $hutangPiutangs = $filterDateTime(HutangPiutang::where('status', '!=', 'cancel'), 'created_at')
+            ->latest('created_at')
+            ->get();
         $totalHutang = $hutangPiutangs->where('jenis', 'hutang')->sum(fn($item) => $item->total_bayar ?? $item->nominal ?? 0);
         $sisaHutang = $hutangPiutangs->where('jenis', 'hutang')->sum(fn($item) => $item->sisa_pembayaran ?? ($item->total_bayar ?? $item->nominal ?? 0));
         $totalPiutang = $hutangPiutangs->where('jenis', 'piutang')->sum('nominal');
@@ -448,7 +450,7 @@ class DashboardController extends Controller
                     'tipe' => 'Pengeluaran', 'sumber' => 'Pembelian Aset',
                     'jenis' => $a->kategoriAset?->deskripsi ?? '-', 'tanggal' => $a->tgl_pembelian?->format('d/m/Y') ?? '-',
                     'aktivitas' => $a->nama_aset, 'kategori' => 'Aset',
-                    'nominal' => $a->nominal_pembelian, 'status' => 'Selesai',
+                    'nominal' => $a->nominal_dibayar, 'status' => 'Selesai',
                     'bank' => $a->accountBank?->nama_bank ?? '-',
                 ]);
             });
@@ -457,14 +459,13 @@ class DashboardController extends Controller
             $persediaanQuery = $filterDate(PembelianPersediaan::with(['accountBank', 'items.itemPersediaan'])
                 ->where('status', 'selesai'), 'tgl_pembelian');
             $persediaanQuery->get()->each(function($p) use ($allTransactions) {
-                $total = $p->items->sum('harga_total');
                 $items = $p->items->map(fn($i) => $i->itemPersediaan?->deskripsi ?? '-')->implode(', ');
                 $allTransactions->push([
                     'no' => 0, 'nomor_transaksi' => $p->nomor_transaksi ?? '-',
                     'tipe' => 'Pengeluaran', 'sumber' => 'Pembelian Persediaan',
                     'jenis' => 'Pembelian Pakan/Item', 'tanggal' => $p->tgl_pembelian?->format('d/m/Y') ?? '-',
                     'aktivitas' => $items ?: 'Pembelian Item', 'kategori' => 'Persediaan',
-                    'nominal' => $total, 'status' => 'Selesai',
+                    'nominal' => $p->nominal_dibayar, 'status' => 'Selesai',
                     'bank' => $p->accountBank?->nama_bank ?? '-',
                 ]);
             });

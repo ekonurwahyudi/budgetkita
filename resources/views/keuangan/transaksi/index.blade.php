@@ -51,7 +51,8 @@
                 </div>
                 <div class="min-w-0">
                     <p class="text-sm text-muted-foreground">Pending</p>
-                    <p class="text-lg font-bold text-warning text-mono">{{ $cardTotals['pending'] }} transaksi</p>
+                    <p class="text-lg font-bold text-warning text-mono">Rp {{ number_format($cardTotals['pending'], 0, ',', '.') }}</p>
+                    <p class="text-xs text-muted-foreground">{{ $cardTotals['pending_count'] }} transaksi</p>
                 </div>
             </div>
         </div>

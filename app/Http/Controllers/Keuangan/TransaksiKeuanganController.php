@@ -116,7 +116,8 @@ class TransaksiKeuanganController extends Controller
             'masuk_count'  => (clone $selesai)->where('jenis_transaksi', 'uang_masuk')->count(),
             'keluar'       => (clone $selesai)->where('jenis_transaksi', 'uang_keluar')->sum('nominal'),
             'keluar_count' => (clone $selesai)->where('jenis_transaksi', 'uang_keluar')->count(),
-            'pending'      => TransaksiKeuangan::whereIn('tambak_id', $tambakIds)->where('status', 'awaiting_approval')->count(),
+            'pending'       => TransaksiKeuangan::whereIn('tambak_id', $tambakIds)->where('status', 'awaiting_approval')->sum('nominal'),
+            'pending_count' => TransaksiKeuangan::whereIn('tambak_id', $tambakIds)->where('status', 'awaiting_approval')->count(),
         ];
 
         return view('keuangan.transaksi.index', compact('data', 'kategoriTransaksis', 'itemTransaksis', 'tambaks', 'bloks', 'sikluses', 'sumberDanas', 'accountBanks', 'counts', 'cardTotals'));

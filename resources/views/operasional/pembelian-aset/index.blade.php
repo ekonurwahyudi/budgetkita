@@ -5,7 +5,51 @@
 @section('page-description', 'Kelola pembelian aset')
 
 @section('content')
+@php
+    $totalAset = $data->count();
+    $totalNilaiBuku = $data->sum('nilai_buku_aset');
+    $totalPembelian = $data->sum('nominal_pembelian');
+@endphp
 <div class="grid w-full space-y-5">
+    <div class="grid grid-cols-3 gap-4">
+        <div class="kt-card">
+            <div class="kt-card-content py-4 px-4 flex items-center gap-3 min-w-0">
+                <div class="size-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-briefcase text-primary"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-muted-foreground truncate">Total Aset</p>
+                    <p class="text-base font-bold text-mono truncate">{{ number_format($totalAset, 0, ',', '.') }}</p>
+                    <p class="text-xs text-muted-foreground truncate">data pembelian</p>
+                </div>
+            </div>
+        </div>
+        <div class="kt-card">
+            <div class="kt-card-content py-4 px-4 flex items-center gap-3 min-w-0">
+                <div class="size-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-wallet text-success"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-muted-foreground truncate">Nilai Buku</p>
+                    <p class="text-base font-bold text-success text-mono truncate">Rp {{ number_format($totalNilaiBuku, 0, ',', '.') }}</p>
+                    <p class="text-xs text-muted-foreground truncate">total nilai saat ini</p>
+                </div>
+            </div>
+        </div>
+        <div class="kt-card">
+            <div class="kt-card-content py-4 px-4 flex items-center gap-3 min-w-0">
+                <div class="size-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-cheque text-warning"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-muted-foreground truncate">Total Pembelian Aset</p>
+                    <p class="text-base font-bold text-warning text-mono truncate">Rp {{ number_format($totalPembelian, 0, ',', '.') }}</p>
+                    <p class="text-xs text-muted-foreground truncate">nominal pembelian</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="kt-card">
         <div class="kt-card-header min-h-16">
             <form method="GET" class="flex items-center gap-2">

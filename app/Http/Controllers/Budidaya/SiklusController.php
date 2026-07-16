@@ -78,12 +78,13 @@ class SiklusController extends Controller
     {
         $siklus->load([
             'blok.tambak',
-            'panens' => fn ($q) => $q->latest('tgl_panen')->latest('created_at'),
+            'panens' => fn ($q) => $q->where('status', 'selesai')->latest('tgl_panen')->latest('created_at'),
             'panens.kolam',
             'panens.accountBank',
         ]);
         $transaksis = TransaksiKeuangan::with(['itemTransaksi', 'kategoriTransaksi', 'sumberDana'])
             ->where('siklus_id', $siklus->id)
+            ->where('status', 'selesai')
             ->latest('tgl_kwitansi')
             ->get();
 

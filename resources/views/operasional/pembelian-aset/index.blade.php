@@ -68,7 +68,7 @@
                         <tr>
                             <th class="w-12" data-kt-datatable-column="no"><span class="kt-table-col"><span class="kt-table-col-label">No</span><span class="kt-table-col-sort"></span></span></th>
                             <th class="w-14" data-kt-datatable-column="foto"><span class="kt-table-col"><span class="kt-table-col-label">Foto</span></span></th>
-                            <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th>
+                            <!-- <th data-kt-datatable-column="nomor"><span class="kt-table-col"><span class="kt-table-col-label">No. Transaksi</span><span class="kt-table-col-sort"></span></span></th> -->
                             <th data-kt-datatable-column="nama"><span class="kt-table-col"><span class="kt-table-col-label">Nama Aset</span><span class="kt-table-col-sort"></span></span></th>
                             <!-- <th data-kt-datatable-column="kategori"><span class="kt-table-col"><span class="kt-table-col-label">Kategori</span><span class="kt-table-col-sort"></span></span></th> -->
                             <th data-kt-datatable-column="tgl"><span class="kt-table-col"><span class="kt-table-col-label">Tgl Pembelian</span><span class="kt-table-col-sort"></span></span></th>
@@ -95,7 +95,7 @@
                                 </div>
                                 @endif
                             </td>
-                            <td class="text-mono text-sm whitespace-nowrap">{{ $item->nomor_transaksi }}</td>
+                            <!-- <td class="text-mono text-sm whitespace-nowrap">{{ $item->nomor_transaksi }}</td> -->
                             <td>
                                 <div class="font-medium">{{ $item->nama_aset }}</div>
                                 @if($item->siklus || $item->blok)

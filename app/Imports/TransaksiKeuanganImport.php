@@ -22,9 +22,13 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 class TransaksiKeuanganImport implements ToCollection
 {
     private int $imported = 0;
+    private bool $processed = false; // ponytail: guard multi-sheet, hanya proses sheet pertama
 
     public function collection(Collection $rows): void
     {
+        if ($this->processed) return; // hanya sheet pertama
+        $this->processed = true;
+
         $headers = $this->headers($rows->first() ?? collect());
         $errors = [];
         $tambakIds = Auth::user()->tambaks()->pluck('tambaks.id')->all();

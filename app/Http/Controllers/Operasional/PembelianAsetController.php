@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operasional;
 
 use App\Http\Controllers\Controller;
+use App\Imports\PembelianAsetImport;
 use App\Models\AccountBank;
 use App\Models\Blok;
 use App\Models\HutangPiutang;
@@ -21,16 +22,23 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PembelianAsetController extends Controller
 {
     public function index()
     {
         $hasTambak = auth()->user()->tambaks()->exists();
+        $tambakIds = $hasTambak ? auth()->user()->tambaks()->pluck('tambaks.id') : Tambak::pluck('id');
         $data = $hasTambak
             ? PembelianAset::with(['kategoriAset', 'accountBank', 'hutangPiutang', 'penjualanAsets', 'blok', 'siklus'])->latest()->get()
             : collect();
-        return view('operasional.pembelian-aset.index', compact('data'));
+        $kategoriAsets = KategoriAset::orderBy('deskripsi')->get();
+        $tambaks = Tambak::whereIn('id', $tambakIds)->orderBy('nama_tambak')->get();
+        $bloks = Blok::with('tambak')->whereIn('tambak_id', $tambakIds)->orderBy('nama_blok')->get();
+        $sikluses = Siklus::with('blok')->whereHas('blok', fn ($q) => $q->whereIn('tambak_id', $tambakIds))->orderBy('nama_siklus')->get();
+
+        return view('operasional.pembelian-aset.index', compact('data', 'kategoriAsets', 'tambaks', 'bloks', 'sikluses'));
     }
 
     public function create()
@@ -121,6 +129,26 @@ class PembelianAsetController extends Controller
         );
 
         return redirect()->route('pembelian-aset.index')->with('success', 'Pembelian aset berhasil ditambahkan.');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        $import = new PembelianAsetImport();
+        Excel::import($import, $request->file('file'));
+
+        if ($import->imported() > 0) {
+            app(NotifikasiService::class)->kirimApprovalRequest(
+                'Import Pembelian Aset Menunggu Approval',
+                $import->imported() . ' pembelian aset hasil import Excel memerlukan persetujuan.',
+                route('pembelian-aset.index')
+            );
+        }
+
+        return redirect()->route('pembelian-aset.index')->with('success', $import->imported() . ' pembelian aset berhasil diimport dengan status awaiting.');
     }
 
     public function show(PembelianAset $pembelianAset)

@@ -9,6 +9,10 @@
     $totalAset = $data->count();
     $totalNilaiBuku = $data->sum('nilai_buku_aset');
     $totalPembelian = $data->sum('nominal_pembelian');
+    $sampleKategori = $kategoriAsets->first();
+    $sampleTambak = $tambaks->first();
+    $sampleBlok = $bloks->first();
+    $sampleSiklus = $sikluses->first();
 @endphp
 <div class="grid w-full space-y-5">
     <div class="grid grid-cols-3 gap-4">
@@ -56,9 +60,14 @@
                 <input type="text" name="search" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#pembelian_aset_table" value="{{ request('search') }}" />
             </form>
             @can('pembelian-aset.create')
-            <a href="{{ route('pembelian-aset.create') }}" class="kt-btn kt-btn-primary">
-                <i class="ki-filled ki-plus-squared"></i> Tambah Aset
-            </a>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="openImportModal()" class="kt-btn kt-btn-outline">
+                    <i class="ki-filled ki-file-up"></i> Import Excel
+                </button>
+                <a href="{{ route('pembelian-aset.create') }}" class="kt-btn kt-btn-primary">
+                    <i class="ki-filled ki-plus-squared"></i> Tambah Aset
+                </a>
+            </div>
             @endcan
         </div>
         <div id="pembelian_aset_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="pembelian_aset">
@@ -187,6 +196,136 @@
     </div>
 </div>
 
+@can('pembelian-aset.create')
+<div id="importModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;" onclick="closeImportModal()">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:0.75rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); width:100%; max-width:64rem; max-height:92vh; overflow:hidden;" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+            <div>
+                <h3 class="text-base font-semibold text-foreground">Import Pembelian Aset</h3>
+                <p class="text-xs text-muted-foreground mt-1">Upload CSV/Excel. Nomor transaksi otomatis dan status masuk awaiting.</p>
+            </div>
+            <button type="button" onclick="closeImportModal()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('pembelian-aset.import') }}" enctype="multipart/form-data">
+            @csrf
+            <div class="p-4 space-y-5" style="max-height:calc(92vh - 132px); overflow:auto;">
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+                    <div>
+                        <label class="text-sm font-medium text-foreground" for="import_file">Upload File <span class="text-danger">*</span></label>
+                        <input id="import_file" type="file" name="file" accept=".xlsx,.xls,.csv" class="kt-input w-full mt-2" required>
+                    </div>
+                    <button type="button" id="downloadAsetImportSample" class="kt-btn justify-center text-white border-0" style="background-color:#111827;">
+                        <i class="ki-filled ki-tablet-text-down"></i> Download Format CSV
+                    </button>
+                </div>
+
+                @if($errors->has('file'))
+                    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 space-y-1">
+                        @foreach($errors->get('file') as $error)
+                            <div>{{ $error }}</div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="rounded-lg border border-border overflow-auto">
+                    <table class="kt-table text-xs">
+                        <thead>
+                            <tr>
+                                <th>Nama Aset *</th>
+                                <th>Tanggal Pembelian *</th>
+                                <th>Kategori Aset</th>
+                                <th>Tambak</th>
+                                <th>Blok</th>
+                                <th>Siklus</th>
+                                <th>Qty</th>
+                                <th>Harga Satuan</th>
+                                <th>Metode Depresiasi</th>
+                                <th>Umur Manfaat</th>
+                                <th>Status Pembayaran</th>
+                                <th>Eviden URL</th>
+                                <th>Foto Aset URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Pompa Air</td>
+                                <td>{{ now()->format('Y-m-d') }}</td>
+                                <td>{{ $sampleKategori?->kode_aset ?? $sampleKategori?->deskripsi ?? '' }}</td>
+                                <td>{{ $sampleTambak?->nama_tambak ?? '' }}</td>
+                                <td>{{ $sampleBlok?->nama_blok ?? '' }}</td>
+                                <td>{{ $sampleSiklus?->nama_siklus ?? '' }}</td>
+                                <td>1</td>
+                                <td>1500000</td>
+                                <td>Tanpa Depresiasi</td>
+                                <td>5</td>
+                                <td>Lunas</td>
+                                <td>https://example.com/eviden.jpg</td>
+                                <td>https://example.com/foto-aset.jpg</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-border overflow-hidden">
+                        <div class="p-3 border-b border-border">
+                            <div class="font-semibold text-gray-900">Kategori Aset</div>
+                            <div class="text-xs text-muted-foreground">Gunakan kode atau deskripsi.</div>
+                        </div>
+                        <div class="max-h-56 overflow-auto">
+                            <table class="kt-table text-xs">
+                                <thead><tr><th>Kode</th><th>Deskripsi</th></tr></thead>
+                                <tbody>
+                                    @forelse($kategoriAsets as $kategori)
+                                        <tr><td class="text-mono">{{ $kategori->kode_aset }}</td><td>{{ $kategori->deskripsi }}</td></tr>
+                                    @empty
+                                        <tr><td colspan="2" class="text-center text-muted-foreground py-4">Belum ada kategori aset.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="rounded-lg border border-border overflow-hidden">
+                        <div class="p-3 border-b border-border">
+                            <div class="font-semibold text-gray-900">Tambak / Blok / Siklus</div>
+                            <div class="text-xs text-muted-foreground">Siklus harus cocok dengan blok.</div>
+                        </div>
+                        <div class="max-h-56 overflow-auto">
+                            <table class="kt-table text-xs">
+                                <thead><tr><th>Tambak</th><th>Blok</th><th>Siklus</th></tr></thead>
+                                <tbody>
+                                    @forelse($sikluses as $siklus)
+                                        <tr>
+                                            <td>{{ $siklus->blok?->tambak?->nama_tambak ?? '-' }}</td>
+                                            <td class="text-mono">{{ $siklus->blok?->nama_blok ?? '-' }}</td>
+                                            <td class="text-mono">{{ $siklus->nama_siklus }}</td>
+                                        </tr>
+                                    @empty
+                                        @forelse($bloks as $blok)
+                                            <tr><td>{{ $blok->tambak?->nama_tambak ?? '-' }}</td><td class="text-mono">{{ $blok->nama_blok }}</td><td>-</td></tr>
+                                        @empty
+                                            <tr><td colspan="3" class="text-center text-muted-foreground py-4">Belum ada data tambak/blok.</td></tr>
+                                        @endforelse
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 p-4 border-t border-border">
+                <button type="button" onclick="closeImportModal()" class="kt-btn kt-btn-outline">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-primary">
+                    <i class="ki-filled ki-file-up"></i> Import
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endcan
+
 <div id="rejectModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:1rem;">
     <div class="kt-card w-full max-w-[460px] shadow-2xl">
         <div class="kt-card-header min-h-14">
@@ -233,5 +372,60 @@ function openRejectModal(action, nomor) {
 function closeRejectModal() {
     document.getElementById('rejectModal').style.display = 'none';
 }
+
+function openImportModal() {
+    var modal = document.getElementById('importModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() {
+        var input = document.getElementById('import_file');
+        if (input) input.focus();
+    }, 50);
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+@if($errors->has('file'))
+    document.addEventListener('DOMContentLoaded', openImportModal);
+@endif
+
+document.getElementById('downloadAsetImportSample')?.addEventListener('click', function() {
+    var csv = [
+        ['Nama Aset','Tanggal Pembelian','Kategori Aset','Tambak','Blok','Siklus','Qty','Harga Satuan','Metode Depresiasi','Umur Manfaat','Status Pembayaran','Eviden URL','Foto Aset URL'],
+        [
+            'Pompa Air',
+            @js(now()->format('Y-m-d')),
+            @js($sampleKategori?->kode_aset ?? $sampleKategori?->deskripsi ?? ''),
+            @js($sampleTambak?->nama_tambak ?? ''),
+            @js($sampleBlok?->nama_blok ?? ''),
+            @js($sampleSiklus?->nama_siklus ?? ''),
+            '1',
+            '1500000',
+            'Tanpa Depresiasi',
+            '5',
+            'Lunas',
+            'https://example.com/eviden.jpg',
+            'https://example.com/foto-aset.jpg'
+        ]
+    ].map(function(row) {
+        return row.map(function(value) {
+            value = String(value || '');
+            return '"' + value.replace(/"/g, '""') + '"';
+        }).join(',');
+    }).join('\r\n');
+
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'format-import-pembelian-aset.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+});
 </script>
 @endpush

@@ -279,11 +279,11 @@ class DashboardController extends Controller
             ->map(function ($siklus) {
                 $blok = $siklus->blok;
 
-                $transaksis = TransaksiKeuangan::where('siklus_id', $siklus->id)->get();
+                $transaksis = TransaksiKeuangan::where('siklus_id', $siklus->id)->where('status', 'selesai')->get();
 
                 $uangMasukTransaksi = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal');
                 $uangKeluarTransaksi = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal');
-                $totalPanen = $siklus->panens->sum('total_penjualan');
+                $totalPanen = $siklus->panens->where('status', 'selesai')->sum('total_penjualan');
 
                 $semuaPemberian = PemberianPakan::with('itemPersediaan.kategoriPersediaan', 'itemPersediaan.persediaan')
                     ->where('siklus_id', $siklus->id)

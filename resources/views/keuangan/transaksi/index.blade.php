@@ -18,6 +18,45 @@
     $sampleAccountBank = $accountBanks->first();
 @endphp
 <div class="grid w-full space-y-5">
+    {{-- Card Counting --}}
+    <div class="grid grid-cols-3 gap-4">
+        <div class="kt-card">
+            <div class="kt-card-content py-4 px-5 flex items-center gap-3">
+                <div class="size-11 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-arrow-down text-success text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm text-muted-foreground">Uang Masuk</p>
+                    <p class="text-lg font-bold text-success text-mono">Rp {{ number_format($cardTotals['masuk'], 0, ',', '.') }}</p>
+                    <p class="text-xs text-muted-foreground">{{ $cardTotals['masuk_count'] }} transaksi</p>
+                </div>
+            </div>
+        </div>
+        <div class="kt-card">
+            <div class="kt-card-content py-4 px-5 flex items-center gap-3">
+                <div class="size-11 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-arrow-up text-destructive text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm text-muted-foreground">Uang Keluar</p>
+                    <p class="text-lg font-bold text-destructive text-mono">Rp {{ number_format($cardTotals['keluar'], 0, ',', '.') }}</p>
+                    <p class="text-xs text-muted-foreground">{{ $cardTotals['keluar_count'] }} transaksi</p>
+                </div>
+            </div>
+        </div>
+        <div class="kt-card">
+            <div class="kt-card-content py-4 px-5 flex items-center gap-3">
+                <div class="size-11 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-time text-warning text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm text-muted-foreground">Pending</p>
+                    <p class="text-lg font-bold text-warning text-mono">{{ $cardTotals['pending'] }} transaksi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="kt-card">
         {{-- Header: Tabs kiri, Search/Filter/Export kanan --}}
         <div class="kt-card-header min-h-16 flex-wrap gap-3">

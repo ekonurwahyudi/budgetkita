@@ -229,6 +229,7 @@
                                         <th>Sumber Dana</th>
                                         <th>Account Bank</th>
                                         <th>Catatan</th>
+                                        <th>URL Gambar</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -246,6 +247,7 @@
                                         <td>{{ $sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA' }}</td>
                                         <td></td>
                                         <td>Contoh import pemasukan</td>
+                                        <td>https://example.com/bukti.jpg</td>
                                     </tr>
                                     <tr>
                                         <td>Uang Keluar</td>
@@ -261,11 +263,12 @@
                                         <td>{{ $sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA' }}</td>
                                         <td>{{ $sampleAccountBank?->kode_account ?? $sampleAccountBank?->nama_bank ?? 'KODE_BANK' }}</td>
                                         <td>Contoh import pengeluaran</td>
+                                        <td></td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                        <div class="text-xs text-muted-foreground mt-2">Gunakan kode atau nama/deskripsi sesuai referensi di bawah. Account Bank wajib diisi hanya untuk pembayaran Bank.</div>
+                        <div class="text-xs text-muted-foreground mt-2">Gunakan kode atau nama/deskripsi sesuai referensi di bawah. Account Bank wajib diisi hanya untuk pembayaran Bank. URL Gambar opsional, jika diisi akan jadi eviden.</div>
                     </div>
 
                     <div class="transaksi-import-col">
@@ -692,7 +695,7 @@ function closeImportModal() {
 
 document.getElementById('downloadImportSample')?.addEventListener('click', function() {
     var csv = [
-        ['Jenis','Tanggal','Aktivitas','Kategori','Item Transaksi','Tambak','Blok','Siklus','Nominal','Jenis Pembayaran','Sumber Dana','Account Bank','Catatan'],
+        ['Jenis','Tanggal','Aktivitas','Kategori','Item Transaksi','Tambak','Blok','Siklus','Nominal','Jenis Pembayaran','Sumber Dana','Account Bank','Catatan','URL Gambar'],
         [
             'Uang Masuk',
             @js(now()->format('Y-m-d')),
@@ -706,7 +709,8 @@ document.getElementById('downloadImportSample')?.addEventListener('click', funct
             'Cash',
             @js($sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA'),
             '',
-            'Contoh import pemasukan'
+            'Contoh import pemasukan',
+            'https://example.com/bukti.jpg'
         ],
         [
             'Uang Keluar',
@@ -721,7 +725,8 @@ document.getElementById('downloadImportSample')?.addEventListener('click', funct
             'Bank',
             @js($sampleSumberDana?->kode_sumber_dana ?? $sampleSumberDana?->deskripsi ?? 'SUMBER_DANA'),
             @js($sampleAccountBank?->kode_account ?? $sampleAccountBank?->nama_bank ?? 'KODE_BANK'),
-            'Contoh import pengeluaran'
+            'Contoh import pengeluaran',
+            ''
         ]
     ].map(function(row) {
         return row.map(function(value) {

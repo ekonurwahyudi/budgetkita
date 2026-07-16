@@ -62,6 +62,32 @@
                                 <td class="text-sm text-mono pb-3 font-semibold">Rp {{ number_format($transaksi->nominal, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Status Pembayaran</td>
+                                <td class="text-sm pb-3">
+                                    @if($transaksi->status_pembayaran === 'lunas')
+                                        <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                    @elseif($transaksi->status_pembayaran === 'hutang')
+                                        <span class="kt-badge kt-badge-sm kt-badge-warning">Hutang</span>
+                                    @elseif($transaksi->status_pembayaran === 'sebagian')
+                                        <span class="kt-badge kt-badge-sm kt-badge-info">Bayar Sebagian</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @if(in_array($transaksi->status_pembayaran, ['hutang', 'sebagian']))
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">Dibayar</td>
+                                <td class="text-sm text-mono pb-3">Rp {{ number_format($transaksi->nominal_dibayar ?? 0, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-sm text-secondary-foreground pb-3 pe-8">
+                                    {{ $transaksi->jenis_transaksi === 'uang_masuk' ? 'Dicatat Piutang' : 'Dicatat Hutang' }}
+                                </td>
+                                <td class="text-sm text-mono pb-3 font-semibold text-warning">
+                                    Rp {{ number_format($transaksi->nominal - ($transaksi->nominal_dibayar ?? 0), 0, ',', '.') }}
+                                </td>
+                            </tr>
+                            @endif
+                            <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-8">Tanggal Kwitansi</td>
                                 <td class="text-sm text-mono pb-3">{{ $transaksi->tgl_kwitansi?->format('d/m/Y') ?? '-' }}</td>
                             </tr>
@@ -147,7 +173,8 @@
                 @php
                     $isPdf = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.pdf']);
                     $isExcel = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.xlsx', '.xls']);
-                    $url = \Illuminate\Support\Facades\Storage::url($ev);
+                    $isUrl = str_starts_with($ev, 'http://') || str_starts_with($ev, 'https://');
+                    $url = $isUrl ? $ev : \Illuminate\Support\Facades\Storage::url($ev);
                 @endphp
                 @if($isPdf)
                 <a href="{{ $url }}" target="_blank" class="group relative aspect-square rounded-xl border border-border overflow-hidden bg-muted flex flex-col items-center justify-center p-3 hover:shadow-md hover:border-primary/50 transition-all">

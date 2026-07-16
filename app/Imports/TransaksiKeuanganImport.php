@@ -48,12 +48,18 @@ class TransaksiKeuanganImport implements ToCollection
                     $jenisPembayaran = $this->jenisPembayaran($data['jenis_pembayaran'] ?? null);
                     $accountBank = $this->accountBank($data['account_bank'] ?? null, $jenisPembayaran);
 
+                    $nominalValue = $this->nominal($data['nominal'] ?? null);
+                    $evidenUrl = $this->nullableText($data['eviden_url'] ?? null);
+
                     TransaksiKeuangan::create([
                         'nomor_transaksi' => app(AutoNumberService::class)->generate('INVT'),
                         'jenis_transaksi' => $this->jenisTransaksi($data['jenis'] ?? null),
                         'tgl_kwitansi' => $this->date($data['tanggal'] ?? null),
                         'aktivitas' => $this->requiredText($data['aktivitas'] ?? null, 'Aktivitas'),
-                        'nominal' => $this->nominal($data['nominal'] ?? null),
+                        'nominal' => $nominalValue,
+                        'status_pembayaran' => 'lunas',
+                        'nominal_dibayar' => $nominalValue,
+                        'eviden' => $evidenUrl ? [$evidenUrl] : null,
                         'item_transaksi_id' => $item->id,
                         'kategori_transaksi_id' => $kategori->id,
                         'tambak_id' => $tambak->id,
@@ -116,6 +122,7 @@ class TransaksiKeuanganImport implements ToCollection
             'kategori_transaksi' => 'kategori',
             'jenis_bayar', 'pembayaran' => 'jenis_pembayaran',
             'bank', 'account', 'akun_bank', 'account_bank' => 'account_bank',
+            'url_gambar', 'eviden_url', 'url_eviden', 'gambar', 'foto', 'image_url' => 'eviden_url',
             default => $key,
         };
     }
@@ -234,7 +241,15 @@ class TransaksiKeuanganImport implements ToCollection
     {
         // Kategori diturunkan dari item (lebih spesifik). Kolom kategori hanya fallback.
         if ($item?->kategoriTransaksi) {
-            return $item->kategoriTransaksi;
+            $kategoriItem = $item->kategoriTransaksi;
+            // Warn jika kolom kategori diisi tapi tidak cocok dengan kategori item
+            $value = $this->nullableText($value);
+            if ($value && strtolower($value) !== strtolower($kategoriItem->deskripsi) && strtolower($value) !== strtolower($kategoriItem->kode_kategori ?? '')) {
+                throw new \InvalidArgumentException(
+                    "Kategori '{$value}' tidak cocok dengan item '{$item->kode_item}' (kategori: {$kategoriItem->deskripsi}). Kosongkan kolom kategori atau sesuaikan."
+                );
+            }
+            return $kategoriItem;
         }
 
         $value = $this->requiredText($value, 'Kategori');

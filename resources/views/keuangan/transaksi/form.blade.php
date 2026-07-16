@@ -217,6 +217,20 @@
                             <input type="file" name="eviden[]" id="evidenInput" class="kt-input" multiple accept=".png,.jpg,.jpeg,.pdf" onchange="previewEviden(this)">
                             <p class="text-xs text-muted-foreground">Maksimal 5MB per file. Format: PNG, JPG, JPEG, PDF.</p>
 
+                            {{-- URL Gambar --}}
+                            <div class="mt-2">
+                                <label class="text-xs font-medium text-muted-foreground mb-1 block">Atau tambah via URL Gambar</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="evidenUrlInput" class="kt-input grow" placeholder="https://example.com/gambar.jpg">
+                                    <button type="button" onclick="addEvidenUrl()" class="kt-btn kt-btn-sm kt-btn-outline shrink-0">
+                                        <i class="ki-filled ki-plus"></i> Tambah
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- URL eviden list (hidden inputs) --}}
+                            <div id="evidenUrlList" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
+
                             <div id="previewContainer" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-2"></div>
 
                             @if($transaksi && !empty($transaksi->eviden))
@@ -224,7 +238,8 @@
                                 @foreach($transaksi->eviden as $idx => $ev)
                                 @php
                                     $isPdf = \Illuminate\Support\Str::endsWith(strtolower($ev), ['.pdf']);
-                                    $url = \Illuminate\Support\Facades\Storage::url($ev);
+                                    $isUrl = str_starts_with($ev, 'http://') || str_starts_with($ev, 'https://');
+                                    $url = $isUrl ? $ev : \Illuminate\Support\Facades\Storage::url($ev);
                                 @endphp
                                 <div class="relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all" id="existing-ev-{{ $idx }}">
                                     @if($isPdf)
@@ -1273,6 +1288,35 @@ function hapusExistingEviden(path, elementId) {
         form.appendChild(inp);
     });
     document.getElementById(elementId).remove();
+}
+
+// URL Gambar eviden
+var evidenUrlCounter = 0;
+function addEvidenUrl() {
+    var input = document.getElementById('evidenUrlInput');
+    var url = input.value.trim();
+    if (!url) return;
+    if (!/^https?:\/\/.+/i.test(url)) { alert('URL harus diawali http:// atau https://'); return; }
+
+    var container = document.getElementById('evidenUrlList');
+    var idx = evidenUrlCounter++;
+    var div = document.createElement('div');
+    div.className = 'relative group rounded-xl border border-border overflow-hidden bg-muted hover:ring-2 hover:ring-primary hover:shadow-md transition-all';
+    div.id = 'eviden-url-' + idx;
+    div.innerHTML =
+        '<input type="hidden" name="eviden_urls[]" value="' + url.replace(/"/g, '&quot;') + '">' +
+        '<img src="' + url.replace(/"/g, '&quot;') + '" class="w-full h-24 object-cover" alt="URL Eviden" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+        '<div class="flex-col items-center justify-center w-full h-24 p-3" style="display:none">' +
+            '<i class="ki-filled ki-picture text-3xl text-muted-foreground mb-1"></i>' +
+            '<span class="text-[10px] text-muted-foreground text-center truncate w-full">URL</span>' +
+        '</div>' +
+        '<div class="flex items-center justify-end px-2 py-1.5 border-t border-border">' +
+            '<button type="button" onclick="document.getElementById(\'eviden-url-' + idx + '\').remove()" class="size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors" title="Hapus">' +
+                '<i class="ki-filled ki-cross text-[10px]"></i>' +
+            '</button>' +
+        '</div>';
+    container.appendChild(div);
+    input.value = '';
 }
 
 function formatMoney(val) {

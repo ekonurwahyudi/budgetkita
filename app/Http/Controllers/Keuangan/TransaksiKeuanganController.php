@@ -184,6 +184,7 @@ class TransaksiKeuanganController extends Controller
             'jenis_pembayaran'      => 'required|in:cash,bank',
             'account_bank_id'       => 'nullable|required_if:status_pembayaran,lunas,sebagian|uuid|exists:account_banks,id',
             'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
+            'eviden_urls.*'         => 'nullable|url',
             'catatan'               => 'nullable|string',
         ]);
 
@@ -203,11 +204,18 @@ class TransaksiKeuanganController extends Controller
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate('INVT');
         $input['created_by'] = auth()->id();
 
+        $paths = [];
         if ($request->hasFile('eviden')) {
-            $paths = [];
             foreach ($request->file('eviden') as $file) {
                 $paths[] = app(FileUploadService::class)->upload($file);
             }
+        }
+        foreach ($request->input('eviden_urls', []) as $url) {
+            if (filter_var($url, FILTER_VALIDATE_URL)) {
+                $paths[] = $url;
+            }
+        }
+        if ($paths) {
             $input['eviden'] = $paths;
         }
 
@@ -262,6 +270,7 @@ class TransaksiKeuanganController extends Controller
             'jenis_pembayaran'      => 'required|in:cash,bank',
             'account_bank_id'       => 'nullable|required_if:status_pembayaran,lunas,sebagian|uuid|exists:account_banks,id',
             'eviden.*'              => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
+            'eviden_urls.*'         => 'nullable|url',
             'catatan'               => 'nullable|string',
         ]);
 
@@ -278,20 +287,27 @@ class TransaksiKeuanganController extends Controller
             $input['account_bank_id'] = null;
         }
 
+        // Build eviden: start from existing, remove hapus, add new uploads + urls
+        $existing = $transaksi->eviden ?? [];
+
+        if ($request->filled('hapus_eviden')) {
+            $hapus = $request->input('hapus_eviden', []);
+            $existing = array_values(array_filter($existing, fn($p) => !in_array($p, $hapus)));
+        }
+
         if ($request->hasFile('eviden')) {
-            $existing = $transaksi->eviden ?? [];
             foreach ($request->file('eviden') as $file) {
                 $existing[] = app(FileUploadService::class)->upload($file);
             }
-            $input['eviden'] = $existing;
         }
 
-        // Handle hapus eviden
-        if ($request->filled('hapus_eviden')) {
-            $existing = $transaksi->eviden ?? [];
-            $hapus = $request->input('hapus_eviden', []);
-            $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $hapus)));
+        foreach ($request->input('eviden_urls', []) as $url) {
+            if (filter_var($url, FILTER_VALIDATE_URL)) {
+                $existing[] = $url;
+            }
         }
+
+        $input['eviden'] = $existing ?: null;
 
         DB::transaction(function () use ($transaksi, $input) {
             // Reverse saldo lama jika transaksi sudah selesai via bank

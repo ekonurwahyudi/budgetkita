@@ -11,12 +11,20 @@ class BlokController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $hasTambak = $user->tambaks()->exists();
         $query = Blok::with('tambak')->withCount('sikluses');
+        if ($hasTambak) {
+            $tambakIds = $user->tambaks()->pluck('tambaks.id');
+            $query->whereIn('tambak_id', $tambakIds);
+        }
         if ($request->filled('tambak_id')) {
             $query->where('tambak_id', $request->tambak_id);
         }
         $data = $query->latest()->get();
-        $tambaks = Tambak::orderBy('nama_tambak')->get();
+        $tambaks = $hasTambak
+            ? Tambak::whereIn('id', $user->tambaks()->pluck('tambaks.id'))->orderBy('nama_tambak')->get()
+            : Tambak::orderBy('nama_tambak')->get();
         return view('budidaya.blok.index', compact('data', 'tambaks'));
     }
 
@@ -65,6 +73,6 @@ class BlokController extends Controller
 
     public function byTambak(Tambak $tambak)
     {
-        return response()->json($tambak->bloks()->where('status_blok', 'aktif')->orderBy('nama_blok')->get());
+        return response()->json($tambak->bloks()->where('status_blok', '!=', 'selesai')->orderBy('nama_blok')->get());
     }
 }

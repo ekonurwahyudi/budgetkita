@@ -28,6 +28,8 @@ class RolePermissionSeeder extends Seeder
             'gaji-karyawan' => ['view', 'create', 'edit', 'delete', 'approve'],
             'investasi' => ['view', 'create', 'edit', 'delete', 'approve'],
             'hutang-piutang' => ['view', 'create', 'edit', 'delete', 'approve'],
+            'sharing-revenue' => ['view', 'create', 'edit', 'delete', 'approve'],
+            'laporan-keuangan' => ['view'],
             'persediaan' => ['view', 'create', 'edit', 'delete'],
             'pembelian-persediaan' => ['view', 'create', 'edit', 'delete', 'approve'],
             'pembelian-aset' => ['view', 'create', 'edit', 'delete', 'approve'],
@@ -35,21 +37,31 @@ class RolePermissionSeeder extends Seeder
             'blok' => ['view', 'create', 'edit', 'delete'],
             'siklus' => ['view', 'create', 'edit', 'delete'],
             'panen' => ['view', 'create', 'edit', 'delete', 'approve'],
+            'kolam' => ['view', 'create', 'edit', 'delete'],
             'pemberian-pakan' => ['view', 'create', 'edit', 'delete'],
             'roles' => ['view', 'create', 'edit', 'delete'],
         ];
 
+        $modules = ['masterdata', 'keuangan', 'operasional', 'budidaya'];
+
+        // Build list of valid permission names
+        $validPermissions = [];
         foreach ($pages as $page => $actions) {
             foreach ($actions as $action) {
-                Permission::firstOrCreate(['name' => "{$page}.{$action}"]);
+                $validPermissions[] = "{$page}.{$action}";
             }
         }
-
-        // Also keep old module-level permissions for backward compat with sidebar @can
-        $modules = ['masterdata', 'keuangan', 'operasional', 'budidaya'];
         foreach ($modules as $mod) {
-            Permission::firstOrCreate(['name' => "{$mod}.view"]);
+            $validPermissions[] = "{$mod}.view";
         }
+
+        // Create or update permissions — also remove orphaned ones
+        foreach ($validPermissions as $perm) {
+            Permission::firstOrCreate(['name' => $perm]);
+        }
+
+        // Delete orphaned permissions that are not in our list
+        Permission::whereNotIn('name', $validPermissions)->delete();
 
         // Owner: full access
         $owner = Role::firstOrCreate(['name' => 'Owner']);
@@ -77,7 +89,9 @@ class RolePermissionSeeder extends Seeder
                   ->orWhere('name', 'like', 'gaji-karyawan.%')
                   ->orWhere('name', 'like', 'investasi.%')
                   ->orWhere('name', 'like', 'hutang-piutang.%')
+                  ->orWhere('name', 'like', 'sharing-revenue.%')
                   ->orWhere('name', 'like', 'keuangan.view')
+                  ->orWhere('name', 'like', 'laporan-keuangan.view')
                   ->orWhere('name', 'like', 'operasional.view');
             })->where('name', 'not like', '%.approve')->get()
         );

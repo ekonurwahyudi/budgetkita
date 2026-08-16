@@ -5,6 +5,8 @@ namespace App\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use App\Models\AccountBank;
+use App\Models\Persediaan;
+use App\Models\RiwayatPersediaan;
 
 class ApprovalService
 {
@@ -13,6 +15,7 @@ class ApprovalService
         DB::transaction(function () use ($model) {
             $model->update(['status' => 'selesai']);
             $this->updateSaldo($model);
+            $this->updatePersediaan($model);
         });
     }
 
@@ -56,10 +59,42 @@ class ApprovalService
     {
         // Gaji → THP, Pembelian → sum items, lainnya → nominal
         if (method_exists($model, 'items') && $model->relationLoaded('items')) {
+            if (class_basename($model) === 'PembelianPersediaan') {
+                return match ($model->status_pembayaran) {
+                    'hutang' => 0,
+                    'sebagian' => $model->nominal_dibayar ?? 0,
+                    default => $model->items->sum('harga_total'),
+                };
+            }
+
             return $model->items->sum('harga_total');
         }
 
-        return $model->thp ?? $model->total_penjualan ?? $model->nominal ?? 0;
+        if (class_basename($model) === 'PembelianAset') {
+            return match ($model->status_pembayaran) {
+                'hutang' => 0,
+                'sebagian' => $model->nominal_dibayar ?? 0,
+                default => $model->nominal_pembelian ?? 0,
+            };
+        }
+
+        if (class_basename($model) === 'TransaksiKeuangan') {
+            return match ($model->status_pembayaran) {
+                'hutang' => 0,
+                'sebagian' => $model->nominal_dibayar ?? 0,
+                default => $model->nominal ?? 0,
+            };
+        }
+
+        if (class_basename($model) === 'Panen') {
+            return match ($model->pembayaran) {
+                'piutang' => 0,
+                'sebagian' => $model->nominal_dibayar ?? 0,
+                default => $model->total_penjualan ?? 0,
+            };
+        }
+
+        return $model->thp ?? $model->total_penjualan ?? $model->nominal_pembelian ?? $model->nominal ?? 0;
     }
 
     private function getSaldoType(Model $model): string
@@ -74,11 +109,51 @@ class ApprovalService
 
         // Uang keluar dari saldo
         if ($class === 'GajiKaryawan') return 'kurang';
+        if ($class === 'SharingRevenue') return 'kurang';
         if ($class === 'PembelianPersediaan') return 'kurang';
         if ($class === 'PembelianAset') return 'kurang';
         if ($class === 'TransaksiKeuangan' && $model->jenis_transaksi === 'uang_keluar') return 'kurang';
         if ($class === 'HutangPiutang' && $model->jenis === 'piutang') return 'kurang';
 
         return '';
+    }
+
+    private function updatePersediaan(Model $model): void
+    {
+        $class = class_basename($model);
+
+        if ($class !== 'PembelianPersediaan') {
+            return;
+        }
+
+        if (!$model->relationLoaded('items')) {
+            $model->load('items');
+        }
+
+        foreach ($model->items as $item) {
+            // Cari atau buat record persediaan
+            $persediaan = Persediaan::firstOrCreate(
+                ['item_persediaan_id' => $item->item_persediaan_id],
+                ['qty' => 0, 'unit' => $item->satuan, 'harga_per_unit' => 0, 'total_harga' => 0]
+            );
+
+            // Update qty dan harga
+            $persediaan->qty += $item->qty;
+            $persediaan->unit = $item->satuan;
+            $persediaan->harga_per_unit = $item->harga_satuan;
+            $persediaan->total_harga = $persediaan->qty * $persediaan->harga_per_unit;
+            $persediaan->save();
+
+            // Catat riwayat
+            RiwayatPersediaan::create([
+                'persediaan_id' => $persediaan->id,
+                'jenis'         => 'penambahan',
+                'qty_masuk'     => $item->qty,
+                'qty_keluar'    => 0,
+                'harga_per_unit'=> $item->harga_satuan,
+                'harga_total'   => $item->harga_total,
+                'catatan'       => 'Pembelian ' . $model->nomor_transaksi,
+            ]);
+        }
     }
 }

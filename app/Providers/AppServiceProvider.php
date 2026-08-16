@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Paginator::defaultView('pagination::tailwind');
+
         \Illuminate\Support\Facades\View::composer('components.header', function ($view) {
             $user = auth()->user();
             if (!$user) return;
@@ -29,12 +32,8 @@ class AppServiceProvider extends ServiceProvider
                 ->pluck('tambak')
                 ->filter();
 
-            $activeTambakId = session('active_tambak_id');
+            $activeTambakId = \App\Support\ActiveTambak::id();
             $activeTambak = $tambaks->firstWhere('id', $activeTambakId) ?? $tambaks->first();
-
-            if ($activeTambak && !$activeTambakId) {
-                session(['active_tambak_id' => $activeTambak->id]);
-            }
 
             $view->with('headerTambaks', $tambaks);
             $view->with('activeTambak', $activeTambak);

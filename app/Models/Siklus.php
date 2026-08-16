@@ -2,8 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ScopedByActiveTambakRelation;
+
 class Siklus extends BaseModel
 {
+    use ScopedByActiveTambakRelation;
+
+    public const ACTIVE_TAMBAK_RELATION = 'blok';
+
     protected $fillable = [
         'blok_id', 'nama_siklus', 'tgl_siklus', 'lama_persiapan', 'tgl_tebar',
         'total_tebar', 'spesies_udang', 'umur_awal', 'kecerahan', 'suhu',
@@ -27,5 +33,10 @@ class Siklus extends BaseModel
     public function panens()
     {
         return $this->hasMany(Panen::class);
+    }
+
+    public function kolams()
+    {
+        return $this->hasMany(Kolam::class);
     }
 }

@@ -1,20 +1,209 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Detail Siklus - ' . $siklus->nama_siklus)
 @section('page-title', 'Detail Siklus')
 @section('page-description', $siklus->nama_siklus)
 
 @section('content')
+@php
+    $totalPanen = $siklus->panens->sum('total_penjualan') ?? 0;
+    $totalTransaksiMasuk = $transaksis->where('jenis_transaksi', 'uang_masuk')->sum('nominal') ?? 0;
+    $totalTransaksiKeluar = $transaksis->where('jenis_transaksi', 'uang_keluar')->sum('nominal') ?? 0;
+    $isProfit = ($keuntunganKerugian ?? 0) >= 0;
+    $formatJumlah = fn($value) => rtrim(rtrim(number_format((float) ($value ?? 0), 2, ',', '.'), '0'), ',');
+@endphp
+
+{{-- Stat Cards --}}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-5 lg:mb-7.5">
+    {{-- Uang Masuk --}}
+    <div class="kt-card overflow-hidden border-success/20 hover:ring-2 hover:ring-success/20 transition-all cursor-pointer group" onclick="openDetailModal('uangMasuk')">
+        <div class="kt-card-content p-5">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex flex-col gap-2 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-success"></span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Uang Masuk</span>
+                    </div>
+                    <span class="text-2xl font-semibold text-mono text-success leading-none truncate">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-xs text-muted-foreground">{{ $detailPanen->count() }} panen, {{ $detailTransaksiMasuk->count() }} transaksi masuk</span>
+                </div>
+                <span class="size-11 rounded-lg bg-success/10 text-success flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-basket text-xl"></i>
+                </span>
+            </div>
+            <div class="pt-3 border-t border-border/60 flex flex-col gap-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Hasil Panen</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalPanen, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Transaksi Masuk</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalTransaksiMasuk, 0, ',', '.') }}</span>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center justify-end">
+                <span class="text-xs font-medium text-success group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+            </div>
+        </div>
+    </div>
+
+    {{-- Uang Keluar --}}
+    <div class="kt-card overflow-hidden border-destructive/20 hover:ring-2 hover:ring-destructive/20 transition-all cursor-pointer group" onclick="openDetailModal('uangKeluar')">
+        <div class="kt-card-content p-5">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex flex-col gap-2 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-destructive"></span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Uang Keluar</span>
+                    </div>
+                    <span class="text-2xl font-semibold text-mono text-destructive leading-none truncate">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-xs text-muted-foreground">{{ $detailTransaksiKeluar->count() }} transaksi, {{ $pemberianPakans->count() + $pemberianKimia->count() }} pemakaian stok, {{ $pembelianAsets->count() }} aset</span>
+                </div>
+                <span class="size-11 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-cheque text-xl"></i>
+                </span>
+            </div>
+            <div class="pt-3 border-t border-border/60 flex flex-col gap-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Transaksi Keluar</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalTransaksiKeluar, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Pakan</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalBiayaPakan ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Bahan Kimia</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Aset</span>
+                    <span class="text-mono font-medium">Rp {{ number_format($totalBiayaAset ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center justify-end">
+                <span class="text-xs font-medium text-destructive group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+            </div>
+        </div>
+    </div>
+
+    {{-- Keuntungan/Kerugian --}}
+    <div class="kt-card overflow-hidden {{ $isProfit ? 'border-success/20 hover:ring-success/20' : 'border-destructive/20 hover:ring-destructive/20' }} hover:ring-2 transition-all cursor-pointer group" onclick="openDetailModal('keuntungan')">
+        <div class="kt-card-content p-5">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex flex-col gap-2 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full {{ $isProfit ? 'bg-success' : 'bg-destructive' }}"></span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ $isProfit ? 'Keuntungan' : 'Kerugian' }}</span>
+                    </div>
+                    <span class="text-2xl font-semibold text-mono {{ $isProfit ? 'text-success' : 'text-destructive' }} leading-none truncate">{{ $isProfit ? '' : '-' }}Rp {{ number_format(abs($keuntunganKerugian ?? 0), 0, ',', '.') }}</span>
+                    <span class="text-xs text-muted-foreground">Uang masuk dikurangi seluruh biaya siklus</span>
+                </div>
+                <span class="size-11 rounded-lg {{ $isProfit ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive' }} flex items-center justify-center shrink-0">
+                    <i class="ki-filled ki-wallet text-xl"></i>
+                </span>
+            </div>
+            <div class="pt-3 border-t border-border/60 flex flex-col gap-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Uang Masuk</span>
+                    <span class="text-mono font-medium text-success">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-secondary-foreground">Uang Keluar</span>
+                    <span class="text-mono font-medium text-destructive">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center justify-end">
+                <span class="text-xs font-medium {{ $isProfit ? 'text-success' : 'text-destructive' }} group-hover:underline whitespace-nowrap">Lihat Data <i class="ki-filled ki-arrow-right text-[10px]"></i></span>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-7.5">
     {{-- KIRI: Tabel History --}}
-    <div class="col-span-2">
+    <div class="col-span-1 lg:col-span-2">
         <div class="flex flex-col gap-5 lg:gap-7.5">
+            {{-- Daftar Kolam --}}
+            <div class="kt-card">
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Daftar Kolam</h3>
+                        <span class="text-xs text-muted-foreground">{{ $kolams->count() }} kolam dalam siklus ini</span>
+                    </div>
+                    @can('kolam.create')
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openKolamModal()">
+                        <i class="ki-filled ki-plus-squared"></i> Tambah Kolam
+                    </button>
+                    @endcan
+                </div>
+                <div class="kt-card-table">
+                    <div class="kt-table-wrapper kt-scrollable">
+                        <table class="kt-table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Kolam</th>
+                                    <th>Tgl Berdiri</th>
+                                    <th>Total Tebar</th>
+                                    <th>Status</th>
+                                    <th>Parameter Terakhir</th>
+                                    <th class="w-24">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($kolams as $kolam)
+                                <tr>
+                                    <td class="font-medium">{{ $kolam->nama_kolam }}</td>
+                                    <td class="text-mono text-sm">{{ $kolam->tgl_berdiri?->format('d/m/Y') ?? '-' }}</td>
+                                    <td class="text-mono">{{ $kolam->total_tebar ? number_format($kolam->total_tebar) . ' ekor' : '-' }}</td>
+                                    <td>
+                                        @if($kolam->status === 'aktif')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Aktif</span>
+                                        @elseif($kolam->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
+                                        @else
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Batal</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($kolam->latestParameter)
+                                            <span class="text-xs text-muted-foreground">{{ $kolam->latestParameter->tgl_parameter?->format('d/m/Y') }}</span>
+                                            @if($kolam->latestParameter->status === 'kritis')
+                                                <span class="kt-badge kt-badge-sm kt-badge-destructive ml-1">Kritis</span>
+                                            @elseif($kolam->latestParameter->status === 'perhatian')
+                                                <span class="kt-badge kt-badge-sm kt-badge-warning ml-1">Perhatian</span>
+                                            @else
+                                                <span class="kt-badge kt-badge-sm kt-badge-success ml-1">Normal</span>
+                                            @endif
+                                        @else
+                                            <span class="text-xs text-muted-foreground">Belum ada</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="inline-flex gap-1">
+                                            <a href="{{ route('kolam.show', $kolam) }}" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Detail"><i class="ki-filled ki-eye"></i></a>
+                                            <button type="button" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline" title="Edit" onclick="editKolam('{{ $kolam->id }}', '{{ addslashes($kolam->nama_kolam) }}', '{{ $kolam->tgl_berdiri?->format('Y-m-d') }}', '{{ $kolam->total_tebar }}', '{{ $kolam->status }}', {{ $kolam->users->pluck('id')->toJson() }})"><i class="ki-filled ki-pencil"></i></button>
+                                            <form method="POST" action="{{ route('kolam.destroy', $kolam) }}" onsubmit="return confirm('Hapus kolam ini?')">@csrf @method('DELETE')<button type="submit" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-outline text-danger" title="Hapus"><i class="ki-filled ki-trash"></i></button></form>
+                                        </span>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="6" class="text-center text-muted-foreground py-4">Belum ada kolam</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             {{-- Tabel History Panen --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">History Panen</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">History Panen</h3>
+                        <span class="text-xs text-muted-foreground">{{ $siklus->panens->count() }} catatan panen, total Rp {{ number_format($totalPanen, 0, ',', '.') }}</span>
+                    </div>
                     @can('panen.create')
-                    <button type="button" class="kt-btn kt-btn kt-btn-primary" onclick="openPanenModal()">
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary" onclick="openPanenModal()">
                         <i class="ki-filled ki-plus-squared"></i> Tambah Panen
                     </button>
                     @endcan
@@ -26,6 +215,7 @@
                                 <tr>
                                     <th class="w-12">No</th>
                                     <th>Tgl Panen</th>
+                                    <th>Kolam</th>
                                     <th>Tipe</th>
                                     <th>Umur</th>
                                     <th>Ukuran</th>
@@ -41,6 +231,7 @@
                                 <tr>
                                     <td>{{ $i + 1 }}</td>
                                     <td>{{ $panen->tgl_panen?->format('d/m/Y') ?? '-' }}</td>
+                                    <td>{{ $panen->kolam?->nama_kolam ?? '-' }}</td>
                                     <td>
                                         @if($panen->tipe_panen === 'parsial')
                                             <span class="kt-badge kt-badge-sm kt-badge-warning kt-badge-outline">Parsial</span>
@@ -55,10 +246,16 @@
                                     <td>Rp {{ number_format($panen->total_penjualan ?? 0, 0, ',', '.') }}</td>
                                     <td>{{ $panen->pembeli ?? '-' }}</td>
                                     <td>
-                                        @if($panen->status === 'lunas')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                        @if($panen->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
+                                        @elseif($panen->status === 'cancel')
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Cancel</span>
+                                        @elseif($panen->status === 'proses')
+                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Proses</span>
+                                        @elseif($panen->status === 'pending')
+                                            <span class="kt-badge kt-badge-sm kt-badge-warning">Pending</span>
                                         @else
-                                            <span class="kt-badge kt-badge-sm kt-badge-warning">Belum Lunas</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-outline">Awaiting</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -73,8 +270,12 @@
 
             {{-- Tabel Transaksi Keuangan --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Transaksi Keuangan</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Transaksi Keuangan</h3>
+                        <span class="text-xs text-muted-foreground">{{ $transaksis->count() }} transaksi terkait siklus ini</span>
+                    </div>
+                    <span class="kt-badge kt-badge-sm kt-badge-outline">Rp {{ number_format($transaksis->sum('nominal') ?? 0, 0, ',', '.') }}</span>
                 </div>
                 <div class="kt-card-table">
                     <div class="kt-table-wrapper kt-scrollable">
@@ -99,23 +300,29 @@
                                     <td class="text-mono">{{ $trx->nomor_transaksi }}</td>
                                     <td>{{ $trx->tgl_kwitansi?->format('d/m/Y') ?? '-' }}</td>
                                     <td>
-                                        @if($trx->jenis_transaksi === 'pemasukan')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Pemasukan</span>
+                                        @if($trx->jenis_transaksi === 'uang_masuk')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success kt-badge-outline">Uang Masuk</span>
+                                        @elseif($trx->jenis_transaksi === 'uang_keluar')
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Uang Keluar</span>
                                         @else
-                                            <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Pengeluaran</span>
+                                            <span class="kt-badge kt-badge-sm kt-badge-outline">{{ ucfirst(str_replace('_',' ',$trx->jenis_transaksi)) }}</span>
                                         @endif
                                     </td>
                                     <td>{{ $trx->aktivitas ?? '-' }}</td>
-                                    <td>{{ $trx->kategoriTransaksi?->nama ?? '-' }}</td>
-                                    <td>{{ $trx->itemTransaksi?->nama ?? '-' }}</td>
+                                    <td>{{ $trx->kategoriTransaksi?->deskripsi ?? '-' }}</td>
+                                    <td>{{ $trx->itemTransaksi?->deskripsi ?? '-' }}</td>
                                     <td class="text-mono">Rp {{ number_format($trx->nominal ?? 0, 0, ',', '.') }}</td>
                                     <td>
-                                        @if($trx->status === 'approved')
-                                            <span class="kt-badge kt-badge-sm kt-badge-success">Approved</span>
-                                        @elseif($trx->status === 'rejected')
-                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Rejected</span>
-                                        @else
+                                        @if($trx->status === 'selesai')
+                                            <span class="kt-badge kt-badge-sm kt-badge-success">Selesai</span>
+                                        @elseif($trx->status === 'cancel')
+                                            <span class="kt-badge kt-badge-sm kt-badge-destructive">Cancel</span>
+                                        @elseif($trx->status === 'proses')
+                                            <span class="kt-badge kt-badge-sm kt-badge-primary">Proses</span>
+                                        @elseif($trx->status === 'pending')
                                             <span class="kt-badge kt-badge-sm kt-badge-warning">Pending</span>
+                                        @else
+                                            <span class="kt-badge kt-badge-sm kt-badge-outline">Awaiting</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -130,8 +337,12 @@
 
             {{-- Tabel Pemberian Pakan --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Pemberian Pakan</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Pemberian Pakan</h3>
+                        <span class="text-xs text-muted-foreground">{{ $pemberianPakans->count() }} catatan pemakaian pakan</span>
+                    </div>
+                    <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Rp {{ number_format($totalBiayaPakan ?? 0, 0, ',', '.') }}</span>
                 </div>
                 <div class="kt-card-table">
                     <div class="kt-table-wrapper kt-scrollable">
@@ -141,7 +352,9 @@
                                     <th class="w-12">No</th>
                                     <th>Tanggal</th>
                                     <th>Item Pakan</th>
-                                    <th>Jumlah Pakan (kg)</th>
+                                    <th>Jumlah Pakan</th>
+                                    <th>Harga Unit</th>
+                                    <th>Total Harga</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -149,11 +362,58 @@
                                 <tr>
                                     <td>{{ $i + 1 }}</td>
                                     <td>{{ $pakan->tgl_pakan?->format('d/m/Y H:i') ?? '-' }}</td>
-                                    <td>{{ $pakan->itemPersediaan?->nama ?? '-' }}</td>
-                                    <td class="text-mono">{{ number_format($pakan->jumlah_pakan ?? 0, 2) }}</td>
+                                    <td>{{ $pakan->itemPersediaan?->deskripsi ?? $pakan->itemPersediaan?->kode_item_persediaan ?? '-' }}</td>
+                                    <td class="text-mono">{{ $formatJumlah($pakan->jumlah_pakan) }} {{ $pakan->unit ?? 'kg' }}</td>
+                                    <td class="text-mono">Rp {{ number_format($pakan->harga_unit ?? 0, 0, ',', '.') }}</td>
+                                    <td class="text-mono">Rp {{ number_format($pakan->biaya ?? 0, 0, ',', '.') }}</td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="4" class="text-center text-muted-foreground py-4">Belum ada data pemberian pakan</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted-foreground py-4">Belum ada data pemberian pakan</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tabel Penggunaan Bahan Kimia & Antibiotik --}}
+            <div class="kt-card">
+                <div class="kt-card-header min-h-16">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="kt-card-title">Bahan Kimia & Antibiotik</h3>
+                        <span class="text-xs text-muted-foreground">{{ $pemberianKimia->count() }} catatan pemakaian bahan</span>
+                    </div>
+                    <span class="kt-badge kt-badge-sm kt-badge-destructive kt-badge-outline">Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="kt-card-table">
+                    <div class="kt-table-wrapper kt-scrollable">
+                        <table class="kt-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-12">No</th>
+                                    <th>Tanggal</th>
+                                    <th>Kategori</th>
+                                    <th>Item</th>
+                                    <th>Jumlah</th>
+                                    <th>Harga Unit</th>
+                                    <th>Total Harga</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($pemberianKimia as $i => $kimia)
+                                <tr>
+                                    <td>{{ $i + 1 }}</td>
+                                    <td>{{ $kimia->tgl_pakan?->format('d/m/Y H:i') ?? '-' }}</td>
+                                    <td>
+                                        <span class="kt-badge kt-badge-sm kt-badge-outline">{{ $kimia->itemPersediaan?->kategoriPersediaan?->deskripsi ?? '-' }}</span>
+                                    </td>
+                                    <td>{{ $kimia->itemPersediaan?->deskripsi ?? $kimia->itemPersediaan?->kode_item_persediaan ?? '-' }}</td>
+                                    <td class="text-mono">{{ $formatJumlah($kimia->jumlah_pakan) }} {{ $kimia->unit ?? 'kg' }}</td>
+                                    <td class="text-mono">Rp {{ number_format($kimia->harga_unit ?? 0, 0, ',', '.') }}</td>
+                                    <td class="text-mono">Rp {{ number_format($kimia->biaya ?? 0, 0, ',', '.') }}</td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="7" class="text-center text-muted-foreground py-4">Belum ada data penggunaan bahan kimia/antibiotik</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -167,14 +427,22 @@
     <div class="col-span-1">
         <div class="grid gap-5 lg:gap-7.5">
             {{-- Info Siklus --}}
-            <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Info Siklus</h3>
-                    <div>
+            <div class="kt-card border-primary/20">
+                <div class="kt-card-header min-h-16">
+                    <div class="flex items-center gap-3">
+                        <span class="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                            <i class="ki-filled ki-chart-line-up"></i>
+                        </span>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="kt-card-title">Info Siklus</h3>
+                            <span class="text-xs text-muted-foreground">{{ $siklus->nama_siklus }}</span>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
                         @if($siklus->status === 'aktif')
                             <span class="kt-badge kt-badge-success">Aktif</span>
                         @elseif($siklus->status === 'selesai')
-                            <span class="kt-badge kt-badge-primary">Selesai</span>
+                            <span class="kt-badge kt-badge-success">Selesai</span>
                         @else
                             <span class="kt-badge kt-badge-destructive">Gagal</span>
                         @endif
@@ -220,72 +488,18 @@
                 </div>
             </div>
 
-            {{-- Parameter Air & Performa --}}
+            {{-- Info Kolam/Blok --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Parameter Air & Performa</h3>
-                </div>
-                <div class="kt-card-content pt-3.5 pb-3.5">
-                    <table class="kt-table-auto">
-                        <tbody>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Kecerahan:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->kecerahan ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Suhu:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->suhu ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">DO Level:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->do_level ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Salinitas:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->salinitas ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">pH Pagi:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->ph_pagi ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">pH Sore:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->ph_sore ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Selisih pH:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->selisih_ph ?? '-' }}</td>
-                            </tr>
-                            <tr><td colspan="2" class="pb-2"></td></tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">FCR:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->fcr ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">ADG:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->adg ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">SR:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->sr ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">MBW:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->mbw ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Size:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->size ?? '-' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {{-- Info Kolam --}}
-            <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Info Kolam/Blok</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex items-center gap-3">
+                        <span class="size-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
+                            <i class="ki-filled ki-element-11"></i>
+                        </span>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="kt-card-title">Info Kolam/Blok</h3>
+                            <span class="text-xs text-muted-foreground">{{ $siklus->blok?->nama_blok ?? '-' }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="kt-card-content pt-3.5 pb-3.5">
                     <table class="kt-table-auto">
@@ -304,7 +518,7 @@
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Luas:</td>
-                                <td class="text-sm text-mono pb-3">{{ number_format(($siklus->blok?->panjang ?? 0) * ($siklus->blok?->lebar ?? 0), 2) }} m²</td>
+                                <td class="text-sm text-mono pb-3">{{ number_format(($siklus->blok?->panjang ?? 0) * ($siklus->blok?->lebar ?? 0), 2) }} m<sup>2</sup></td>
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Jumlah Anco:</td>
@@ -329,8 +543,16 @@
 
             {{-- Info Tambak --}}
             <div class="kt-card">
-                <div class="kt-card-header">
-                    <h3 class="kt-card-title">Info Tambak</h3>
+                <div class="kt-card-header min-h-16">
+                    <div class="flex items-center gap-3">
+                        <span class="size-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+                            <i class="ki-filled ki-geolocation"></i>
+                        </span>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="kt-card-title">Info Tambak</h3>
+                            <span class="text-xs text-muted-foreground">{{ $siklus->blok?->tambak?->nama_tambak ?? '-' }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="kt-card-content pt-3.5 pb-3.5">
                     <table class="kt-table-auto">
@@ -349,7 +571,7 @@
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Total Lahan:</td>
-                                <td class="text-sm text-mono pb-3">{{ $siklus->blok?->tambak?->total_lahan ? number_format($siklus->blok->tambak->total_lahan, 2) . ' m²' : '-' }}</td>
+                                <td class="text-sm text-mono pb-3">{!! $siklus->blok?->tambak?->total_lahan ? number_format($siklus->blok->tambak->total_lahan, 2) . ' m<sup>2</sup>' : '-' !!}</td>
                             </tr>
                             <tr>
                                 <td class="text-sm text-secondary-foreground pb-3 pe-4 lg:pe-8">Didirikan:</td>
@@ -365,7 +587,7 @@
 
 <!-- Modal Tambah Panen -->
 <div class="kt-modal" data-kt-modal="true" id="panenModal">
-    <div class="kt-modal-content max-w-[600px] top-5 lg:top-[10%]">
+    <div class="kt-modal-content max-w-[600px] top-0 sm:top-5 lg:top-[10%]">
         <div class="kt-modal-header">
             <h3 class="kt-modal-title" id="panenModalTitle">Tambah Panen</h3>
             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
@@ -377,7 +599,7 @@
             <input type="hidden" name="siklus_id" value="{{ $siklus->id }}">
             <input type="hidden" name="_method" id="panenFormMethod" value="POST">
             <div class="kt-modal-body flex flex-col gap-4" style="max-height:75vh;overflow-y:auto;">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Tanggal Panen <span class="text-danger">*</span></label>
                         <div class="kt-input">
@@ -394,7 +616,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Umur <span class="text-danger">*</span></label>
                         <div class="kt-input-group">
@@ -414,7 +636,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Harga Jual (/kg) <span class="text-danger">*</span></label>
                         <div class="kt-input-group">
@@ -434,7 +656,7 @@
                     <label class="text-sm font-medium text-foreground">Pembeli <span class="text-danger">*</span></label>
                     <input type="text" name="pembeli" id="p_pembeli" class="kt-input" required>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Jenis Pembayaran <span class="text-danger">*</span></label>
                         <select name="jenis_pembayaran" id="p_jenis_pembayaran" class="kt-select" required onchange="toggleBank()">
@@ -452,7 +674,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-sm font-medium text-foreground">Pembayaran <span class="text-danger">*</span></label>
                         <select name="pembayaran" id="p_pembayaran" class="kt-select" required onchange="toggleSisaBayar()">
@@ -477,10 +699,385 @@
     </div>
 </div>
 
+{{-- Modal Tambah/Edit Kolam --}}
+<div class="kt-modal" data-kt-modal="true" id="kolamModal">
+    <div class="kt-modal-content max-w-[500px] top-0 sm:top-5 lg:top-[15%]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title" id="kolamModalTitle">Tambah Kolam</h3>
+            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <form id="kolamForm" method="POST" action="{{ route('kolam.store') }}">
+            @csrf
+            <input type="hidden" name="_method" id="kolamFormMethod" value="POST">
+            <input type="hidden" name="siklus_id" value="{{ $siklus->id }}">
+            <input type="hidden" name="blok_id" value="{{ $siklus->blok_id }}">
+            <div class="kt-modal-body flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium">Nama Kolam <span class="text-danger">*</span></label>
+                    <input type="text" name="nama_kolam" id="k_nama_kolam" class="kt-input" required placeholder="Nama kolam">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium">Tgl Berdiri</label>
+                        <div class="kt-input">
+                            <i class="ki-outline ki-calendar"></i>
+                            <input class="grow" name="tgl_berdiri" id="k_tgl_berdiri" data-kt-date-picker="true" data-kt-date-picker-input-mode="true" placeholder="Pilih tanggal" readonly type="text">
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium">Total Tebar (ekor)</label>
+                        <input type="number" name="total_tebar" id="k_total_tebar" class="kt-input" min="0" placeholder="0">
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium">Status <span class="text-danger">*</span></label>
+                    <select name="status" id="k_status" class="kt-select" required>
+                        <option value="aktif">Aktif</option>
+                        <option value="selesai">Selesai</option>
+                        <option value="batal">Batal</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium">Akses User</label>
+                    <div id="k_user_checkboxes" class="flex flex-col gap-1 max-h-40 overflow-y-auto border border-border rounded-lg p-2">
+                        @foreach($users as $u)
+                        <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/40 px-2 py-1 rounded">
+                            <input type="checkbox" name="user_ids[]" value="{{ $u->id }}" class="size-4 k-user-cb" data-user-id="{{ $u->id }}">
+                            {{ $u->nama }}
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            <div class="kt-modal-footer justify-end">
+                <button type="button" class="kt-btn kt-btn-outline" data-kt-modal-dismiss="true">Batal</button>
+                <button type="submit" class="kt-btn kt-btn-primary">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal Detail Uang Masuk --}}
+<div class="kt-modal" data-kt-modal="true" id="detailUangMasukModal">
+    <div class="kt-modal-content max-w-2xl top-0 sm:top-5 lg:top-[10%]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Detail Uang Masuk</h3>
+            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <div class="kt-modal-body" style="max-height:70vh;overflow-y:auto;">
+            <div class="mb-4 p-4 rounded-lg" style="background:rgba(23,198,83,0.08);">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <span class="text-sm font-medium">Total Uang Masuk</span>
+                    <span class="text-lg font-bold text-green-600">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+            
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-basket text-green-600"></i> Hasil Panen
+            </h4>
+            <div class="kt-table-wrapper mb-5">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>Tgl Panen</th>
+                            <th>Kolam</th>
+                            <th>Berat (kg)</th>
+                            <th class="text-end">Total Penjualan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($detailPanen as $panen)
+                        <tr>
+                            <td>{{ $panen->tgl_panen?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $panen->kolam?->nama_kolam ?? '-' }}</td>
+                            <td class="text-mono">{{ number_format($panen->total_berat ?? 0, 2) }}</td>
+                            <td class="text-mono text-end text-green-600">Rp {{ number_format($panen->total_penjualan ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="text-center text-muted-foreground py-3">Belum ada data panen</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="3" class="text-end">Subtotal Panen:</td>
+                            <td class="text-mono text-end text-green-600">Rp {{ number_format($siklus->panens->sum('total_penjualan') ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-graph-up text-green-600"></i> Transaksi Masuk
+            </h4>
+            <div class="kt-table-wrapper">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>No. Transaksi</th>
+                            <th>Tgl Kwitansi</th>
+                            <th>Kategori</th>
+                            <th class="text-end">Nominal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($detailTransaksiMasuk as $trx)
+                        <tr>
+                            <td class="text-mono">{{ $trx->nomor_transaksi }}</td>
+                            <td>{{ $trx->tgl_kwitansi?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $trx->kategoriTransaksi?->deskripsi ?? '-' }}</td>
+                            <td class="text-mono text-end text-green-600">Rp {{ number_format($trx->nominal ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="text-center text-muted-foreground py-3">Belum ada transaksi masuk</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="3" class="text-end">Subtotal Transaksi:</td>
+                            <td class="text-mono text-end text-green-600">Rp {{ number_format($detailTransaksiMasuk->sum('nominal') ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Detail Uang Keluar --}}
+<div class="kt-modal" data-kt-modal="true" id="detailUangKeluarModal">
+    <div class="kt-modal-content max-w-2xl top-0 sm:top-5 lg:top-[10%]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Detail Uang Keluar</h3>
+            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <div class="kt-modal-body" style="max-height:70vh;overflow-y:auto;">
+            <div class="mb-4 p-4 rounded-lg" style="background:rgba(241,65,108,0.08);">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <span class="text-sm font-medium">Total Uang Keluar</span>
+                    <span class="text-lg font-bold text-red-600">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+            
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-graph-down text-red-600"></i> Transaksi Keluar
+            </h4>
+            <div class="kt-table-wrapper mb-5">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>No. Transaksi</th>
+                            <th>Tgl Kwitansi</th>
+                            <th>Kategori</th>
+                            <th class="text-end">Nominal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($detailTransaksiKeluar as $trx)
+                        <tr>
+                            <td class="text-mono">{{ $trx->nomor_transaksi }}</td>
+                            <td>{{ $trx->tgl_kwitansi?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $trx->kategoriTransaksi?->deskripsi ?? '-' }}</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($trx->nominal ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="text-center text-muted-foreground py-3">Belum ada transaksi keluar</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="3" class="text-end">Subtotal Transaksi:</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($detailTransaksiKeluar->sum('nominal') ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-cup text-red-600"></i> Biaya Pakan
+            </h4>
+            <div class="kt-table-wrapper mb-5">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Item Pakan</th>
+                            <th>Jumlah</th>
+                            <th class="text-end">Total Biaya</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pemberianPakans as $pakan)
+                        <tr>
+                            <td>{{ $pakan->tgl_pakan?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $pakan->itemPersediaan?->deskripsi ?? '-' }}</td>
+                            <td class="text-mono">{{ $formatJumlah($pakan->jumlah_pakan) }} {{ $pakan->unit ?? 'kg' }}</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($pakan->biaya ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="text-center text-muted-foreground py-3">Belum ada data pakan</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="3" class="text-end">Subtotal Pakan:</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($totalBiayaPakan ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-flask text-red-600"></i> Biaya Bahan Kimia
+            </h4>
+            <div class="kt-table-wrapper mb-5">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Item</th>
+                            <th>Jumlah</th>
+                            <th class="text-end">Total Biaya</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pemberianKimia as $kimia)
+                        <tr>
+                            <td>{{ $kimia->tgl_pakan?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $kimia->itemPersediaan?->deskripsi ?? '-' }}</td>
+                            <td class="text-mono">{{ $formatJumlah($kimia->jumlah_pakan) }} {{ $kimia->unit ?? 'kg' }}</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($kimia->biaya ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="text-center text-muted-foreground py-3">Belum ada data bahan kimia</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="3" class="text-end">Subtotal Kimia:</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                <i class="ki-filled ki-briefcase text-red-600"></i> Pembelian Aset
+            </h4>
+            <div class="kt-table-wrapper">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>No. Transaksi</th>
+                            <th>Tanggal</th>
+                            <th>Aset</th>
+                            <th>Pembayaran</th>
+                            <th class="text-end">Dibayar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pembelianAsets as $aset)
+                        <tr>
+                            <td class="text-mono">
+                                <a href="{{ route('pembelian-aset.show', $aset) }}" class="text-primary hover:underline">
+                                    {{ $aset->nomor_transaksi }}
+                                </a>
+                            </td>
+                            <td>{{ $aset->tgl_pembelian?->format('d/m/Y') ?? '-' }}</td>
+                            <td>{{ $aset->nama_aset }}</td>
+                            <td>
+                                @if($aset->status_pembayaran === 'hutang')
+                                    <span class="kt-badge kt-badge-sm kt-badge-warning">Hutang</span>
+                                @elseif($aset->status_pembayaran === 'sebagian')
+                                    <span class="kt-badge kt-badge-sm kt-badge-primary">Sebagian</span>
+                                @else
+                                    <span class="kt-badge kt-badge-sm kt-badge-success">Lunas</span>
+                                @endif
+                            </td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($aset->nominal_dibayar ?? $aset->nominal_pembelian ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="5" class="text-center text-muted-foreground py-3">Belum ada pembelian aset</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="font-semibold">
+                            <td colspan="4" class="text-end">Subtotal Aset:</td>
+                            <td class="text-mono text-end text-red-600">Rp {{ number_format($totalBiayaAset ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Detail Keuntungan --}}
+<div class="kt-modal" data-kt-modal="true" id="detailKeuntunganModal">
+    <div class="kt-modal-content max-w-2xl top-0 sm:top-5 lg:top-[10%]">
+        <div class="kt-modal-header">
+            <h3 class="kt-modal-title">Ringkasan Keuangan</h3>
+            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost" data-kt-modal-dismiss="true">
+                <i class="ki-filled ki-cross"></i>
+            </button>
+        </div>
+        <div class="kt-modal-body">
+            <div class="flex flex-col gap-4">
+                <div class="p-4 rounded-lg" style="background:rgba(23,198,83,0.08);">
+                    <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+                        <span class="text-sm text-secondary-foreground">Total Uang Masuk</span>
+                        <span class="text-lg font-bold text-green-600">Rp {{ number_format($uangMasuk ?? 0, 0, ',', '.') }}</span>
+                    </div>
+                    <div class="text-xs text-secondary-foreground">
+                        Panen: Rp {{ number_format($siklus->panens->sum('total_penjualan') ?? 0, 0, ',', '.') }} + 
+                        Transaksi: Rp {{ number_format($detailTransaksiMasuk->sum('nominal') ?? 0, 0, ',', '.') }}
+                    </div>
+                </div>
+                <div class="p-4 rounded-lg" style="background:rgba(241,65,108,0.08);">
+                    <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+                        <span class="text-sm text-secondary-foreground">Total Uang Keluar</span>
+                        <span class="text-lg font-bold text-red-600">Rp {{ number_format($uangKeluar ?? 0, 0, ',', '.') }}</span>
+                    </div>
+                    <div class="text-xs text-secondary-foreground">
+                        Transaksi: Rp {{ number_format($detailTransaksiKeluar->sum('nominal') ?? 0, 0, ',', '.') }} + 
+                        Pakan: Rp {{ number_format($totalBiayaPakan ?? 0, 0, ',', '.') }} + 
+                        Kimia: Rp {{ number_format($totalBiayaKimia ?? 0, 0, ',', '.') }} +
+                        Aset: Rp {{ number_format($totalBiayaAset ?? 0, 0, ',', '.') }}
+                    </div>
+                </div>
+                @php
+                    $isProfit = ($keuntunganKerugian ?? 0) >= 0;
+                @endphp
+                <div class="p-5 rounded-lg text-center" style="background:rgba({{ $isProfit ? '23,198,83' : '241,65,108' }},0.12);">
+                    <p class="text-sm text-secondary-foreground mb-2">{{ $isProfit ? 'Keuntungan Bersih' : 'Kerugian Bersih' }}</p>
+                    <p class="text-3xl font-bold {{ $isProfit ? 'text-green-600' : 'text-red-600' }}">
+                        Rp {{ number_format(abs($keuntunganKerugian ?? 0), 0, ',', '.') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
+function openDetailModal(type) {
+    if (type === 'uangMasuk') {
+        KTModal.getInstance(document.querySelector('#detailUangMasukModal')).show();
+    } else if (type === 'uangKeluar') {
+        KTModal.getInstance(document.querySelector('#detailUangKeluarModal')).show();
+    } else if (type === 'keuntungan') {
+        KTModal.getInstance(document.querySelector('#detailKeuntunganModal')).show();
+    }
+}
+
 function calcPanen() {
     var berat = parseFloat(document.getElementById('p_total_berat').value) || 0;
     var harga = parseFloat(document.getElementById('p_harga_jual').value) || 0;
@@ -510,6 +1107,30 @@ function openPanenModal() {
     toggleBank();
     toggleSisaBayar();
     KTModal.getInstance(document.querySelector('#panenModal')).show();
+}
+
+function openKolamModal() {
+    document.getElementById('kolamModalTitle').textContent = 'Tambah Kolam';
+    document.getElementById('kolamForm').action = "{{ route('kolam.store') }}";
+    document.getElementById('kolamFormMethod').value = 'POST';
+    document.getElementById('k_nama_kolam').value = '';
+    document.getElementById('k_tgl_berdiri').value = '';
+    document.getElementById('k_total_tebar').value = '';
+    document.getElementById('k_status').value = 'aktif';
+    document.querySelectorAll('.k-user-cb').forEach(function(cb) { cb.checked = false; });
+    KTModal.getInstance(document.querySelector('#kolamModal')).show();
+}
+
+function editKolam(id, nama, tglBerdiri, totalTebar, status) {
+    document.getElementById('kolamModalTitle').textContent = 'Edit Kolam';
+    document.getElementById('kolamForm').action = "{{ route('kolam.update', ['kolam' => '__ID__']) }}".replace('__ID__', id);
+    document.getElementById('kolamFormMethod').value = 'PUT';
+    document.getElementById('k_nama_kolam').value = nama;
+    document.getElementById('k_tgl_berdiri').value = tglBerdiri || '';
+    document.getElementById('k_total_tebar').value = totalTebar || '';
+    document.getElementById('k_status').value = status || 'aktif';
+    document.querySelectorAll('.k-user-cb').forEach(function(cb) { cb.checked = false; });
+    KTModal.getInstance(document.querySelector('#kolamModal')).show();
 }
 </script>
 @endpush

@@ -5,72 +5,322 @@ namespace App\Http\Controllers\Keuangan;
 use App\Http\Controllers\Controller;
 use App\Models\AccountBank;
 use App\Models\HutangPiutang;
+use App\Models\HutangPiutangPayment;
 use App\Models\KategoriHutangPiutang;
 use App\Services\ApprovalService;
 use App\Services\AutoNumberService;
+use App\Services\FileUploadService;
+use App\Services\NotifikasiService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class HutangPiutangController extends Controller
 {
     public function index()
     {
-        $data = HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])->latest()->get();
-        $kategoriHutangPiutangs = KategoriHutangPiutang::orderBy('nama')->get();
+        $hasTambak = auth()->user()->tambaks()->exists();
+        $data = $hasTambak
+            ? HutangPiutang::with(['kategoriHutangPiutang', 'accountBank'])
+                ->orderByDesc('updated_at')
+                ->orderByDesc('created_at')
+                ->get()
+            : collect();
+        return view('keuangan.hutang-piutang.index', compact('data'));
+    }
+
+    public function create()
+    {
+        $kategoriHutangPiutangs = KategoriHutangPiutang::orderBy('deskripsi')->get();
         $accountBanks = AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
-        return view('keuangan.hutang-piutang.index', compact('data', 'kategoriHutangPiutangs', 'accountBanks'));
+        return view('keuangan.hutang-piutang.form', compact('kategoriHutangPiutangs', 'accountBanks') + ['hutangPiutang' => null]);
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'jenis' => 'required|in:hutang,piutang',
+            'nama_pemberi_hutang' => 'nullable|string|max:255',
             'aktivitas' => 'required|string',
             'kategori_hutang_piutang_id' => 'required|uuid|exists:kategori_hutang_piutangs,id',
             'nominal' => 'required|numeric|min:0',
+            'total_bayar' => 'nullable|numeric|min:0',
             'jatuh_tempo' => 'required|date',
+            'created_at' => 'required|date',
             'nominal_bayar' => 'nullable|numeric|min:0',
             'jenis_pembayaran' => 'required|in:cash,bank',
             'account_bank_id' => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
+            'eviden.*' => 'nullable|file|max:5120|mimes:jpg,jpeg,png,gif,bmp,webp,pdf,xlsx,xls',
             'catatan' => 'nullable|string',
         ]);
 
-        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input = $request->only(['jenis','nama_pemberi_hutang','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
         $input['nomor_transaksi'] = app(AutoNumberService::class)->generate($request->jenis === 'hutang' ? 'INVH' : 'INVP');
-        $input['sisa_pembayaran'] = ($input['nominal'] ?? 0) - ($input['nominal_bayar'] ?? 0);
+        $input['created_by'] = auth()->id();
+        // Sisa: untuk hutang = total_bayar - nominal_bayar, untuk piutang = nominal - nominal_bayar
+        $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
+        $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);
 
-        HutangPiutang::create($input);
-        return redirect()->back()->with('success', 'Data berhasil ditambahkan.');
+        if ($request->hasFile('eviden')) {
+            $paths = [];
+            foreach ($request->file('eviden') as $file) {
+                $paths[] = app(FileUploadService::class)->upload($file);
+            }
+            $input['eviden'] = $paths;
+        }
+
+        $hp = HutangPiutang::create($input);
+
+        $jenis = $input['jenis'] === 'hutang' ? 'Hutang' : 'Piutang';
+        app(NotifikasiService::class)->kirimApprovalRequest(
+            $jenis . ' Baru Menunggu Approval',
+            $jenis . ' "' . $input['aktivitas'] . '" sebesar Rp ' . number_format($input['nominal'], 0, ',', '.') . ' memerlukan persetujuan.',
+            route('hutang-piutang.show', $hp->id)
+        );
+
+        return redirect()->route('hutang-piutang.index')->with('success', 'Data berhasil ditambahkan.');
+    }
+
+    public function show(HutangPiutang $hutangPiutang)
+    {
+        $hutangPiutang->load(['kategoriHutangPiutang', 'accountBank']);
+        return view('keuangan.hutang-piutang.show', compact('hutangPiutang'));
     }
 
     public function edit(HutangPiutang $hutangPiutang)
     {
-        $data = $hutangPiutang->toArray();
-        $data['jatuh_tempo'] = $hutangPiutang->jatuh_tempo?->format('Y-m-d');
-        return response()->json($data);
+        $kategoriHutangPiutangs = KategoriHutangPiutang::orderBy('deskripsi')->get();
+        $accountBanks = AccountBank::where('status', 'aktif')->orderBy('nama_bank')->get();
+        return view('keuangan.hutang-piutang.form', compact('hutangPiutang', 'kategoriHutangPiutangs', 'accountBanks'));
     }
 
     public function update(Request $request, HutangPiutang $hutangPiutang)
     {
         $request->validate([
             'jenis' => 'required|in:hutang,piutang',
+            'nama_pemberi_hutang' => 'nullable|string|max:255',
             'aktivitas' => 'required|string',
             'kategori_hutang_piutang_id' => 'required|uuid|exists:kategori_hutang_piutangs,id',
             'nominal' => 'required|numeric|min:0',
+            'total_bayar' => 'nullable|numeric|min:0',
             'jatuh_tempo' => 'required|date',
+            'created_at' => 'required|date',
             'nominal_bayar' => 'nullable|numeric|min:0',
             'jenis_pembayaran' => 'required|in:cash,bank',
             'account_bank_id' => 'nullable|required_if:jenis_pembayaran,bank|uuid|exists:account_banks,id',
             'catatan' => 'nullable|string',
         ]);
 
-        $input = $request->only(['jenis','aktivitas','kategori_hutang_piutang_id','nominal','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
-        $input['sisa_pembayaran'] = ($input['nominal'] ?? 0) - ($input['nominal_bayar'] ?? 0);
+        $input = $request->only(['jenis','nama_pemberi_hutang','aktivitas','kategori_hutang_piutang_id','nominal','total_bayar','jatuh_tempo','nominal_bayar','jenis_pembayaran','account_bank_id','catatan']);
+        $input['created_at'] = \Carbon\Carbon::parse($request->created_at);
+        $base = $request->jenis === 'hutang' ? ($input['total_bayar'] ?? $input['nominal']) : $input['nominal'];
+        $input['sisa_pembayaran'] = $base - ($input['nominal_bayar'] ?? 0);
 
-        $hutangPiutang->update($input);
-        return redirect()->back()->with('success', 'Data berhasil diperbarui.');
+        if ($request->hasFile('eviden')) {
+            $existing = $hutangPiutang->eviden ?? [];
+            foreach ($request->file('eviden') as $file) {
+                $existing[] = app(FileUploadService::class)->upload($file);
+            }
+            $input['eviden'] = $existing;
+        }
+        if ($request->filled('hapus_eviden')) {
+            $existing = $hutangPiutang->eviden ?? [];
+            $input['eviden'] = array_values(array_filter($existing, fn($p) => !in_array($p, $request->input('hapus_eviden', []))));
+        }
+
+        DB::transaction(function () use ($hutangPiutang, $input) {
+            if ($hutangPiutang->status === 'selesai' && $hutangPiutang->jenis_pembayaran === 'bank' && $hutangPiutang->account_bank_id) {
+                $bankLama = AccountBank::find($hutangPiutang->account_bank_id);
+                if ($bankLama) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bankLama->decrement('saldo', $hutangPiutang->nominal);
+                    } else {
+                        $bankLama->increment('saldo', $hutangPiutang->nominal);
+                    }
+                }
+            }
+
+            $hutangPiutang->update($input);
+
+            $hutangPiutang->refresh();
+            if ($hutangPiutang->status === 'selesai' && $hutangPiutang->jenis_pembayaran === 'bank' && $hutangPiutang->account_bank_id) {
+                $bankBaru = AccountBank::find($hutangPiutang->account_bank_id);
+                if ($bankBaru) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bankBaru->increment('saldo', $hutangPiutang->nominal);
+                    } else {
+                        $bankBaru->decrement('saldo', $hutangPiutang->nominal);
+                    }
+                }
+            }
+        });
+
+        return redirect()->route('hutang-piutang.index')->with('success', 'Data berhasil diperbarui.');
     }
 
-    public function destroy(HutangPiutang $hutangPiutang) { $hutangPiutang->delete(); return redirect()->back()->with('success', 'Data berhasil dihapus.'); }
-    public function approve(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->approve($hutangPiutang); return redirect()->back()->with('success', 'Data berhasil di-approve.'); }
-    public function reject(HutangPiutang $hutangPiutang) { app(ApprovalService::class)->reject($hutangPiutang); return redirect()->back()->with('success', 'Data berhasil di-reject.'); }
+    public function destroy(HutangPiutang $hutangPiutang)
+    {
+        DB::transaction(function () use ($hutangPiutang) {
+            if ($hutangPiutang->status === 'selesai' && $hutangPiutang->jenis_pembayaran === 'bank' && $hutangPiutang->account_bank_id) {
+                $bank = AccountBank::find($hutangPiutang->account_bank_id);
+                if ($bank) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bank->decrement('saldo', $hutangPiutang->nominal);
+                    } else {
+                        $bank->increment('saldo', $hutangPiutang->nominal);
+                    }
+                }
+            }
+
+            foreach ($hutangPiutang->payments as $payment) {
+                if ($payment->account_bank_id) {
+                    $bank = AccountBank::find($payment->account_bank_id);
+                    if ($bank) {
+                        if ($hutangPiutang->jenis === 'hutang') {
+                            $bank->increment('saldo', $payment->jumlah);
+                        } else {
+                            $bank->decrement('saldo', $payment->jumlah);
+                        }
+                    }
+                }
+                $payment->delete();
+            }
+
+            $hutangPiutang->delete();
+        });
+
+        return redirect()->back()->with('success', 'Data berhasil dihapus.');
+    }
+
+    public function bayar(Request $request, HutangPiutang $hutangPiutang)
+    {
+        $request->validate([
+            'jumlah_bayar'   => 'required|numeric|min:1',
+            'account_bank_id'=> 'nullable|uuid|exists:account_banks,id',
+            'catatan_bayar'  => 'nullable|string',
+        ]);
+
+        $jumlah = (float) $request->jumlah_bayar;
+        $sisaBaru = 0;
+
+        DB::transaction(function () use ($request, $hutangPiutang, $jumlah, &$sisaBaru) {
+            $sisaBaru = max(0, ($hutangPiutang->sisa_pembayaran ?? $hutangPiutang->nominal) - $jumlah);
+            $nominalBayarBaru = ($hutangPiutang->nominal_bayar ?? 0) + $jumlah;
+
+            $hutangPiutang->update([
+                'nominal_bayar'   => $nominalBayarBaru,
+                'sisa_pembayaran' => $sisaBaru,
+            ]);
+
+            // Simpan riwayat pembayaran
+            HutangPiutangPayment::create([
+                'hutang_piutang_id' => $hutangPiutang->id,
+                'jumlah'            => $jumlah,
+                'account_bank_id'   => $request->account_bank_id ?: null,
+                'catatan'           => $request->catatan_bayar,
+            ]);
+
+            // Update saldo bank jika bayar via bank
+            if ($request->filled('account_bank_id')) {
+                $bank = AccountBank::find($request->account_bank_id);
+                if ($bank) {
+                    if ($hutangPiutang->jenis === 'hutang') {
+                        $bank->decrement('saldo', $jumlah);
+                    } else {
+                        $bank->increment('saldo', $jumlah);
+                    }
+                }
+            }
+
+            $aset = $hutangPiutang->pembelianAset;
+            if ($aset) {
+                $asetPayload = [
+                    'nominal_dibayar' => min((float) $aset->nominal_pembelian, $nominalBayarBaru),
+                ];
+
+                if ($sisaBaru <= 0) {
+                    $asetPayload['status_pembayaran'] = 'lunas';
+                } elseif ($asetPayload['nominal_dibayar'] > 0) {
+                    $asetPayload['status_pembayaran'] = 'sebagian';
+                }
+
+                $aset->update($asetPayload);
+            }
+
+            $pembelianPersediaan = $hutangPiutang->pembelianPersediaan;
+            if ($pembelianPersediaan) {
+                $pembelianPersediaan->load('items');
+                $totalPersediaan = (float) $pembelianPersediaan->items->sum('harga_total');
+                $persediaanPayload = [
+                    'nominal_dibayar' => min($totalPersediaan, $nominalBayarBaru),
+                ];
+
+                if ($sisaBaru <= 0) {
+                    $persediaanPayload['status_pembayaran'] = 'lunas';
+                } elseif ($persediaanPayload['nominal_dibayar'] > 0) {
+                    $persediaanPayload['status_pembayaran'] = 'sebagian';
+                }
+
+                $pembelianPersediaan->update($persediaanPayload);
+            }
+
+            $penjualanAset = $hutangPiutang->penjualanAset;
+            if ($penjualanAset) {
+                $penjualanPayload = [
+                    'nominal_dibayar' => min(
+                        (float) $penjualanAset->total_penjualan,
+                        max(0, (float) $penjualanAset->total_penjualan - $sisaBaru)
+                    ),
+                ];
+
+                if ($sisaBaru <= 0) {
+                    $penjualanPayload['status_pembayaran'] = 'lunas';
+                } elseif ($penjualanPayload['nominal_dibayar'] > 0) {
+                    $penjualanPayload['status_pembayaran'] = 'sebagian';
+                }
+
+                $penjualanAset->update($penjualanPayload);
+            }
+        });
+
+        $msg = 'Pembayaran Rp ' . number_format($jumlah, 0, ',', '.') . ' berhasil dicatat.';
+        if ($sisaBaru <= 0) $msg .= ' Hutang/Piutang sudah LUNAS.';
+
+        return redirect()->back()->with('success', $msg);
+    }
+
+    public function approve(HutangPiutang $hutangPiutang)
+    {
+        $hutangPiutang->update(['reject_reason' => null]);
+        app(ApprovalService::class)->approve($hutangPiutang);
+        $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang';
+        app(NotifikasiService::class)->kirimKeRole('Owner', $jenis . ' Disetujui', $jenis . ' "' . $hutangPiutang->aktivitas . '" telah disetujui.', 'info', route('hutang-piutang.show', $hutangPiutang->id));
+        return redirect()->back()->with('success', 'Data berhasil di-approve.');
+    }
+
+    public function reject(Request $request, HutangPiutang $hutangPiutang)
+    {
+        $validated = $request->validate([
+            'alasan_reject' => 'required|string|min:5|max:1000',
+        ], [
+            'alasan_reject.required' => 'Alasan reject wajib diisi.',
+            'alasan_reject.min' => 'Alasan reject minimal 5 karakter.',
+        ]);
+
+        $hutangPiutang->update(['reject_reason' => $validated['alasan_reject']]);
+        app(ApprovalService::class)->reject($hutangPiutang);
+
+        if ($hutangPiutang->created_by) {
+            $jenis = $hutangPiutang->jenis === 'hutang' ? 'Hutang' : 'Piutang';
+            app(NotifikasiService::class)->kirim(
+                $hutangPiutang->created_by,
+                $jenis . ' Ditolak',
+                $jenis . ' "' . $hutangPiutang->aktivitas . '" ditolak. Alasan: ' . $validated['alasan_reject'],
+                'warning',
+                route('hutang-piutang.show', $hutangPiutang->id)
+            );
+        }
+
+        return redirect()->back()->with('success', 'Data berhasil di-reject.');
+    }
 }

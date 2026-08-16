@@ -45,4 +45,14 @@ class User extends Authenticatable
             'mulai_bekerja' => 'date',
         ];
     }
+
+    public function tambakAnggotas()
+    {
+        return $this->hasMany(TambakAnggota::class);
+    }
+
+    public function tambaks()
+    {
+        return $this->hasManyThrough(Tambak::class, TambakAnggota::class, 'user_id', 'id', 'id', 'tambak_id');
+    }
 }

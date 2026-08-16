@@ -9,7 +9,7 @@
     <div class="kt-card">
         <div class="kt-card-header min-h-16">
             <form method="GET" class="flex items-center gap-2">
-                <input type="text" name="search" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#kt_datatable" value="{{ request('search') }}" />
+                <input type="text" name="search" placeholder="Cari..." class="kt-input" style="width:200px" data-kt-datatable-search="#siklus_table" value="{{ request('search') }}" />
                 <select name="tambak_id" class="kt-select sm:w-48" onchange="this.form.submit()">
                     <option value="">-- Semua Tambak --</option>
                     @foreach($tambaks as $tambak)
@@ -29,7 +29,7 @@
             </button>
             @endcan
         </div>
-        <div id="kt_datatable" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="true">
+        <div id="siklus_table" class="kt-card-table" data-kt-datatable="true" data-kt-datatable-page-size="10" data-kt-datatable-state-save="false" data-kt-datatable-state-namespace="siklus">
             <div class="kt-table-wrapper kt-scrollable">
                 <table class="kt-table" data-kt-datatable-table="true">
                     <thead>

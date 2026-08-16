@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'asset_version' => env('ASSET_VERSION', '20250502'),
+
 ];
